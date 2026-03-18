@@ -1,0 +1,33 @@
+{
+  "files": [],
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/renderer/*"
+      ],
+      "@renderer/*": [
+        "src/renderer/src/*"
+      ],
+      "@components/*": [
+        "src/renderer/components/*"
+      ],
+      "@ui/*": [
+        "src/renderer/components/ui/*"
+      ],
+      "@main/*": [
+        "src/main/*"
+      ],
+      "@domain/*": [
+        "src/main/domain/*"
+      ],
+      "@use-cases/*": [
+        "src/main/use-cases/*"
+      ],
+      "@preload/*": [
+        "src/preload/*"
+      ]
+    }
+  }
+}
