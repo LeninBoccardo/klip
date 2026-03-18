@@ -1,0 +1,60 @@
+import { defineConfig } from 'vitest/config'
+import { resolve } from 'path'
+
+export default defineConfig({
+  test: {
+    projects: [
+      {
+        test: {
+          name: 'main',
+          environment: 'node',
+          include: ['tests/main/**/*.test.ts'],
+          setupFiles: ['tests/setup/main.setup.ts']
+        },
+        resolve: {
+          alias: {
+            '@main': resolve(__dirname, 'src/main'),
+            '@domain': resolve(__dirname, 'src/main/domain'),
+            '@use-cases': resolve(__dirname, 'src/main/use-cases')
+          }
+        }
+      },
+      {
+        test: {
+          name: 'renderer',
+          environment: 'jsdom',
+          include: ['tests/renderer/**/*.test.{ts,tsx}'],
+          setupFiles: ['tests/setup/renderer.setup.ts']
+        },
+        resolve: {
+          alias: {
+            '@': resolve(__dirname, 'src/renderer'),
+            '@renderer': resolve(__dirname, 'src/renderer/src'),
+            '@components': resolve(__dirname, 'src/renderer/components'),
+            '@ui': resolve(__dirname, 'src/renderer/components/ui')
+          }
+        }
+      }
+    ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'json-summary'],
+      include: ['src/main/**/*.ts', 'src/renderer/**/*.{ts,tsx}'],
+      exclude: [
+        'src/main/index.ts',
+        'src/main/**/index.ts',
+        'src/main/domain/entities/**',
+        'src/main/domain/repositories/I*.ts',
+        'src/renderer/components/ui/**',
+        'src/renderer/src/env.d.ts'
+      ],
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80
+      }
+    }
+  }
+})
+

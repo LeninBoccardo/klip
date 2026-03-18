@@ -94,6 +94,51 @@ Always use `@/components/ui/...` and `@/lib/utils` for renderer imports—this m
 - **Tailwind CSS v4** configured as a Vite plugin; theme tokens and CSS variables defined in `src/renderer/src/assets/main.css`
 - Icons: `lucide-react`
 
+## Testing
+
+**Stack:** Vitest (single runner for both main + renderer), `@testing-library/react` + `jsdom` for React component tests, `@vitest/coverage-v8` for coverage.
+
+**Config files:**
+- `vitest.config.ts` — single root config with two inline projects (`main` environment: `node`, `renderer` environment: `jsdom`), path aliases matching `electron.vite.config.ts`, and global coverage thresholds.
+
+**Folder structure:**
+```
+tests/
+├── main/                               # Main-process tests (node environment)
+│   ├── domain/types/                   # Pure-function unit tests (pagination helpers)
+│   ├── framework-drivers/              # Database init / migration tests
+│   ├── interface-adapters/repositories/# SQLite repository integration tests
+│   ├── use-cases/                      # Use-case tests (mock repos via interfaces)
+│   └── helpers/
+│       └── createTestDb.ts             # In-memory DB factory (calls initializeDatabase(':memory:'))
+├── renderer/                           # Renderer tests (jsdom environment)
+│   └── components/
+└── setup/
+    ├── main.setup.ts
+    └── renderer.setup.ts
+```
+
+**Writing tests:**
+- Place test files next to their mirror in `tests/`, e.g. `src/main/interface-adapters/repositories/SqliteCreatorRepository.ts` → `tests/main/interface-adapters/repositories/SqliteCreatorRepository.test.ts`.
+- Use `createTestDb()` from `tests/main/helpers/createTestDb.ts` for all DB tests — it returns a fresh in-memory SQLite instance with all migrations applied. Always call `db.close()` in `afterEach`.
+- Use factory functions (e.g. `makeCreator()`, `makeVideo()`, `makeCut()`) with `Partial<Entity>` overrides to build test data concisely.
+- Use-case tests should mock repository interfaces (via `vi.fn()`), never instantiate real SQLite.
+- Renderer tests use `@testing-library/react` with `render()` / `screen` — never test implementation details.
+
+**Coverage thresholds:**
+- Global: 80% (statements, branches, functions, lines).
+- `src/main/use-cases/`: 90% (enforced per-project in `vitest.workspace.ts` when use-cases exist).
+- Excluded from coverage: barrel `index.ts` files, `src/renderer/components/ui/` (auto-generated shadcn).
+
+## CI Pipeline
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
+1. `npm run lint`
+2. `npm run typecheck`
+3. `npm run test:coverage`
+
+Coverage reports are uploaded as artifacts (14-day retention).
+
 ## Key Commands
 
 ```bash
@@ -102,6 +147,11 @@ npm run build:win    # Typecheck + build + package for Windows (NSIS installer)
 npm run typecheck    # Run both node and web typechecks
 npm run lint         # ESLint (flat config in eslint.config.mjs)
 npm run format       # Prettier
+npm run test         # Run all tests (main + renderer)
+npm run test:watch   # Run tests in watch mode
+npm run test:main    # Run only main-process tests
+npm run test:renderer # Run only renderer tests
+npm run test:coverage # Run all tests with coverage report
 ```
 
 `npm run build` runs typecheck first—fix type errors before building. Platform builds (`build:mac`, `build:linux`) call `electron-vite build` directly without typecheck.
