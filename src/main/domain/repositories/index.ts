@@ -1,3 +1,3 @@
 export type { ICreatorRepository } from './ICreatorRepository'
-export type { IVideoRepository } from './IVideoRepository'
-export type { ICutRepository } from './ICutRepository'
+export type { IVideoRepository, VideoQueryParams } from './IVideoRepository'
+export type { ICutRepository, CutQueryParams } from './ICutRepository'

@@ -84,4 +84,3 @@ export function initializeDatabase(dbPath: string): BetterSqlite3.Database {
 
   return db
 }
-

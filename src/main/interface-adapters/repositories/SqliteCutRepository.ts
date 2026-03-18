@@ -1,6 +1,21 @@
 import type BetterSqlite3 from 'better-sqlite3'
 import type { Cut } from '@domain/entities'
-import type { ICutRepository } from '@domain/repositories'
+import type { ICutRepository, CutQueryParams } from '@domain/repositories'
+import type { PaginatedResult } from '@domain/types'
+import { paginatedResult } from '@domain/types'
+
+// ── sort-column allowlist (camelCase UI key → snake_case DB column) ──
+
+const CUT_SORT_COLUMNS: Record<string, string> = {
+  title: 'title',
+  duration: 'duration',
+  fileSize: 'file_size',
+  startTimestamp: 'start_timestamp',
+  endTimestamp: 'end_timestamp',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
+}
+const DEFAULT_SORT_COLUMN = 'created_at'
 
 export class SqliteCutRepository implements ICutRepository {
   constructor(private db: BetterSqlite3.Database) {}
@@ -115,6 +130,57 @@ export class SqliteCutRepository implements ICutRepository {
 
   delete(id: string): void {
     this.db.prepare('DELETE FROM cuts WHERE id = ?').run(id)
+  }
+
+  findPaginated(params: CutQueryParams): PaginatedResult<Cut> {
+    const conditions: string[] = []
+    const bindings: unknown[] = []
+
+    if (params.creatorId) {
+      conditions.push('creator_id = ?')
+      bindings.push(params.creatorId)
+    }
+
+    if (params.videoId) {
+      conditions.push('video_id = ?')
+      bindings.push(params.videoId)
+    }
+
+    if (params.tags && params.tags.length > 0) {
+      const placeholders = params.tags.map(() => '?').join(', ')
+      conditions.push(
+        `EXISTS (SELECT 1 FROM json_each(cuts.tags) WHERE value IN (${placeholders}))`
+      )
+      bindings.push(...params.tags)
+    }
+
+    if (params.search) {
+      conditions.push('title LIKE ?')
+      bindings.push(`%${params.search}%`)
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    const sortCol = CUT_SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
+    const sortDir = params.sortDirection === 'desc' ? 'DESC' : 'ASC'
+    const offset = (params.page - 1) * params.pageSize
+
+    const total = (
+      this.db.prepare(`SELECT COUNT(*) AS count FROM cuts ${where}`).get(...bindings) as {
+        count: number
+      }
+    ).count
+
+    const rows = this.db
+      .prepare(
+        `SELECT id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
+                duration, resolution, file_size, file_path, thumbnail_path, created_at, updated_at
+         FROM cuts ${where}
+         ORDER BY ${sortCol} ${sortDir}
+         LIMIT ? OFFSET ?`
+      )
+      .all(...bindings, params.pageSize, offset) as RawCutRow[]
+
+    return paginatedResult(rows.map(mapRowToCut), total, params)
   }
 }
 

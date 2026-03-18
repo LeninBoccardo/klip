@@ -1,6 +1,20 @@
 import type BetterSqlite3 from 'better-sqlite3'
 import type { Video } from '@domain/entities'
-import type { IVideoRepository } from '@domain/repositories'
+import type { IVideoRepository, VideoQueryParams } from '@domain/repositories'
+import type { PaginatedResult } from '@domain/types'
+import { paginatedResult } from '@domain/types'
+
+// ── sort-column allowlist (camelCase UI key → snake_case DB column) ──
+
+const VIDEO_SORT_COLUMNS: Record<string, string> = {
+  title: 'title',
+  duration: 'duration',
+  fileSize: 'file_size',
+  downloadDate: 'download_date',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
+}
+const DEFAULT_SORT_COLUMN = 'created_at'
 
 export class SqliteVideoRepository implements IVideoRepository {
   constructor(private db: BetterSqlite3.Database) {}
@@ -78,6 +92,44 @@ export class SqliteVideoRepository implements IVideoRepository {
 
   delete(id: string): void {
     this.db.prepare('DELETE FROM videos WHERE id = ?').run(id)
+  }
+
+  findPaginated(params: VideoQueryParams): PaginatedResult<Video> {
+    const conditions: string[] = []
+    const bindings: unknown[] = []
+
+    if (params.creatorId) {
+      conditions.push('creator_id = ?')
+      bindings.push(params.creatorId)
+    }
+
+    if (params.search) {
+      conditions.push('title LIKE ?')
+      bindings.push(`%${params.search}%`)
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    const sortCol = VIDEO_SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
+    const sortDir = params.sortDirection === 'desc' ? 'DESC' : 'ASC'
+    const offset = (params.page - 1) * params.pageSize
+
+    const total = (
+      this.db.prepare(`SELECT COUNT(*) AS count FROM videos ${where}`).get(...bindings) as {
+        count: number
+      }
+    ).count
+
+    const rows = this.db
+      .prepare(
+        `SELECT id, creator_id, title, url, duration, resolution, file_size,
+                file_path, thumbnail_path, download_date, created_at, updated_at
+         FROM videos ${where}
+         ORDER BY ${sortCol} ${sortDir}
+         LIMIT ? OFFSET ?`
+      )
+      .all(...bindings, params.pageSize, offset) as RawVideoRow[]
+
+    return paginatedResult(rows.map(mapRowToVideo), total, params)
   }
 }
 
