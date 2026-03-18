@@ -2,6 +2,18 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { initializeDatabase } from './framework-drivers/database'
+import {
+  SqliteCreatorRepository,
+  SqliteVideoRepository,
+  SqliteCutRepository
+} from './interface-adapters/repositories'
+import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
+
+// ── Repository singletons (initialised in createDb, consumed by IPC controllers) ──
+export let creatorRepository: ICreatorRepository
+export let videoRepository: IVideoRepository
+export let cutRepository: ICutRepository
 
 function createWindow(): void {
   // Create the browser window.
@@ -27,7 +39,7 @@ function createWindow(): void {
   })
 
   // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
+  // Load the remote URL for development or the local HTML file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -36,7 +48,14 @@ function createWindow(): void {
 }
 
 function createDb(): void {
-  //TODO: Initialize database connection and setup tables
+  const dbPath = join(app.getPath('userData'), 'klip.db')
+  const db = initializeDatabase(dbPath)
+
+  creatorRepository = new SqliteCreatorRepository(db)
+  videoRepository = new SqliteVideoRepository(db)
+  cutRepository = new SqliteCutRepository(db)
+
+  console.log(`[klip] Database initialised at ${dbPath}`)
 }
 
 // This method will be called when Electron has finished
@@ -61,7 +80,7 @@ app.whenReady().then(() => {
   createWindow()
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
+    // On macOS, it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })

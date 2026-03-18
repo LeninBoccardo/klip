@@ -1,0 +1,157 @@
+import type BetterSqlite3 from 'better-sqlite3'
+import type { Cut } from '@domain/entities'
+import type { ICutRepository } from '@domain/repositories'
+
+export class SqliteCutRepository implements ICutRepository {
+  constructor(private db: BetterSqlite3.Database) {}
+
+  findAll(): Cut[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
+                duration, resolution, file_size, file_path, thumbnail_path, created_at, updated_at
+         FROM cuts ORDER BY created_at DESC`
+      )
+      .all() as RawCutRow[]
+
+    return rows.map(mapRowToCut)
+  }
+
+  findById(id: string): Cut | null {
+    const row = this.db
+      .prepare(
+        `SELECT id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
+                duration, resolution, file_size, file_path, thumbnail_path, created_at, updated_at
+         FROM cuts WHERE id = ?`
+      )
+      .get(id) as RawCutRow | undefined
+
+    return row ? mapRowToCut(row) : null
+  }
+
+  findByCreatorId(creatorId: string): Cut[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
+                duration, resolution, file_size, file_path, thumbnail_path, created_at, updated_at
+         FROM cuts WHERE creator_id = ? ORDER BY created_at DESC`
+      )
+      .all(creatorId) as RawCutRow[]
+
+    return rows.map(mapRowToCut)
+  }
+
+  findByVideoId(videoId: string): Cut[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
+                duration, resolution, file_size, file_path, thumbnail_path, created_at, updated_at
+         FROM cuts WHERE video_id = ? ORDER BY created_at DESC`
+      )
+      .all(videoId) as RawCutRow[]
+
+    return rows.map(mapRowToCut)
+  }
+
+  findByTags(tags: string[]): Cut[] {
+    if (tags.length === 0) return []
+
+    // Match cuts that contain ANY of the provided tags using json_each()
+    const placeholders = tags.map(() => '?').join(', ')
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT c.id, c.creator_id, c.video_id, c.title, c.tags,
+                c.start_timestamp, c.end_timestamp, c.duration, c.resolution,
+                c.file_size, c.file_path, c.thumbnail_path, c.created_at, c.updated_at
+         FROM cuts c, json_each(c.tags) AS t
+         WHERE t.value IN (${placeholders})
+         ORDER BY c.created_at DESC`
+      )
+      .all(...tags) as RawCutRow[]
+
+    return rows.map(mapRowToCut)
+  }
+
+  upsert(cut: Cut): void {
+    this.db
+      .prepare(
+        `INSERT INTO cuts (id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
+                           duration, resolution, file_size, file_path, thumbnail_path,
+                           created_at, updated_at)
+         VALUES (@id, @creatorId, @videoId, @title, @tags, @startTimestamp, @endTimestamp,
+                 @duration, @resolution, @fileSize, @filePath, @thumbnailPath,
+                 @createdAt, @updatedAt)
+         ON CONFLICT(id) DO UPDATE SET
+           creator_id      = excluded.creator_id,
+           video_id        = excluded.video_id,
+           title           = excluded.title,
+           tags            = excluded.tags,
+           start_timestamp = excluded.start_timestamp,
+           end_timestamp   = excluded.end_timestamp,
+           duration        = excluded.duration,
+           resolution      = excluded.resolution,
+           file_size       = excluded.file_size,
+           file_path       = excluded.file_path,
+           thumbnail_path  = excluded.thumbnail_path,
+           updated_at      = excluded.updated_at`
+      )
+      .run({
+        id: cut.id,
+        creatorId: cut.creatorId,
+        videoId: cut.videoId,
+        title: cut.title,
+        tags: JSON.stringify(cut.tags),
+        startTimestamp: cut.startTimestamp,
+        endTimestamp: cut.endTimestamp,
+        duration: cut.duration,
+        resolution: cut.resolution,
+        fileSize: cut.fileSize,
+        filePath: cut.filePath,
+        thumbnailPath: cut.thumbnailPath,
+        createdAt: cut.createdAt,
+        updatedAt: cut.updatedAt
+      })
+  }
+
+  delete(id: string): void {
+    this.db.prepare('DELETE FROM cuts WHERE id = ?').run(id)
+  }
+}
+
+// ── internal helpers ──
+
+interface RawCutRow {
+  id: string
+  creator_id: string
+  video_id: string | null
+  title: string
+  tags: string
+  start_timestamp: number | null
+  end_timestamp: number | null
+  duration: number | null
+  resolution: string | null
+  file_size: number | null
+  file_path: string
+  thumbnail_path: string | null
+  created_at: string
+  updated_at: string
+}
+
+function mapRowToCut(row: RawCutRow): Cut {
+  return {
+    id: row.id,
+    creatorId: row.creator_id,
+    videoId: row.video_id,
+    title: row.title,
+    tags: JSON.parse(row.tags) as string[],
+    startTimestamp: row.start_timestamp,
+    endTimestamp: row.end_timestamp,
+    duration: row.duration,
+    resolution: row.resolution,
+    fileSize: row.file_size,
+    filePath: row.file_path,
+    thumbnailPath: row.thumbnail_path,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}

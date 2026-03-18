@@ -1,0 +1,1 @@
+export { initializeDatabase } from './database'
