@@ -20,7 +20,7 @@ const BIN_DIR = nodePathResolver.join(__dirname, '..', 'resources', 'bin')
 
 // ── Version pins ──
 const YT_DLP_VERSION = '2025.02.19'
-const FFPROBE_VERSION = '7.1'
+const FFPROBE_VERSION = '6.1'
 
 // ── Platform detection ──
 type Platform = 'win32' | 'darwin' | 'linux'
@@ -62,27 +62,29 @@ function getYtDlpSpec(): BinarySpec {
   }
 }
 
+const BASE_FFPROBE_URL = 'https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v'
+
 function getFfprobeSpec(): BinarySpec {
   const arch = process.arch === 'arm64' ? 'arm64' : 'amd64'
   switch (platform) {
     case 'win32':
       return {
         name: 'ffprobe',
-        url: `https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-windows-64.zip`,
+        url: `${BASE_FFPROBE_URL}${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-win-64.zip`,
         outputName: 'ffprobe.exe',
         extractType: 'zip'
       }
     case 'darwin':
       return {
         name: 'ffprobe',
-        url: `https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-osx-64.zip`,
+        url: `${BASE_FFPROBE_URL}${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-macos-64.zip`,
         outputName: 'ffprobe',
         extractType: 'zip'
       }
     case 'linux':
       return {
         name: 'ffprobe',
-        url: `https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-linux-${arch === 'arm64' ? 'arm-64' : '64'}.zip`,
+        url: `${BASE_FFPROBE_URL}${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-linux-${arch === 'arm64' ? 'arm-64' : '64'}.zip`,
         outputName: 'ffprobe',
         extractType: 'zip'
       }
