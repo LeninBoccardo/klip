@@ -1,5 +1,5 @@
 import type { Cut } from '@domain/entities'
-import type { PaginationParams, PaginatedResult } from '@domain/types'
+import type { PaginationParams, PaginatedResult, EntityStatus } from '@domain/types'
 
 export interface CutQueryParams extends PaginationParams {
   creatorId?: string
@@ -9,11 +9,13 @@ export interface CutQueryParams extends PaginationParams {
 
 export interface ICutRepository {
   findAll(): Cut[]
+  findAllActive(): Cut[]
   findById(id: string): Cut | null
   findByCreatorId(creatorId: string): Cut[]
   findByVideoId(videoId: string): Cut[]
   findByTags(tags: string[]): Cut[]
   upsert(cut: Cut): void
+  updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   delete(id: string): void
   findPaginated(params: CutQueryParams): PaginatedResult<Cut>
 }

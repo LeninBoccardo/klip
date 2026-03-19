@@ -8,6 +8,9 @@ import {
   SqliteVideoRepository,
   SqliteCutRepository
 } from './interface-adapters/repositories'
+import { NodeFileSystemReader } from './interface-adapters/file-system'
+import { ReconcileDirectory } from './use-cases/ReconcileDirectory'
+import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
 import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
 
 // ── Repository singletons (initialised in createDb, consumed by IPC controllers) ──
@@ -76,6 +79,18 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   createDb()
+
+  // ── Reconciliation setup ──
+  const rootPath = join(app.getPath('documents'), 'klip')
+  const fsReader = new NodeFileSystemReader()
+  const reconcile = new ReconcileDirectory(
+    creatorRepository,
+    videoRepository,
+    cutRepository,
+    fsReader
+  )
+  registerReconcileController(reconcile, rootPath)
+  console.log(`[klip] Reconciliation controller registered (root: ${rootPath})`)
 
   createWindow()
 

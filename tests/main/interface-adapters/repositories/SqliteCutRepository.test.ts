@@ -14,6 +14,8 @@ function makeCreator(overrides: Partial<Creator> = {}): Creator {
     id: 'creator-1',
     name: 'Test Creator',
     profileImagePath: null,
+    status: 'active',
+    deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ...overrides
@@ -32,6 +34,8 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     filePath: '/videos/test.mp4',
     thumbnailPath: null,
     downloadDate: null,
+    status: 'active',
+    deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ...overrides
@@ -52,6 +56,8 @@ function makeCut(overrides: Partial<Cut> = {}): Cut {
     fileSize: 10_000_000,
     filePath: '/cuts/cut1.mp4',
     thumbnailPath: null,
+    status: 'active',
+    deletedAt: null,
     createdAt: '2025-01-03T00:00:00.000Z',
     updatedAt: '2025-01-03T00:00:00.000Z',
     ...overrides

@@ -8,6 +8,8 @@ function makeCreator(overrides: Partial<Creator> = {}): Creator {
     id: 'creator-1',
     name: 'Test Creator',
     profileImagePath: null,
+    status: 'active',
+    deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ...overrides
@@ -142,6 +144,47 @@ describe('SqliteCreatorRepository', () => {
       expect(result.data).toHaveLength(0)
       expect(result.total).toBe(25)
     })
+
+    it('defaults to status=active filter', () => {
+      repo.updateStatus('c-01', 'missing', null)
+      repo.updateStatus('c-02', 'deleted', '2025-06-01T00:00:00.000Z')
+
+      const result = repo.findPaginated({ page: 1, pageSize: 50 })
+      expect(result.total).toBe(23)
+    })
+
+    it('filters by explicit status array', () => {
+      repo.updateStatus('c-01', 'missing', null)
+
+      const result = repo.findPaginated({ page: 1, pageSize: 50, status: ['missing'] })
+      expect(result.total).toBe(1)
+      expect(result.data[0].status).toBe('missing')
+    })
+  })
+
+  // ── updateStatus ──
+
+  it('sets status and deletedAt', () => {
+    repo.upsert(makeCreator())
+    repo.updateStatus('creator-1', 'deleted', '2025-06-01T00:00:00.000Z')
+
+    const result = repo.findById('creator-1')
+    expect(result?.status).toBe('deleted')
+    expect(result?.deletedAt).toBe('2025-06-01T00:00:00.000Z')
+  })
+
+  // ── findAllActive ──
+
+  it('returns only active creators', () => {
+    repo.upsert(makeCreator({ id: 'c-1', name: 'Active' }))
+    repo.upsert(makeCreator({ id: 'c-2', name: 'Missing', status: 'missing' }))
+    repo.upsert(
+      makeCreator({ id: 'c-3', name: 'Deleted', status: 'deleted', deletedAt: '2025-06-01' })
+    )
+
+    const active = repo.findAllActive()
+    expect(active).toHaveLength(1)
+    expect(active[0].name).toBe('Active')
   })
 })
 

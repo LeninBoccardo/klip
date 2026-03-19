@@ -4,7 +4,7 @@
 
 Klip is a local, offline-first desktop asset manager designed to organize downloaded source videos (e.g., from YouTube) and manually created video cuts (e.g., exported from CapCut).
 
-**Core Paradigm:** The OS File System is the single source of truth, but it is never queried directly by the UI.
+**Core Paradigm:** The SQLite index is the authoritative source of truth for application state, while the OS file system acts as the underlying storage layer. The UI interacts exclusively with the indexed data, and file system changes are ingested through controlled synchronization processes.
 
 **Target Folder Structure:**
 ```text

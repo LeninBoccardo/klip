@@ -1,3 +1,5 @@
+import type { EntityStatus } from '@domain/types'
+
 export interface Cut {
   id: string
   creatorId: string
@@ -11,6 +13,8 @@ export interface Cut {
   fileSize: number | null
   filePath: string
   thumbnailPath: string | null
+  status: EntityStatus
+  deletedAt: string | null
   createdAt: string
   updatedAt: string
 }

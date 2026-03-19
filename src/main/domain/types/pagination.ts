@@ -1,3 +1,5 @@
+import type { EntityStatus } from './entity-status'
+
 /** Sort direction */
 export type SortDirection = 'asc' | 'desc'
 
@@ -13,6 +15,8 @@ export interface PaginationParams {
   sortDirection?: SortDirection
   /** Free-text search term applied to relevant text columns */
   search?: string
+  /** Filter by entity status. Defaults to ['active'] when omitted. */
+  status?: EntityStatus[]
 }
 
 /** Generic paginated result returned to the UI */

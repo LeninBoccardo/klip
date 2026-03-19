@@ -26,7 +26,7 @@ describe('initializeDatabase', () => {
   it('sets user_version to the current schema version', () => {
     db = createTestDb()
     const version = db.pragma('user_version', { simple: true }) as number
-    expect(version).toBeGreaterThanOrEqual(1)
+    expect(version).toBe(2)
   })
 
   it('creates all expected tables', () => {
@@ -57,10 +57,18 @@ describe('initializeDatabase', () => {
 
   it('is idempotent — calling twice on the same DB does not throw', () => {
     db = createTestDb()
-    // The second call would be like re-opening an existing DB
-    // We simulate by checking the version again — migration should be skipped
     const version = db.pragma('user_version', { simple: true }) as number
-    expect(version).toBeGreaterThanOrEqual(1)
+    expect(version).toBe(2)
+  })
+
+  it('adds status and deleted_at columns to all tables (migration v2)', () => {
+    db = createTestDb()
+    for (const table of ['creators', 'videos', 'cuts']) {
+      const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+      const colNames = columns.map((c) => c.name)
+      expect(colNames).toContain('status')
+      expect(colNames).toContain('deleted_at')
+    }
   })
 })
 
