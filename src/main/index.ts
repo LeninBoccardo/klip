@@ -9,21 +9,25 @@ import {
   SqliteCutRepository
 } from './interface-adapters/repositories'
 import { NodeFileSystemReader } from './interface-adapters/file-system'
-import { ReconcileDirectory } from './use-cases/ReconcileDirectory'
-import { ProcessFileNotifications } from './use-cases/ProcessFileNotifications'
+import { ReconcileDirectory } from '@use-cases/ReconcileDirectory'
+import { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
 import { PQueueNotificationQueue } from './interface-adapters/queue'
 import { NodeDebouncer } from './framework-drivers/timers'
 import { ElectronNotifier } from './framework-drivers/electron/ElectronNotifier'
+import { ChokidarWatcher } from './framework-drivers/file-system/ChokidarWatcher'
 import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
+import type { IFileWatcher } from '@domain/ports'
 
 // ── Repository singletons (initialised in createDb, consumed by IPC controllers) ──
 export let creatorRepository: ICreatorRepository
 export let videoRepository: IVideoRepository
 export let cutRepository: ICutRepository
 
-// ── Notification processor (initialised in app.whenReady, consumed by future ChokidarWatcher) ──
+// ── Notification processor + file watcher (initialised in app.whenReady) ──
 export let processNotifications: ProcessFileNotifications
+let fileWatcher: IFileWatcher
+let debouncer: NodeDebouncer
 
 function createWindow(): void {
   // Create the browser window.
@@ -101,7 +105,7 @@ app.whenReady().then(() => {
 
   // ── Notification queue setup ──
   const notificationQueue = new PQueueNotificationQueue()
-  const debouncer = new NodeDebouncer()
+  debouncer = new NodeDebouncer()
   const electronNotifier = new ElectronNotifier()
   processNotifications = new ProcessFileNotifications(
     notificationQueue,
@@ -112,6 +116,19 @@ app.whenReady().then(() => {
   )
   console.log(`[klip] Notification queue initialised (debounce: 1000ms, threshold: 50)`)
 
+  // ── Initial reconciliation (one-time full scan at startup) ──
+  try {
+    const result = reconcile.execute(rootPath)
+    console.log(`[klip] Initial reconciliation complete:`, result)
+  } catch (error) {
+    console.error(`[klip] Initial reconciliation failed:`, error)
+  }
+
+  // ── File watcher setup (runtime changes only, ignoreInitial: true) ──
+  fileWatcher = new ChokidarWatcher(rootPath)
+  fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
+  fileWatcher.start()
+
   createWindow()
 
   app.on('activate', function () {
@@ -119,6 +136,13 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+// Graceful shutdown: stop watcher and cancel pending debounce before quit
+app.on('before-quit', () => {
+  fileWatcher?.stop()
+  debouncer?.cancel()
+  console.log('[klip] File watcher stopped, debouncer cancelled')
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

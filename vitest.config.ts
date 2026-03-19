@@ -52,6 +52,7 @@ export default defineConfig({
         'src/main/interface-adapters/controllers/**',
         'src/main/interface-adapters/file-system/**',
         'src/main/framework-drivers/electron/**',
+        'src/main/framework-drivers/file-system/**',
         'src/renderer/components/ui/**',
         'src/renderer/src/env.d.ts'
       ],

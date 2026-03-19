@@ -69,7 +69,7 @@ The Main process must adhere to SOLID principles and isolate business logic from
   - `file-system/` — Port implementations (e.g., `NodeFileSystemReader`)
   - `queue/` — Notification queue implementation (`PQueueNotificationQueue`)
 
-- `framework-drivers/`: Raw DB initialization (`database/database.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`), and window management.
+- `framework-drivers/`: Raw DB initialization (`database/database.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`), file-system watcher (`file-system/ChokidarWatcher.ts`), and window management.
 
 ## Path Aliases
 
@@ -144,7 +144,7 @@ tests/
 
 - Global: 80% (statements, branches, functions, lines).
 - `src/main/use-cases/`: 90% target (not yet enforced per-project; will be added to `vitest.config.ts` when use-cases grow).
-- Excluded from coverage: `src/main/index.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), port interfaces (`src/main/domain/ports/I*.ts`), pure type-only files (`entity-status.ts`, `file-event.ts`, `notification-events.ts`), IPC controllers (`src/main/interface-adapters/controllers/**`), file-system adapters (`src/main/interface-adapters/file-system/**`), Electron-dependent drivers (`src/main/framework-drivers/electron/**`), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
+- Excluded from coverage: `src/main/index.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), port interfaces (`src/main/domain/ports/I*.ts`), pure type-only files (`entity-status.ts`, `file-event.ts`, `notification-events.ts`), IPC controllers (`src/main/interface-adapters/controllers/**`), file-system adapters (`src/main/interface-adapters/file-system/**`), Electron-dependent drivers (`src/main/framework-drivers/electron/**`), file-system drivers (`src/main/framework-drivers/file-system/**`), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
 
 ## CI Pipeline
 

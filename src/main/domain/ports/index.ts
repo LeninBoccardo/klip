@@ -1,4 +1,5 @@
 export type { IFileSystemReader } from './IFileSystemReader'
+export type { IFileWatcher } from './IFileWatcher'
 export type { INotificationQueue } from './INotificationQueue'
 export type { IDebouncer } from './IDebouncer'
 export type { INotifier } from './INotifier'
