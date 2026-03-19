@@ -3,7 +3,20 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  reconcile: (): Promise<unknown> => ipcRenderer.invoke('reconcile')
+  reconcile: (): Promise<unknown> => ipcRenderer.invoke('reconcile'),
+  fetchVideoInfo: (url: string): Promise<unknown> => ipcRenderer.invoke('fetch-video-info', url),
+  downloadVideo: (url: string, creatorName: string): Promise<unknown> =>
+    ipcRenderer.invoke('download-video', url, creatorName),
+  cancelDownload: (downloadId: string): Promise<void> =>
+    ipcRenderer.invoke('cancel-download', downloadId),
+  probeMediaFile: (filePath: string): Promise<unknown> =>
+    ipcRenderer.invoke('probe-media-file', filePath),
+  onDownloadProgress: (callback: (_event: unknown, data: unknown) => void): (() => void) => {
+    ipcRenderer.on('download-progress', callback)
+    return (): void => {
+      ipcRenderer.removeListener('download-progress', callback)
+    }
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

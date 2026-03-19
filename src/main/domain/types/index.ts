@@ -6,3 +6,11 @@ export { collapseEvents } from './collapse-events'
 export type { NotificationEventMap, NotificationChannel } from './notification-events'
 export type { PathClassification } from './path-classification'
 export { classifyPath } from './path-classification'
+export type {
+  DownloadStatus,
+  DownloadRequest,
+  DownloadProgress,
+  DownloadResult,
+  VideoInfo
+} from './download'
+export type { MediaProbeResult } from './media-probe'

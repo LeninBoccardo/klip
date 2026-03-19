@@ -1,9 +1,12 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
+import { registerDownloadController } from './interface-adapters/controllers/DownloadController'
+import { NodePathResolver } from '@main/interface-adapters/file-system'
+
+const nodePathResolver = new NodePathResolver()
 
 // ── Application container (initialised in app.whenReady) ──
 let container: AppContainer
@@ -17,7 +20,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: nodePathResolver.join(__dirname, '../preload/index.js'),
       sandbox: false
     }
   })
@@ -36,7 +39,7 @@ function createWindow(): void {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(nodePathResolver.join(__dirname, '../renderer/index.html'))
   }
 }
 
@@ -58,14 +61,19 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   // ── Create DI container ──
-  const rootPath = join(app.getPath('documents'), 'klip')
-  const dbPath = join(app.getPath('userData'), 'klip.db')
+  const rootPath = nodePathResolver.join(app.getPath('documents'), 'klip')
+  const dbPath = nodePathResolver.join(app.getPath('userData'), 'klip.db')
   container = createAppContainer({ dbPath, rootPath })
   console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
 
   // ── Register IPC controllers ──
   registerReconcileController(container.useCases.reconcile, rootPath)
-  console.log(`[klip] Reconciliation controller registered`)
+  registerDownloadController(
+    container.useCases.fetchVideoInfo,
+    container.useCases.downloadVideo,
+    container.useCases.probeMediaFile
+  )
+  console.log(`[klip] IPC controllers registered`)
 
   // ── Initial reconciliation (one-time full scan at startup) ──
   try {

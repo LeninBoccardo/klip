@@ -1,0 +1,33 @@
+import { app } from 'electron'
+import type { IBinaryResolver } from '@domain/ports'
+import { NodePathResolver } from '@main/interface-adapters/file-system'
+
+const nodePathResolver = new NodePathResolver()
+
+type SupportedPlatform = 'win32' | 'darwin' | 'linux'
+
+const BINARY_NAMES: Record<string, Record<SupportedPlatform, string>> = {
+  'yt-dlp': { win32: 'yt-dlp.exe', darwin: 'yt-dlp', linux: 'yt-dlp' },
+  ffprobe: { win32: 'ffprobe.exe', darwin: 'ffprobe', linux: 'ffprobe' }
+}
+
+/**
+ * Resolves external binary paths depending on whether the app is packaged or running in dev.
+ *
+ * - **Packaged:** `process.resourcesPath/bin/<binary>`
+ * - **Dev:** `<project-root>/resources/bin/<binary>`
+ */
+export class ElectronBinaryResolver implements IBinaryResolver {
+  resolve(name: 'yt-dlp' | 'ffprobe'): string {
+    const platform = process.platform as SupportedPlatform
+    const platformMap = BINARY_NAMES[name]
+    const fileName = platformMap[platform] ?? platformMap['linux']
+
+    if (app.isPackaged) {
+      return nodePathResolver.join(process.resourcesPath, 'bin', fileName)
+    }
+
+    // Dev: relative to project root (electron-vite sets __dirname to out/main/)
+    return nodePathResolver.join(app.getAppPath(), 'resources', 'bin', fileName)
+  }
+}

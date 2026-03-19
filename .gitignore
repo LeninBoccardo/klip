@@ -4,3 +4,7 @@ out
 .DS_Store
 .eslintcache
 *.log*
+
+# External binaries (downloaded via `npm run setup`)
+resources/bin/
+

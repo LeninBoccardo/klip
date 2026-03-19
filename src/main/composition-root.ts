@@ -4,24 +4,42 @@ import type {
   IFileWatcher,
   IDebouncer,
   IFileSystemReader,
+  IFileSystemWriter,
   IPathResolver,
   ITransactionScope,
-  INotifier
+  INotifier,
+  IBinaryResolver,
+  IVideoDownloader,
+  IMediaProbe,
+  IDownloadQueue
 } from '@domain/ports'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
+import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
+import type { IDownloadVideo } from '@use-cases/IDownloadVideo'
+import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
 import { initializeDatabase, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
   SqliteVideoRepository,
   SqliteCutRepository
 } from './interface-adapters/repositories'
-import { NodeFileSystemReader, NodePathResolver } from './interface-adapters/file-system'
-import { PQueueNotificationQueue } from './interface-adapters/queue'
+import {
+  NodeFileSystemReader,
+  NodeFileSystemWriter,
+  NodePathResolver
+} from './interface-adapters/file-system'
+import { PQueueNotificationQueue, PQueueDownloadQueue } from './interface-adapters/queue'
 import { NodeDebouncer } from './framework-drivers/timers'
 import { ElectronNotifier } from './framework-drivers/electron/ElectronNotifier'
+import { ElectronBinaryResolver } from './framework-drivers/electron/ElectronBinaryResolver'
 import { ChokidarWatcher } from './framework-drivers/file-system/ChokidarWatcher'
+import { YtDlpDownloader } from './framework-drivers/yt-dlp/YtDlpDownloader'
+import { FfprobeMediaProbe } from './framework-drivers/ffprobe/FfprobeMediaProbe'
 import { ReconcileDirectory } from '@use-cases/ReconcileDirectory'
 import { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
+import { FetchVideoInfo } from '@use-cases/FetchVideoInfo'
+import { DownloadVideo } from '@use-cases/DownloadVideo'
+import { ProbeMediaFile } from '@use-cases/ProbeMediaFile'
 
 /**
  * Application dependency container.
@@ -36,14 +54,22 @@ export interface AppContainer {
   }
   ports: {
     fsReader: IFileSystemReader
+    fsWriter: IFileSystemWriter
     pathResolver: IPathResolver
     transactionScope: ITransactionScope
     notifier: INotifier
     debouncer: IDebouncer
+    binaryResolver: IBinaryResolver
+    videoDownloader: IVideoDownloader
+    mediaProbe: IMediaProbe
+    downloadQueue: IDownloadQueue
   }
   useCases: {
     reconcile: IReconcileDirectory
     processNotifications: ProcessFileNotifications
+    fetchVideoInfo: IFetchVideoInfo
+    downloadVideo: IDownloadVideo
+    probeMediaFile: IProbeMediaFile
   }
   services: {
     fileWatcher: IFileWatcher
@@ -67,10 +93,15 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   // ── Ports / adapters ──
   const fsReader = new NodeFileSystemReader()
+  const fsWriter = new NodeFileSystemWriter()
   const pathResolver = new NodePathResolver()
   const transactionScope = new SqliteTransactionScope(db)
   const notifier = new ElectronNotifier()
   const debouncer = new NodeDebouncer()
+  const binaryResolver = new ElectronBinaryResolver()
+  const videoDownloader = new YtDlpDownloader(binaryResolver)
+  const mediaProbe = new FfprobeMediaProbe(binaryResolver)
+  const downloadQueue = new PQueueDownloadQueue(2)
 
   // ── Repositories ──
   const creatorRepo = new SqliteCreatorRepository(db)
@@ -96,6 +127,22 @@ export function createAppContainer(config: AppConfig): AppContainer {
     config.rootPath
   )
 
+  const fetchVideoInfo = new FetchVideoInfo(videoDownloader)
+
+  const downloadVideo = new DownloadVideo(
+    videoDownloader,
+    fetchVideoInfo,
+    downloadQueue,
+    creatorRepo,
+    videoRepo,
+    pathResolver,
+    fsWriter,
+    notifier,
+    config.rootPath
+  )
+
+  const probeMediaFile = new ProbeMediaFile(mediaProbe)
+
   // ── File watcher ──
   const fileWatcher = new ChokidarWatcher(config.rootPath)
   fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
@@ -109,14 +156,22 @@ export function createAppContainer(config: AppConfig): AppContainer {
     },
     ports: {
       fsReader,
+      fsWriter,
       pathResolver,
       transactionScope,
       notifier,
-      debouncer
+      debouncer,
+      binaryResolver,
+      videoDownloader,
+      mediaProbe,
+      downloadQueue
     },
     useCases: {
       reconcile,
-      processNotifications
+      processNotifications,
+      fetchVideoInfo,
+      downloadVideo,
+      probeMediaFile
     },
     services: {
       fileWatcher
@@ -124,6 +179,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
     shutdown(): void {
       fileWatcher.stop()
       debouncer.cancel()
+      downloadQueue.clear()
       db.close()
       console.log('[klip] Container shut down: watcher stopped, debouncer cancelled, DB closed')
     }

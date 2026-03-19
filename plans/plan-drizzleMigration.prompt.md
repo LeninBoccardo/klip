@@ -19,16 +19,16 @@ The current data layer uses raw `better-sqlite3` with hand-written SQL strings t
 
 ## Scope
 
-| In Scope | Out of Scope |
-|---|---|
-| Install `drizzle-orm` + `drizzle-kit` | Changing domain entities or repository interfaces |
-| Define Drizzle schema tables | Changing use-case logic |
-| Rewrite 3 Sqlite*Repository implementations | Changing the renderer or preload layers |
-| Replace manual migration system with Drizzle Kit | Changing the `ITransactionScope` port interface |
-| Update `SqliteTransactionScope` internals | Removing `better-sqlite3` (Drizzle uses it as driver) |
-| Update `composition-root.ts` wiring | Adding new features or tables |
-| Update test helper `createTestDb.ts` | Changing `ChokidarWatcher` or notification system |
-| Update all repository tests | — |
+| In Scope                                         | Out of Scope                                          |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| Install `drizzle-orm` + `drizzle-kit`            | Changing domain entities or repository interfaces     |
+| Define Drizzle schema tables                     | Changing use-case logic                               |
+| Rewrite 3 Sqlite\*Repository implementations     | Changing the renderer or preload layers               |
+| Replace manual migration system with Drizzle Kit | Changing the `ITransactionScope` port interface       |
+| Update `SqliteTransactionScope` internals        | Removing `better-sqlite3` (Drizzle uses it as driver) |
+| Update `composition-root.ts` wiring              | Adding new features or tables                         |
+| Update test helper `createTestDb.ts`             | Changing `ChokidarWatcher` or notification system     |
+| Update all repository tests                      | —                                                     |
 
 ---
 
@@ -51,26 +51,30 @@ These rules **must** remain intact after migration:
 ### Phase 1 — Install Dependencies & Configure Drizzle Kit
 
 **Files touched:**
+
 - `package.json`
-- `drizzle.config.ts` *(new)*
+- `drizzle.config.ts` _(new)_
 
 **Tasks:**
 
 1. Install packages:
+
    ```bash
    npm install drizzle-orm
    npm install -D drizzle-kit
    ```
+
    > `better-sqlite3` and `@types/better-sqlite3` are already installed — keep them.
 
 2. Create `drizzle.config.ts` at project root:
+
    ```ts
    import { defineConfig } from 'drizzle-kit'
 
    export default defineConfig({
      dialect: 'sqlite',
      schema: './src/main/framework-drivers/database/schema.ts',
-     out: './src/main/framework-drivers/database/migrations',
+     out: './src/main/framework-drivers/database/migrations'
    })
    ```
 
@@ -86,7 +90,8 @@ These rules **must** remain intact after migration:
 ### Phase 2 — Define Drizzle Schema
 
 **Files created:**
-- `src/main/framework-drivers/database/schema.ts` *(new)*
+
+- `src/main/framework-drivers/database/schema.ts` _(new)_
 
 **Tasks:**
 
@@ -97,62 +102,88 @@ Define all three tables using Drizzle's `sqliteTable` API, matching the existing
 import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
-export const creators = sqliteTable('creators', {
-  id:               text('id').primaryKey(),
-  name:             text('name').notNull(),
-  profileImagePath: text('profile_image_path'),
-  status:           text('status').notNull().default('active'),
-  deletedAt:        text('deleted_at'),
-  createdAt:        text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt:        text('updated_at').notNull().default(sql`(datetime('now'))`),
-}, (table) => [
-  index('idx_creators_status').on(table.status),
-])
+export const creators = sqliteTable(
+  'creators',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    profileImagePath: text('profile_image_path'),
+    status: text('status').notNull().default('active'),
+    deletedAt: text('deleted_at'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(datetime('now'))`)
+  },
+  (table) => [index('idx_creators_status').on(table.status)]
+)
 
-export const videos = sqliteTable('videos', {
-  id:            text('id').primaryKey(),
-  creatorId:     text('creator_id').notNull().references(() => creators.id, { onDelete: 'cascade' }),
-  title:         text('title').notNull(),
-  url:           text('url'),
-  duration:      integer('duration'),
-  resolution:    text('resolution'),
-  fileSize:      integer('file_size'),
-  filePath:      text('file_path').notNull(),
-  thumbnailPath: text('thumbnail_path'),
-  downloadDate:  text('download_date'),
-  status:        text('status').notNull().default('active'),
-  deletedAt:     text('deleted_at'),
-  createdAt:     text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt:     text('updated_at').notNull().default(sql`(datetime('now'))`),
-}, (table) => [
-  index('idx_videos_creator_id').on(table.creatorId),
-  index('idx_videos_status').on(table.status),
-  index('idx_videos_status_created').on(table.status, table.createdAt),
-])
+export const videos = sqliteTable(
+  'videos',
+  {
+    id: text('id').primaryKey(),
+    creatorId: text('creator_id')
+      .notNull()
+      .references(() => creators.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    url: text('url'),
+    duration: integer('duration'),
+    resolution: text('resolution'),
+    fileSize: integer('file_size'),
+    filePath: text('file_path').notNull(),
+    thumbnailPath: text('thumbnail_path'),
+    downloadDate: text('download_date'),
+    status: text('status').notNull().default('active'),
+    deletedAt: text('deleted_at'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(datetime('now'))`)
+  },
+  (table) => [
+    index('idx_videos_creator_id').on(table.creatorId),
+    index('idx_videos_status').on(table.status),
+    index('idx_videos_status_created').on(table.status, table.createdAt)
+  ]
+)
 
-export const cuts = sqliteTable('cuts', {
-  id:             text('id').primaryKey(),
-  creatorId:      text('creator_id').notNull().references(() => creators.id, { onDelete: 'cascade' }),
-  videoId:        text('video_id').references(() => videos.id, { onDelete: 'set null' }),
-  title:          text('title').notNull(),
-  tags:           text('tags').notNull().default('[]'),
-  startTimestamp: real('start_timestamp'),
-  endTimestamp:   real('end_timestamp'),
-  duration:       integer('duration'),
-  resolution:     text('resolution'),
-  fileSize:       integer('file_size'),
-  filePath:       text('file_path').notNull(),
-  thumbnailPath:  text('thumbnail_path'),
-  status:         text('status').notNull().default('active'),
-  deletedAt:      text('deleted_at'),
-  createdAt:      text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt:      text('updated_at').notNull().default(sql`(datetime('now'))`),
-}, (table) => [
-  index('idx_cuts_creator_id').on(table.creatorId),
-  index('idx_cuts_video_id').on(table.videoId),
-  index('idx_cuts_status').on(table.status),
-  index('idx_cuts_status_created').on(table.status, table.createdAt),
-])
+export const cuts = sqliteTable(
+  'cuts',
+  {
+    id: text('id').primaryKey(),
+    creatorId: text('creator_id')
+      .notNull()
+      .references(() => creators.id, { onDelete: 'cascade' }),
+    videoId: text('video_id').references(() => videos.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    tags: text('tags').notNull().default('[]'),
+    startTimestamp: real('start_timestamp'),
+    endTimestamp: real('end_timestamp'),
+    duration: integer('duration'),
+    resolution: text('resolution'),
+    fileSize: integer('file_size'),
+    filePath: text('file_path').notNull(),
+    thumbnailPath: text('thumbnail_path'),
+    status: text('status').notNull().default('active'),
+    deletedAt: text('deleted_at'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(datetime('now'))`)
+  },
+  (table) => [
+    index('idx_cuts_creator_id').on(table.creatorId),
+    index('idx_cuts_video_id').on(table.videoId),
+    index('idx_cuts_status').on(table.status),
+    index('idx_cuts_status_created').on(table.status, table.createdAt)
+  ]
+)
 ```
 
 > **Column naming:** Drizzle's schema keys are camelCase (matching our domain entities), while the SQL column names in `text('snake_case')` match the existing DB. This eliminates all manual `mapRowToEntity` functions.
@@ -162,8 +193,9 @@ export const cuts = sqliteTable('cuts', {
 ### Phase 3 — Replace Manual Migration System with Drizzle
 
 **Files touched:**
-- `src/main/framework-drivers/database/database.ts` *(rewrite)*
-- `src/main/framework-drivers/database/index.ts` *(update exports)*
+
+- `src/main/framework-drivers/database/database.ts` _(rewrite)_
+- `src/main/framework-drivers/database/index.ts` _(update exports)_
 
 **Tasks:**
 
@@ -203,7 +235,7 @@ export const cuts = sqliteTable('cuts', {
    }
    ```
 
-2. **Handle `:memory:` databases in tests:** Drizzle's `migrate()` reads migration files from disk, which works for the real app. For in-memory test DBs, use `db.run(sql\`...\`)` to push the schema directly, or use Drizzle Kit's `push` strategy. The recommended approach:
+2. **Handle `:memory:` databases in tests:** Drizzle's `migrate()` reads migration files from disk, which works for the real app. For in-memory test DBs, use `db.run(sql\`...\`)`to push the schema directly, or use Drizzle Kit's`push` strategy. The recommended approach:
    - Create a `pushSchema()` helper that uses the Drizzle schema to create tables directly on an in-memory DB.
    - Or, use `drizzle-orm`'s ability to call `raw.exec()` on the underlying driver to run the migration SQL inline in tests.
 
@@ -217,25 +249,27 @@ export const cuts = sqliteTable('cuts', {
 ### Phase 4 — Rewrite Repository Implementations
 
 **Files touched:**
-- `src/main/interface-adapters/repositories/SqliteCreatorRepository.ts` *(rewrite)*
-- `src/main/interface-adapters/repositories/SqliteVideoRepository.ts` *(rewrite)*
-- `src/main/interface-adapters/repositories/SqliteCutRepository.ts` *(rewrite)*
+
+- `src/main/interface-adapters/repositories/SqliteCreatorRepository.ts` _(rewrite)_
+- `src/main/interface-adapters/repositories/SqliteVideoRepository.ts` _(rewrite)_
+- `src/main/interface-adapters/repositories/SqliteCutRepository.ts` _(rewrite)_
 
 **Key changes per repository:**
 
 #### 4a. `SqliteCreatorRepository`
 
-| Before (raw SQL) | After (Drizzle) |
-|---|---|
-| `this.db.prepare('SELECT … FROM creators').all()` | `this.db.select().from(creators)` |
-| `this.db.prepare('INSERT … ON CONFLICT …').run({…})` | `this.db.insert(creators).values({…}).onConflictDoUpdate({…})` |
-| `RawCreatorRow` interface + `mapRowToCreator()` | **Deleted** — Drizzle returns camelCase-keyed objects matching `Creator` |
-| `CREATOR_SORT_COLUMNS` string map | Type-safe column map: `Record<string, SQLiteColumn>` using Drizzle column refs |
-| String-concatenated `WHERE` / `ORDER BY` | Drizzle's `where(and(…))`, `orderBy(asc(col))` |
+| Before (raw SQL)                                     | After (Drizzle)                                                                |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `this.db.prepare('SELECT … FROM creators').all()`    | `this.db.select().from(creators)`                                              |
+| `this.db.prepare('INSERT … ON CONFLICT …').run({…})` | `this.db.insert(creators).values({…}).onConflictDoUpdate({…})`                 |
+| `RawCreatorRow` interface + `mapRowToCreator()`      | **Deleted** — Drizzle returns camelCase-keyed objects matching `Creator`       |
+| `CREATOR_SORT_COLUMNS` string map                    | Type-safe column map: `Record<string, SQLiteColumn>` using Drizzle column refs |
+| String-concatenated `WHERE` / `ORDER BY`             | Drizzle's `where(and(…))`, `orderBy(asc(col))`                                 |
 
 **Constructor change:** Accept `BetterSQLite3Database<typeof schema>` instead of raw `BetterSqlite3.Database`.
 
 **Example — `findAllActive()`:**
+
 ```ts
 // Before
 const rows = this.db
@@ -252,6 +286,7 @@ return this.db
 ```
 
 **Example — `upsert()`:**
+
 ```ts
 // Before — hand-written ON CONFLICT
 this.db.prepare(`INSERT INTO creators (...) VALUES (...) ON CONFLICT(id) DO UPDATE SET ...`).run({...})
@@ -278,12 +313,13 @@ this.db.insert(creators).values({
 ```
 
 **Example — `findPaginated()` with dynamic sort:**
+
 ```ts
 const SORT_COLUMNS: Record<string, SQLiteColumn> = {
   name: creators.name,
   status: creators.status,
   createdAt: creators.createdAt,
-  updatedAt: creators.updatedAt,
+  updatedAt: creators.updatedAt
 }
 
 const sortColumn = SORT_COLUMNS[params.sortBy ?? ''] ?? creators.name
@@ -315,6 +351,7 @@ Same pattern as Creator. Replace all raw SQL with Drizzle query builder. Drop `R
 Same pattern, with one notable difference:
 
 **Tags handling:**
+
 - `Cut.tags` is `string[]` in domain but stored as JSON `TEXT`.
 - On **write**: `JSON.stringify(cut.tags)` when passing to `.values()` / `.set()`.
 - On **read**: Post-process the result to parse `tags` with `JSON.parse()`. Drizzle doesn't auto-parse custom column types with the `select()` API, so either:
@@ -322,6 +359,7 @@ Same pattern, with one notable difference:
   - Or define a custom Drizzle column type with `customType()` that handles serialization.
 
 **`findByTags()` with `json_each()`:**
+
 ```ts
 // Drizzle supports raw SQL fragments for advanced queries
 const tagTable = sql`json_each(${cuts.tags})`
@@ -329,11 +367,8 @@ const tagTable = sql`json_each(${cuts.tags})`
 this.db
   .selectDistinct()
   .from(cuts)
-  .innerJoin(tagTable, sql`1=1`)  // json_each is a table-valued function
-  .where(and(
-    eq(cuts.status, 'active'),
-    inArray(sql`${tagTable}.value`, tags)
-  ))
+  .innerJoin(tagTable, sql`1=1`) // json_each is a table-valued function
+  .where(and(eq(cuts.status, 'active'), inArray(sql`${tagTable}.value`, tags)))
   .orderBy(desc(cuts.createdAt))
 ```
 
@@ -344,6 +379,7 @@ this.db
 ### Phase 5 — Update `SqliteTransactionScope`
 
 **File touched:**
+
 - `src/main/framework-drivers/database/SqliteTransactionScope.ts`
 
 **Change:** The constructor can accept either the Drizzle DB instance or continue using the raw `better-sqlite3` instance, since Drizzle exposes `.transaction()` as well:
@@ -377,6 +413,7 @@ export class SqliteTransactionScope implements ITransactionScope {
 ### Phase 6 — Update Composition Root
 
 **File touched:**
+
 - `src/main/composition-root.ts`
 
 **Changes:**
@@ -395,7 +432,7 @@ const transactionScope = new SqliteTransactionScope(db)
 // After
 const { raw, db } = initializeDatabase(config.dbPath)
 const creatorRepo = new SqliteCreatorRepository(db)
-const transactionScope = new SqliteTransactionScope(raw)  // raw driver for transactions
+const transactionScope = new SqliteTransactionScope(raw) // raw driver for transactions
 ```
 
 5. Update `AppContainer` interface: store `raw` for shutdown and the Drizzle `db` for typing purposes. Alternatively, only expose what's needed — the rest is an implementation detail.
@@ -405,16 +442,18 @@ const transactionScope = new SqliteTransactionScope(raw)  // raw driver for tran
 ### Phase 7 — Update Test Infrastructure
 
 **Files touched:**
-- `tests/main/helpers/createTestDb.ts` *(rewrite)*
-- `tests/main/interface-adapters/repositories/SqliteCreatorRepository.test.ts` *(update)*
-- `tests/main/interface-adapters/repositories/SqliteVideoRepository.test.ts` *(update)*
-- `tests/main/interface-adapters/repositories/SqliteCutRepository.test.ts` *(update)*
-- `tests/main/framework-drivers/database.test.ts` *(update)*
-- `tests/main/framework-drivers/SqliteTransactionScope.test.ts` *(update)*
+
+- `tests/main/helpers/createTestDb.ts` _(rewrite)_
+- `tests/main/interface-adapters/repositories/SqliteCreatorRepository.test.ts` _(update)_
+- `tests/main/interface-adapters/repositories/SqliteVideoRepository.test.ts` _(update)_
+- `tests/main/interface-adapters/repositories/SqliteCutRepository.test.ts` _(update)_
+- `tests/main/framework-drivers/database.test.ts` _(update)_
+- `tests/main/framework-drivers/SqliteTransactionScope.test.ts` _(update)_
 
 **Tasks:**
 
 1. **Rewrite `createTestDb()`:**
+
    ```ts
    import BetterSqlite3 from 'better-sqlite3'
    import { drizzle } from 'drizzle-orm/better-sqlite3'
@@ -493,25 +532,25 @@ const transactionScope = new SqliteTransactionScope(raw)  // raw driver for tran
 
 ## File Change Summary
 
-| File | Action | Layer |
-|---|---|---|
-| `package.json` | Add `drizzle-orm`, `drizzle-kit`, new scripts | Config |
-| `drizzle.config.ts` | Create | Config |
-| `src/main/framework-drivers/database/schema.ts` | Create | Drivers |
-| `src/main/framework-drivers/database/migrations/` | Generated by Drizzle Kit | Drivers |
-| `src/main/framework-drivers/database/database.ts` | Rewrite | Drivers |
-| `src/main/framework-drivers/database/index.ts` | Update exports | Drivers |
-| `src/main/framework-drivers/database/SqliteTransactionScope.ts` | No change (Option B) or minor update | Drivers |
-| `src/main/interface-adapters/repositories/SqliteCreatorRepository.ts` | Rewrite | Adapters |
-| `src/main/interface-adapters/repositories/SqliteVideoRepository.ts` | Rewrite | Adapters |
-| `src/main/interface-adapters/repositories/SqliteCutRepository.ts` | Rewrite | Adapters |
-| `src/main/composition-root.ts` | Update wiring | Composition |
-| `tests/main/helpers/createTestDb.ts` | Rewrite | Tests |
-| `tests/main/interface-adapters/repositories/*.test.ts` | Update (DB instance type) | Tests |
-| `tests/main/framework-drivers/database.test.ts` | Update | Tests |
-| `tests/main/framework-drivers/SqliteTransactionScope.test.ts` | Minor update | Tests |
-| `vitest.config.ts` | Add coverage exclusions | Config |
-| `AGENTS.md` | Update docs | Docs |
+| File                                                                  | Action                                        | Layer       |
+| --------------------------------------------------------------------- | --------------------------------------------- | ----------- |
+| `package.json`                                                        | Add `drizzle-orm`, `drizzle-kit`, new scripts | Config      |
+| `drizzle.config.ts`                                                   | Create                                        | Config      |
+| `src/main/framework-drivers/database/schema.ts`                       | Create                                        | Drivers     |
+| `src/main/framework-drivers/database/migrations/`                     | Generated by Drizzle Kit                      | Drivers     |
+| `src/main/framework-drivers/database/database.ts`                     | Rewrite                                       | Drivers     |
+| `src/main/framework-drivers/database/index.ts`                        | Update exports                                | Drivers     |
+| `src/main/framework-drivers/database/SqliteTransactionScope.ts`       | No change (Option B) or minor update          | Drivers     |
+| `src/main/interface-adapters/repositories/SqliteCreatorRepository.ts` | Rewrite                                       | Adapters    |
+| `src/main/interface-adapters/repositories/SqliteVideoRepository.ts`   | Rewrite                                       | Adapters    |
+| `src/main/interface-adapters/repositories/SqliteCutRepository.ts`     | Rewrite                                       | Adapters    |
+| `src/main/composition-root.ts`                                        | Update wiring                                 | Composition |
+| `tests/main/helpers/createTestDb.ts`                                  | Rewrite                                       | Tests       |
+| `tests/main/interface-adapters/repositories/*.test.ts`                | Update (DB instance type)                     | Tests       |
+| `tests/main/framework-drivers/database.test.ts`                       | Update                                        | Tests       |
+| `tests/main/framework-drivers/SqliteTransactionScope.test.ts`         | Minor update                                  | Tests       |
+| `vitest.config.ts`                                                    | Add coverage exclusions                       | Config      |
+| `AGENTS.md`                                                           | Update docs                                   | Docs        |
 
 **Files NOT touched (confirming boundary respect):**
 
@@ -530,14 +569,14 @@ const transactionScope = new SqliteTransactionScope(raw)  // raw driver for tran
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-|---|---|
-| **Existing user databases break** after migration | Phase 8 baseline bridge: detect legacy `user_version` DBs and seed Drizzle journal |
-| **`json_each()` in Drizzle** is awkward | Fall back to `db.all(sql\`...\`)` for `findByTags()` only — raw SQL is still available via Drizzle's `sql` tag |
-| **In-memory test DBs** can't use file-based migrations | Push schema directly via raw `exec()` or Drizzle's programmatic schema push |
-| **Bundle size increase** from `drizzle-orm` | Minimal — `drizzle-orm` is ~50KB gzipped, runs in main process only (not shipped to renderer) |
-| **`drizzle-kit`** is dev-only | Already in `devDependencies` — not bundled in production |
-| **Drizzle's `select()` returns different shape** than domain entity for `cuts.tags` | Post-query `.map()` to parse JSON tags, or custom Drizzle column type |
+| Risk                                                                                | Mitigation                                                                                                 |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Existing user databases break** after migration                                   | Phase 8 baseline bridge: detect legacy `user_version` DBs and seed Drizzle journal                         |
+| **`json_each()` in Drizzle** is awkward                                             | Fall back to `db.all(sql\`...\`)`for`findByTags()`only — raw SQL is still available via Drizzle's`sql` tag |
+| **In-memory test DBs** can't use file-based migrations                              | Push schema directly via raw `exec()` or Drizzle's programmatic schema push                                |
+| **Bundle size increase** from `drizzle-orm`                                         | Minimal — `drizzle-orm` is ~50KB gzipped, runs in main process only (not shipped to renderer)              |
+| **`drizzle-kit`** is dev-only                                                       | Already in `devDependencies` — not bundled in production                                                   |
+| **Drizzle's `select()` returns different shape** than domain entity for `cuts.tags` | Post-query `.map()` to parse JSON tags, or custom Drizzle column type                                      |
 
 ---
 
@@ -556,4 +595,3 @@ Execute phases sequentially. Each phase should pass `npm run typecheck && npm ru
 9. **Phase 9** — Clean up dead code & update docs
 
 > **Tip:** Phase 4 can be done incrementally — migrate one repository at a time and run its tests. The other repositories continue using the raw DB instance temporarily (Drizzle and raw `better-sqlite3` share the same connection).
-

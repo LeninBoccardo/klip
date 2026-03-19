@@ -1,3 +1,5 @@
+import type { DownloadProgress } from './download'
+
 /**
  * Typed event map for renderer notifications.
  * Each key is a channel name; the value is the payload type.
@@ -10,6 +12,7 @@
  */
 export interface NotificationEventMap {
   'db-updated': void
+  'download-progress': DownloadProgress
 }
 
 /** Union of all valid notification channel names */
