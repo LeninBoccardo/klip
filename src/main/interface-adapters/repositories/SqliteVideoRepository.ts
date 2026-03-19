@@ -33,18 +33,16 @@ export class SqliteVideoRepository implements IVideoRepository {
 
   findAllActive(): Video[] {
     const rows = this.db
-      .prepare(
-        `SELECT ${ALL_COLUMNS} FROM videos WHERE status = 'active' ORDER BY created_at DESC`
-      )
+      .prepare(`SELECT ${ALL_COLUMNS} FROM videos WHERE status = 'active' ORDER BY created_at DESC`)
       .all() as RawVideoRow[]
 
     return rows.map(mapRowToVideo)
   }
 
   findById(id: string): Video | null {
-    const row = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM videos WHERE id = ?`)
-      .get(id) as RawVideoRow | undefined
+    const row = this.db.prepare(`SELECT ${ALL_COLUMNS} FROM videos WHERE id = ?`).get(id) as
+      | RawVideoRow
+      | undefined
 
     return row ? mapRowToVideo(row) : null
   }

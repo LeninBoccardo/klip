@@ -7,6 +7,7 @@ Klip is a local, offline-first desktop asset manager designed to organize downlo
 **Core Paradigm:** The SQLite index is the authoritative source of truth for application state, while the OS file system acts as the underlying storage layer. The UI interacts exclusively with the indexed data, and file system changes are ingested through controlled synchronization processes.
 
 **Target Folder Structure:**
+
 ```text
 [User Defined Root]/
 └── [Creator Name]/
@@ -27,18 +28,19 @@ Klip is a local, offline-first desktop asset manager designed to organize downlo
 
 Klip is an Electron desktop app built with **electron-vite**, **React 19**, and **TypeScript**. The codebase follows a strict layered architecture in the **Main Process** to separate business logic from the infrastructure:
 
-| Layer | Folder | Responsibility |
-|-------|--------|----------------|
-| **Domain** | `src/main/domain` | Enterprise rules, Entities, and Repository Interfaces. No external deps. |
-| **Use Cases** | `src/main/use-cases` | Orchestrates data flow between Entities and Repositories. |
-| **Adapters** | `src/main/interface-adapters` | IPC Handlers and SQLite repository implementations. |
-| **Drivers** | `src/main/framework-drivers` | SQLite config, Chokidar (File Watcher), and Electron Window logic. |
+| Layer         | Folder                        | Responsibility                                                           |
+| ------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| **Domain**    | `src/main/domain`             | Enterprise rules, Entities, and Repository Interfaces. No external deps. |
+| **Use Cases** | `src/main/use-cases`          | Orchestrates data flow between Entities and Repositories.                |
+| **Adapters**  | `src/main/interface-adapters` | IPC Handlers and SQLite repository implementations.                      |
+| **Drivers**   | `src/main/framework-drivers`  | SQLite config, Chokidar (File Watcher), and Electron Window logic.       |
 
 The renderer accesses Electron APIs exclusively through `window.electron` (typed in `src/preload/index.d.ts`). Custom APIs are exposed via `window.api`—add new IPC handlers in `src/preload/index.ts` and register them in `src/main/index.ts` with `ipcMain`.
 
 **Renderer Process:** Flattened for clarity. Features are grouped by domain (e.g., `/components/features/creators`).
 
 ## Data Management & Sync Pattern
+
 To ensure high performance when filtering large amounts of media, strictly follow the Indexed Sync Pattern:
 
 1. **Local Cache**: Use `better-sqlite3` in the Main process to store the state of the file system. All UI queries, filters, and sorts must hit this SQLite database, never the raw file system.
@@ -48,20 +50,25 @@ To ensure high performance when filtering large amounts of media, strictly follo
 3. **IPC Sync (Subscriber)**: When `chokidar` detects a change, the Main process parses the file, updates SQLite, and pushes an event (`webContents.send('db-updated')`) to the Renderer to trigger a UI refresh.
 
 ## External Binaries
+
 - **yt-dlp**: Used via Node child processes to handle all external video downloads. Must be packaged with the app.
 
 - **ffprobe**: Used to extract metadata (duration, resolution, file size) when new local files are detected by the file watcher.
 
 ## Clean Architecture Guidelines (Main Process)
+
 The Main process must adhere to SOLID principles and isolate business logic from framework tools. Structure src/main/ accordingly:
 
-- `domain/`: Core entities (Creator, Video, Cut) and interface definitions (e.g., IVideoRepository).
+- `domain/`: Core entities (Creator, Video, Cut), repository interfaces (e.g., `IVideoRepository`), and port interfaces (e.g., `IFileSystemReader` in `domain/ports/`). No external deps.
 
-- `use-cases/`: Application rules (e.g., SyncDirectory, DownloadVideo, GetFilteredCuts).
+- `use-cases/`: Application rules (e.g., `ReconcileDirectory`). Each use case receives its dependencies (repositories, ports) via constructor injection.
 
-- `interface-adapters/`: Concrete implementations of interfaces (SQLite controllers, chokidar wrappers).
+- `interface-adapters/`: Three subdirectories:
+  - `controllers/` — IPC handlers (e.g., `ReconcileController.ts`)
+  - `repositories/` — SQLite implementations (e.g., `SqliteCreatorRepository`)
+  - `file-system/` — Port implementations (e.g., `NodeFileSystemReader`)
 
-- `framework-drivers/`: Raw DB initialization, binary execution logic, and Electron window management.
+- `framework-drivers/`: Raw DB initialization (`database/database.ts`), binary execution logic, and Electron window management.
 
 ## Path Aliases
 
@@ -81,10 +88,14 @@ Always use `@/components/ui/...` and `@/lib/utils` for renderer imports—this m
 ## Coding Conventions
 
 1. **Dependency Inversion:** Use-cases must never import `better-sqlite3` or `chokidar` directly. They must use interfaces defined in `@domain/repositories`.
-2. **IPC Isolation:** IPC Handlers in `interface-adapters/controllers` are the *only* place allowed to use `ipcMain.handle`. They should call a Use Case and return the result.
+2. **IPC Isolation:** IPC Handlers in `interface-adapters/controllers` are the _only_ place allowed to use `ipcMain.handle`. They should call a Use Case and return the result.
 3. **Slim Renderer:** The React layer should not know about file paths or SQL. It calls `window.api.getCreators()` and receives typed DTOs (Data Transfer Objects).
-4. **Single Source of Truth:** The UI only queries the SQLite index. The `chokidar` driver in `framework-drivers` is responsible for keeping the SQLite index in sync with the physical `D://` drive.
+4. **Single Source of Truth:** The UI only queries the SQLite index. The `chokidar` driver in `framework-drivers` is responsible for keeping the SQLite index in sync with the root directory (default: `app.getPath('documents')/klip`).
 5. **Dependency Injection Requirement**: Concrete infrastructure (DB, File Watcher, APIs) must never be instantiated inside Use Cases or Repositories. Always pass them as interfaces via constructors to ensure the core logic remains agnostic to the underlying technology.
+6. **Entity Lifecycle (`EntityStatus`)**: All indexed entities use `status: 'active' | 'deleted' | 'missing'`. Reconciliation marks disappeared entities as `'missing'` (never hard-deletes). Only explicit user action sets `'deleted'`. Entities with `'deleted'` status are never touched by reconciliation.
+7. **Tags JSON Serialization**: `Cut.tags` is `string[]` in the domain entity but stored as a JSON string in SQLite. Use `JSON.stringify()` on write and `JSON.parse()` on read. Tag-based queries use SQLite's `json_each()` function (see `SqliteCutRepository.findByTags()`).
+8. **Sort-Column Allowlists**: Each SQLite repository defines a `Record<string, string>` map (camelCase UI key → snake_case DB column) to validate `sortBy` params. Unknown keys fall back to a default column. Never interpolate user-provided sort values directly into SQL.
+9. **Database Migrations**: `framework-drivers/database/database.ts` uses a sequential fall-through `switch` on `PRAGMA user_version`. To add a migration: increment `CURRENT_SCHEMA_VERSION`, add a new `case N:` block (no `break`), and use `ALTER TABLE` statements. All migrations run in a single transaction.
 
 ## UI Components & Styling
 
@@ -99,9 +110,11 @@ Always use `@/components/ui/...` and `@/lib/utils` for renderer imports—this m
 **Stack:** Vitest (single runner for both main + renderer), `@testing-library/react` + `jsdom` for React component tests, `@vitest/coverage-v8` for coverage.
 
 **Config files:**
+
 - `vitest.config.ts` — single root config with two inline projects (`main` environment: `node`, `renderer` environment: `jsdom`), path aliases matching `electron.vite.config.ts`, and global coverage thresholds.
 
 **Folder structure:**
+
 ```
 tests/
 ├── main/                               # Main-process tests (node environment)
@@ -119,6 +132,7 @@ tests/
 ```
 
 **Writing tests:**
+
 - Place test files next to their mirror in `tests/`, e.g. `src/main/interface-adapters/repositories/SqliteCreatorRepository.ts` → `tests/main/interface-adapters/repositories/SqliteCreatorRepository.test.ts`.
 - Use `createTestDb()` from `tests/main/helpers/createTestDb.ts` for all DB tests — it returns a fresh in-memory SQLite instance with all migrations applied. Always call `db.close()` in `afterEach`.
 - Use factory functions (e.g. `makeCreator()`, `makeVideo()`, `makeCut()`) with `Partial<Entity>` overrides to build test data concisely.
@@ -126,13 +140,15 @@ tests/
 - Renderer tests use `@testing-library/react` with `render()` / `screen` — never test implementation details.
 
 **Coverage thresholds:**
+
 - Global: 80% (statements, branches, functions, lines).
-- `src/main/use-cases/`: 90% (enforced per-project in `vitest.workspace.ts` when use-cases exist).
-- Excluded from coverage: barrel `index.ts` files, `src/renderer/components/ui/` (auto-generated shadcn).
+- `src/main/use-cases/`: 90% target (not yet enforced per-project; will be added to `vitest.config.ts` when use-cases grow).
+- Excluded from coverage: `src/main/index.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
 
 ## CI Pipeline
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
+
 1. `npm run lint`
 2. `npm run typecheck`
 3. `npm run test:coverage`
@@ -158,8 +174,7 @@ npm run test:coverage # Run all tests with coverage report
 
 ## Conventions
 
-- Renderer components are `.tsx` files under `src/renderer/src/components/`; shared UI primitives live in `src/renderer/components/ui/`
+- Renderer components are `.tsx` files under `src/renderer/components/`; shared UI primitives live in `src/renderer/components/ui/`
 - The renderer HTML (`src/renderer/index.html`) enforces a strict CSP—when adding external resources, update the `Content-Security-Policy` meta tag
 - electron-builder config is in `electron-builder.yml` (not `package.json`)—app ID is `com.electron.app`, product name is `klip`
 - Auto-update support via `electron-updater` is present in dependencies; publish URL is in `electron-builder.yml`
-

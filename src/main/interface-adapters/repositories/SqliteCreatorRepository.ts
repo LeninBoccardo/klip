@@ -36,9 +36,9 @@ export class SqliteCreatorRepository implements ICreatorRepository {
   }
 
   findById(id: string): Creator | null {
-    const row = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM creators WHERE id = ?`)
-      .get(id) as RawCreatorRow | undefined
+    const row = this.db.prepare(`SELECT ${ALL_COLUMNS} FROM creators WHERE id = ?`).get(id) as
+      | RawCreatorRow
+      | undefined
 
     return row ? mapRowToCreator(row) : null
   }

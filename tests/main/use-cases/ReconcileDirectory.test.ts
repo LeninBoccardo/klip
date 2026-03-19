@@ -211,9 +211,9 @@ describe('ReconcileDirectory', () => {
   })
 
   it('never touches entities with status = deleted', () => {
-    creatorRepo.findAll = vi.fn().mockReturnValue([
-      makeCreator({ status: 'deleted', deletedAt: '2025-06-01' })
-    ])
+    creatorRepo.findAll = vi
+      .fn()
+      .mockReturnValue([makeCreator({ status: 'deleted', deletedAt: '2025-06-01' })])
     fs.listDirectories = vi.fn().mockReturnValue([]) // folder gone
 
     const result = useCase.execute(ROOT)
@@ -325,4 +325,3 @@ describe('ReconcileDirectory', () => {
     )
   })
 })
-

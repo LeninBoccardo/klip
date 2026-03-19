@@ -187,7 +187,3 @@ describe('SqliteCreatorRepository', () => {
     expect(active[0].name).toBe('Active')
   })
 })
-
-
-
-

@@ -38,4 +38,3 @@ Implement the full SQLite database stack following Clean Architecture: domain en
 - Answer: ISO 8601 strings
 - **Database migration strategy**: For now, `CREATE TABLE IF NOT EXISTS` in `initializeDatabase` is sufficient. If schema evolves later, consider a simple version-based migration table (`schema_version`).
 - Answer: prefer a simple version-based migration table (schema_version)
-

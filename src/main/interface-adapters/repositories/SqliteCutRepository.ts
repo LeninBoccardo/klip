@@ -42,9 +42,9 @@ export class SqliteCutRepository implements ICutRepository {
   }
 
   findById(id: string): Cut | null {
-    const row = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM cuts WHERE id = ?`)
-      .get(id) as RawCutRow | undefined
+    const row = this.db.prepare(`SELECT ${ALL_COLUMNS} FROM cuts WHERE id = ?`).get(id) as
+      | RawCutRow
+      | undefined
 
     return row ? mapRowToCut(row) : null
   }

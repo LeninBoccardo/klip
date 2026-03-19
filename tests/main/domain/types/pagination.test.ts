@@ -24,4 +24,3 @@ describe('paginatedResult', () => {
     expect(result.data).toBe(data) // same reference
   })
 })
-
