@@ -11,6 +11,14 @@ export default defineConfig({
         '@domain': resolve('src/main/domain'),
         '@use-cases': resolve('src/main/use-cases')
       }
+    },
+    build: {
+      // p-queue and yocto-queue are ESM-only packages.
+      // They must be bundled (not externalized) so Vite handles
+      // the ESM default-export interop in the CJS main process.
+      externalizeDeps: {
+        exclude: ['p-queue', 'yocto-queue']
+      }
     }
   },
   preload: {
