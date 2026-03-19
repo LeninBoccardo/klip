@@ -1,7 +1,7 @@
 import type { INotificationQueue, IDebouncer, INotifier } from '@domain/ports'
 import type { FileEvent } from '@domain/types'
-import { collapseEvents } from '@domain/types'
-import type { ReconcileDirectory } from './ReconcileDirectory'
+import { collapseEvents, classifyPath } from '@domain/types'
+import type { IReconcileDirectory, ReconcileResult } from './IReconcileDirectory'
 
 /** Named constants — tune based on real-world profiling */
 export const RECONCILE_THRESHOLD = 50
@@ -13,11 +13,28 @@ export interface FlushConfig {
 }
 
 /**
+ * Merge two ReconcileResult objects by summing all counters.
+ */
+function mergeResults(a: ReconcileResult, b: ReconcileResult): ReconcileResult {
+  return {
+    creatorsAdded: a.creatorsAdded + b.creatorsAdded,
+    creatorsMarkedMissing: a.creatorsMarkedMissing + b.creatorsMarkedMissing,
+    creatorsRecovered: a.creatorsRecovered + b.creatorsRecovered,
+    videosAdded: a.videosAdded + b.videosAdded,
+    videosMarkedMissing: a.videosMarkedMissing + b.videosMarkedMissing,
+    videosRecovered: a.videosRecovered + b.videosRecovered,
+    cutsAdded: a.cutsAdded + b.cutsAdded,
+    cutsMarkedMissing: a.cutsMarkedMissing + b.cutsMarkedMissing,
+    cutsRecovered: a.cutsRecovered + b.cutsRecovered
+  }
+}
+
+/**
  * Orchestrates file-system notification processing.
  *
  * Collects raw file events into a buffer, debounces bursts, collapses
  * duplicate/conflicting events per path, then decides:
- *   - < threshold collapsed events → granular DB updates (stubbed → reconciliation)
+ *   - < threshold collapsed events → granular per-creator reconciliation
  *   - ≥ threshold → full directory reconciliation
  *
  * Uses a double-buffer model: `drain()` atomically swaps the buffer so
@@ -29,7 +46,7 @@ export class ProcessFileNotifications {
   constructor(
     private queue: INotificationQueue,
     private debouncer: IDebouncer,
-    private reconcile: ReconcileDirectory,
+    private reconcile: IReconcileDirectory,
     private notifier: INotifier,
     private rootPath: string,
     private config: FlushConfig = {
@@ -66,11 +83,7 @@ export class ProcessFileNotifications {
       if (collapsed.length >= this.config.reconcileThreshold) {
         this.reconcile.execute(this.rootPath)
       } else {
-        // TODO: Granular path — classify each event via PathClassifier,
-        // map to entities via EntityMapper, upsert/delete individually.
-        // Stubbed: falls back to full reconciliation until file watcher
-        // infrastructure (PathClassifier + EntityMapper) is implemented.
-        this.reconcile.execute(this.rootPath)
+        this.processGranular(collapsed)
       }
 
       this.notifier.notify('db-updated')
@@ -83,6 +96,38 @@ export class ProcessFileNotifications {
       if (this.queue.size() > 0) {
         this.debouncer.schedule(() => this.flush(), this.config.debounceMs)
       }
+    }
+  }
+
+  /**
+   * Granular processing: classify events by creator and reconcile only affected creators.
+   * Unknown paths are silently skipped (filtered by ChokidarWatcher anyway).
+   */
+  private processGranular(events: FileEvent[]): void {
+    const affectedCreators = new Set<string>()
+
+    for (const event of events) {
+      const classification = classifyPath(this.rootPath, event.path)
+      if (classification.kind !== 'unknown') {
+        affectedCreators.add(classification.creatorName)
+      }
+    }
+
+    let combined: ReconcileResult = {
+      creatorsAdded: 0,
+      creatorsMarkedMissing: 0,
+      creatorsRecovered: 0,
+      videosAdded: 0,
+      videosMarkedMissing: 0,
+      videosRecovered: 0,
+      cutsAdded: 0,
+      cutsMarkedMissing: 0,
+      cutsRecovered: 0
+    }
+
+    for (const creatorName of affectedCreators) {
+      const result = this.reconcile.executeForCreator(this.rootPath, creatorName)
+      combined = mergeResults(combined, result)
     }
   }
 }

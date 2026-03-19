@@ -23,4 +23,26 @@ describe('paginatedResult', () => {
     const result = paginatedResult(data, 2, { page: 1, pageSize: 10 })
     expect(result.data).toBe(data) // same reference
   })
+
+  it('clamps pageSize to at least 1 when 0 is passed', () => {
+    const result = paginatedResult(['a'], 5, { page: 1, pageSize: 0 })
+    expect(result.pageSize).toBe(1)
+    expect(result.totalPages).toBe(5)
+  })
+
+  it('clamps pageSize to at least 1 when negative is passed', () => {
+    const result = paginatedResult([], 10, { page: 1, pageSize: -5 })
+    expect(result.pageSize).toBe(1)
+    expect(result.totalPages).toBe(10)
+  })
+
+  it('clamps page to at least 1 when 0 is passed', () => {
+    const result = paginatedResult([], 0, { page: 0, pageSize: 10 })
+    expect(result.page).toBe(1)
+  })
+
+  it('clamps page to at least 1 when negative is passed', () => {
+    const result = paginatedResult([], 0, { page: -3, pageSize: 10 })
+    expect(result.page).toBe(1)
+  })
 })

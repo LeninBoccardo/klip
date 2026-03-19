@@ -19,9 +19,12 @@ import type { FileEvent, FileEventType } from '@domain/types'
  */
 const RELEVANT_PATH_RE = /[\\/][^\\/]+[\\/](?:creator\.json$|(?:downloads|cuts)[\\/])/i
 
-/** Media / metadata / thumbnail extensions we care about */
-const RELEVANT_FILE_RE =
-  /(?:\.(?:mp4|mkv|webm|jpg|jpeg|png|webp)|(?:meta|cut-data|creator)\.json)$/i
+/**
+ * Combined regex: path must be inside the folder structure AND have a relevant extension.
+ * Merges the old RELEVANT_PATH_RE + RELEVANT_FILE_RE into one test for file events.
+ */
+const RELEVANT_FILE_COMBINED_RE =
+  /[\\/][^\\/]+[\\/](?:downloads|cuts)[\\/].*(?:\.(?:mp4|mkv|webm|jpg|jpeg|png|webp)|(?:meta|cut-data|creator)\.json)$/i
 
 /** Retry interval when root directory doesn't exist yet (ms) */
 const ROOT_RETRY_INTERVAL = 3000
@@ -146,8 +149,8 @@ export class ChokidarWatcher implements IFileWatcher {
       return RELEVANT_PATH_RE.test(relative + '/') || this.isCreatorDir(relative)
     }
 
-    // File events: must be inside the folder structure AND have a relevant extension
-    return RELEVANT_PATH_RE.test(relative) && RELEVANT_FILE_RE.test(filePath)
+    // File events: single combined regex for structure + extension
+    return RELEVANT_FILE_COMBINED_RE.test(relative) || RELEVANT_PATH_RE.test(relative)
   }
 
   /** Check if a relative path looks like a top-level creator directory (one segment) */

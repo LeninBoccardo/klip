@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   SqliteCreatorRepository,
   SqliteVideoRepository,
@@ -153,6 +153,17 @@ describe('SqliteCutRepository', () => {
     expect(results[0].id).toBe('c-1')
   })
 
+  it('returns cuts matching multiple tags (OR semantics) without duplicates', () => {
+    cutRepo.upsert(makeCut({ id: 'c-1', tags: ['funny', 'highlight'] }))
+    cutRepo.upsert(makeCut({ id: 'c-2', tags: ['serious'] }))
+    cutRepo.upsert(makeCut({ id: 'c-3', tags: ['highlight', 'clip'] }))
+
+    const results = cutRepo.findByTags(['funny', 'highlight'])
+    const ids = results.map((c) => c.id).sort()
+    // c-1 has both tags but should appear only once; c-3 has 'highlight'
+    expect(ids).toEqual(['c-1', 'c-3'])
+  })
+
   // ── upsert ──
 
   it('inserts a new cut', () => {
@@ -173,6 +184,20 @@ describe('SqliteCutRepository', () => {
     cutRepo.upsert(makeCut({ tags: ['a', 'b', 'c'] }))
     const result = cutRepo.findById('cut-1')
     expect(result?.tags).toEqual(['a', 'b', 'c'])
+  })
+
+  it('returns empty array for malformed JSON tags instead of crashing', () => {
+    // Directly insert a row with invalid JSON in the tags column
+    db.prepare(
+      `INSERT INTO cuts (id, creator_id, video_id, title, tags, file_path, status, created_at, updated_at)
+       VALUES ('bad-tags', 'creator-1', 'video-1', 'Bad', 'NOT_JSON', '/test', 'active', datetime('now'), datetime('now'))`
+    ).run()
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const result = cutRepo.findById('bad-tags')
+    expect(result).not.toBeNull()
+    expect(result!.tags).toEqual([])
+    consoleSpy.mockRestore()
   })
 
   // ── delete ──
@@ -264,5 +289,51 @@ describe('SqliteCutRepository', () => {
       // "Cut 01" through "Cut 09" — only odd ones: 01,03,05,07,09 = 5
       expect(result.total).toBe(5)
     })
+  })
+
+  // ── updateStatus ──
+
+  it('sets status and deletedAt', () => {
+    cutRepo.upsert(makeCut())
+    cutRepo.updateStatus('cut-1', 'deleted', '2025-06-01T00:00:00.000Z')
+
+    const result = cutRepo.findById('cut-1')
+    expect(result?.status).toBe('deleted')
+    expect(result?.deletedAt).toBe('2025-06-01T00:00:00.000Z')
+  })
+
+  it('updateStatus + findPaginated: missing cuts excluded by default filter', () => {
+    cutRepo.upsert(makeCut({ id: 'c-a' }))
+    cutRepo.upsert(makeCut({ id: 'c-b' }))
+    cutRepo.updateStatus('c-a', 'missing', null)
+
+    const result = cutRepo.findPaginated({ page: 1, pageSize: 50 })
+    expect(result.total).toBe(1)
+    expect(result.data[0].id).toBe('c-b')
+  })
+
+  // ── findByCreatorId returns all statuses ──
+
+  it('findByCreatorId returns cuts of all statuses', () => {
+    cutRepo.upsert(makeCut({ id: 'c-active', status: 'active' }))
+    cutRepo.upsert(makeCut({ id: 'c-missing', status: 'missing' }))
+    cutRepo.upsert(makeCut({ id: 'c-deleted', status: 'deleted', deletedAt: '2025-06-01' }))
+
+    const results = cutRepo.findByCreatorId('creator-1')
+    expect(results).toHaveLength(3)
+    const ids = results.map((c) => c.id).sort()
+    expect(ids).toEqual(['c-active', 'c-deleted', 'c-missing'])
+  })
+
+  // ── findAllActive ──
+
+  it('returns only active cuts', () => {
+    cutRepo.upsert(makeCut({ id: 'c-1', status: 'active' }))
+    cutRepo.upsert(makeCut({ id: 'c-2', status: 'missing' }))
+    cutRepo.upsert(makeCut({ id: 'c-3', status: 'deleted', deletedAt: '2025-06-01' }))
+
+    const active = cutRepo.findAllActive()
+    expect(active).toHaveLength(1)
+    expect(active[0].id).toBe('c-1')
   })
 })

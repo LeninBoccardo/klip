@@ -39,11 +39,12 @@ export function paginatedResult<T>(
   total: number,
   params: PaginationParams
 ): PaginatedResult<T> {
+  const safePageSize = Math.max(1, params.pageSize)
   return {
     data,
     total,
-    page: params.page,
-    pageSize: params.pageSize,
-    totalPages: Math.max(1, Math.ceil(total / params.pageSize))
+    page: Math.max(1, params.page),
+    pageSize: safePageSize,
+    totalPages: Math.max(1, Math.ceil(total / safePageSize))
   }
 }

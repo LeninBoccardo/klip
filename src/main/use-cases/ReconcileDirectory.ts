@@ -1,7 +1,7 @@
-import { join } from 'path'
 import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
-import type { IFileSystemReader } from '@domain/ports'
+import type { IFileSystemReader, IPathResolver, ITransactionScope } from '@domain/ports'
 import type { Creator, Video, Cut } from '@domain/entities'
+import type { IReconcileDirectory, ReconcileResult } from './IReconcileDirectory'
 
 /** Metadata shape expected inside `meta.json` (video downloads) */
 interface MetaJson {
@@ -25,17 +25,18 @@ interface CreatorJson {
   profileImagePath?: string
 }
 
-/** Summary returned after reconciliation completes */
-export interface ReconcileResult {
-  creatorsAdded: number
-  creatorsMarkedMissing: number
-  creatorsRecovered: number
-  videosAdded: number
-  videosMarkedMissing: number
-  videosRecovered: number
-  cutsAdded: number
-  cutsMarkedMissing: number
-  cutsRecovered: number
+function emptyResult(): ReconcileResult {
+  return {
+    creatorsAdded: 0,
+    creatorsMarkedMissing: 0,
+    creatorsRecovered: 0,
+    videosAdded: 0,
+    videosMarkedMissing: 0,
+    videosRecovered: 0,
+    cutsAdded: 0,
+    cutsMarkedMissing: 0,
+    cutsRecovered: 0
+  }
 }
 
 /**
@@ -44,27 +45,31 @@ export interface ReconcileResult {
  * Pipeline: snapshot FS → snapshot DB → compute diff → apply changes in batch.
  * Never hard-deletes. Marks missing entities with status = 'missing'.
  * Entities with status = 'deleted' are never touched (user-confirmed).
+ *
+ * All mutations run inside a single DB transaction for atomicity.
  */
-export class ReconcileDirectory {
+export class ReconcileDirectory implements IReconcileDirectory {
   constructor(
     private creatorRepo: ICreatorRepository,
     private videoRepo: IVideoRepository,
     private cutRepo: ICutRepository,
-    private fs: IFileSystemReader
+    private fs: IFileSystemReader,
+    private path: IPathResolver,
+    private transaction: ITransactionScope
   ) {}
 
   execute(rootPath: string): ReconcileResult {
-    const result: ReconcileResult = {
-      creatorsAdded: 0,
-      creatorsMarkedMissing: 0,
-      creatorsRecovered: 0,
-      videosAdded: 0,
-      videosMarkedMissing: 0,
-      videosRecovered: 0,
-      cutsAdded: 0,
-      cutsMarkedMissing: 0,
-      cutsRecovered: 0
-    }
+    return this.transaction.run(() => this.executeInternal(rootPath))
+  }
+
+  executeForCreator(rootPath: string, creatorName: string): ReconcileResult {
+    return this.transaction.run(() => this.executeForCreatorInternal(rootPath, creatorName))
+  }
+
+  // ── Internal (called inside transaction) ──
+
+  private executeInternal(rootPath: string): ReconcileResult {
+    const result = emptyResult()
 
     // ── 1. Snapshot ──
     const dbCreators = this.creatorRepo.findAll()
@@ -98,8 +103,10 @@ export class ReconcileDirectory {
     for (const dirName of diskCreatorNames) {
       if (dbCreatorMap.has(dirName)) continue // already processed
 
-      const creatorDir = join(rootPath, dirName)
-      const creatorJson = this.fs.readJsonFile<CreatorJson>(join(creatorDir, 'creator.json'))
+      const creatorDir = this.path.join(rootPath, dirName)
+      const creatorJson = this.fs.readJsonFile<CreatorJson>(
+        this.path.join(creatorDir, 'creator.json')
+      )
 
       const now = new Date().toISOString()
       const newCreator: Creator = {
@@ -122,16 +129,67 @@ export class ReconcileDirectory {
     return result
   }
 
+  private executeForCreatorInternal(rootPath: string, creatorName: string): ReconcileResult {
+    const result = emptyResult()
+
+    const existing = this.creatorRepo.findById(creatorName)
+    const creatorDir = this.path.join(rootPath, creatorName)
+    const folderExists = this.fs.directoryExists(creatorDir)
+
+    if (existing) {
+      if (existing.status === 'deleted') return result // respect user deletion
+
+      if (folderExists) {
+        // Creator folder exists — recover if missing
+        if (existing.status === 'missing') {
+          this.creatorRepo.updateStatus(existing.id, 'active', null)
+          result.creatorsRecovered++
+        }
+        this.reconcileVideos(rootPath, existing, result)
+        this.reconcileCuts(rootPath, existing, result)
+      } else {
+        // Creator folder gone
+        if (existing.status !== 'missing') {
+          this.creatorRepo.updateStatus(existing.id, 'missing', null)
+          result.creatorsMarkedMissing++
+          this.markChildrenMissing(existing.id, result)
+        }
+      }
+    } else if (folderExists) {
+      // New creator discovered
+      const creatorJson = this.fs.readJsonFile<CreatorJson>(
+        this.path.join(creatorDir, 'creator.json')
+      )
+      const now = new Date().toISOString()
+      const newCreator: Creator = {
+        id: creatorName,
+        name: creatorJson?.name ?? creatorName,
+        profileImagePath: creatorJson?.profileImagePath ?? null,
+        status: 'active',
+        deletedAt: null,
+        createdAt: now,
+        updatedAt: now
+      }
+      this.creatorRepo.upsert(newCreator)
+      result.creatorsAdded++
+
+      this.discoverVideos(rootPath, newCreator, result)
+      this.discoverCuts(rootPath, newCreator, result)
+    }
+
+    return result
+  }
+
   // ── Video reconciliation ──
 
   private reconcileVideos(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const downloadsDir = join(rootPath, creator.name, 'downloads')
+    const downloadsDir = this.path.join(rootPath, creator.name, 'downloads')
     const diskVideoIds = new Set(this.fs.listDirectories(downloadsDir))
 
-    // Check all DB videos for this creator (need unfiltered list for reconciliation)
-    const allDbVideos = this.videoRepo.findAll().filter((v) => v.creatorId === creator.id)
+    // Use targeted query instead of findAll() + in-memory filter
+    const dbVideos = this.videoRepo.findByCreatorId(creator.id)
 
-    for (const video of allDbVideos) {
+    for (const video of dbVideos) {
       if (video.status === 'deleted') continue
 
       if (diskVideoIds.has(video.id)) {
@@ -148,17 +206,26 @@ export class ReconcileDirectory {
       }
     }
 
-    // Discover new videos
+    // Discover genuinely new videos only
     for (const videoId of diskVideoIds) {
       this.upsertVideoFromDisk(rootPath, creator, videoId, result)
     }
   }
 
   private discoverVideos(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const downloadsDir = join(rootPath, creator.name, 'downloads')
+    const downloadsDir = this.path.join(rootPath, creator.name, 'downloads')
     const videoIds = this.fs.listDirectories(downloadsDir)
 
     for (const videoId of videoIds) {
+      // Guard: only insert truly new entities — don't overwrite existing DB data
+      const existing = this.videoRepo.findById(videoId)
+      if (existing) {
+        if (existing.status === 'missing') {
+          this.videoRepo.updateStatus(videoId, 'active', null)
+          result.videosRecovered++
+        }
+        continue
+      }
       this.upsertVideoFromDisk(rootPath, creator, videoId, result)
     }
   }
@@ -169,8 +236,8 @@ export class ReconcileDirectory {
     videoId: string,
     result: ReconcileResult
   ): void {
-    const videoDir = join(rootPath, creator.name, 'downloads', videoId)
-    const metaJson = this.fs.readJsonFile<MetaJson>(join(videoDir, 'meta.json'))
+    const videoDir = this.path.join(rootPath, creator.name, 'downloads', videoId)
+    const metaJson = this.fs.readJsonFile<MetaJson>(this.path.join(videoDir, 'meta.json'))
     const files = this.fs.listFiles(videoDir)
 
     const mediaFile = files.find((f) => /\.(mp4|mkv|webm)$/i.test(f)) ?? null
@@ -185,8 +252,8 @@ export class ReconcileDirectory {
       duration: metaJson?.duration ?? null,
       resolution: null,
       fileSize: null,
-      filePath: mediaFile ? join(videoDir, mediaFile) : videoDir,
-      thumbnailPath: thumbFile ? join(videoDir, thumbFile) : null,
+      filePath: mediaFile ? this.path.join(videoDir, mediaFile) : videoDir,
+      thumbnailPath: thumbFile ? this.path.join(videoDir, thumbFile) : null,
       downloadDate: metaJson?.downloadDate ?? null,
       status: 'active',
       deletedAt: null,
@@ -200,12 +267,13 @@ export class ReconcileDirectory {
   // ── Cut reconciliation ──
 
   private reconcileCuts(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const cutsDir = join(rootPath, creator.name, 'cuts')
+    const cutsDir = this.path.join(rootPath, creator.name, 'cuts')
     const diskCutIds = new Set(this.fs.listDirectories(cutsDir))
 
-    const allDbCuts = this.cutRepo.findAll().filter((c) => c.creatorId === creator.id)
+    // Use targeted query instead of findAll() + in-memory filter
+    const dbCuts = this.cutRepo.findByCreatorId(creator.id)
 
-    for (const cut of allDbCuts) {
+    for (const cut of dbCuts) {
       if (cut.status === 'deleted') continue
 
       if (diskCutIds.has(cut.id)) {
@@ -228,10 +296,19 @@ export class ReconcileDirectory {
   }
 
   private discoverCuts(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const cutsDir = join(rootPath, creator.name, 'cuts')
+    const cutsDir = this.path.join(rootPath, creator.name, 'cuts')
     const cutIds = this.fs.listDirectories(cutsDir)
 
     for (const cutId of cutIds) {
+      // Guard: only insert truly new entities — don't overwrite existing DB data
+      const existing = this.cutRepo.findById(cutId)
+      if (existing) {
+        if (existing.status === 'missing') {
+          this.cutRepo.updateStatus(cutId, 'active', null)
+          result.cutsRecovered++
+        }
+        continue
+      }
       this.upsertCutFromDisk(rootPath, creator, cutId, result)
     }
   }
@@ -242,8 +319,8 @@ export class ReconcileDirectory {
     cutId: string,
     result: ReconcileResult
   ): void {
-    const cutDir = join(rootPath, creator.name, 'cuts', cutId)
-    const cutData = this.fs.readJsonFile<CutDataJson>(join(cutDir, 'cut-data.json'))
+    const cutDir = this.path.join(rootPath, creator.name, 'cuts', cutId)
+    const cutData = this.fs.readJsonFile<CutDataJson>(this.path.join(cutDir, 'cut-data.json'))
     const files = this.fs.listFiles(cutDir)
 
     const mediaFile = files.find((f) => /\.(mp4|mkv|webm)$/i.test(f)) ?? null
@@ -261,8 +338,8 @@ export class ReconcileDirectory {
       duration: null,
       resolution: null,
       fileSize: null,
-      filePath: mediaFile ? join(cutDir, mediaFile) : cutDir,
-      thumbnailPath: thumbFile ? join(cutDir, thumbFile) : null,
+      filePath: mediaFile ? this.path.join(cutDir, mediaFile) : cutDir,
+      thumbnailPath: thumbFile ? this.path.join(cutDir, thumbFile) : null,
       status: 'active',
       deletedAt: null,
       createdAt: now,
@@ -275,14 +352,14 @@ export class ReconcileDirectory {
   // ── Helpers ──
 
   private markChildrenMissing(creatorId: string, result: ReconcileResult): void {
-    const videos = this.videoRepo.findAll().filter((v) => v.creatorId === creatorId)
+    const videos = this.videoRepo.findByCreatorId(creatorId)
     for (const video of videos) {
       if (video.status === 'deleted' || video.status === 'missing') continue
       this.videoRepo.updateStatus(video.id, 'missing', null)
       result.videosMarkedMissing++
     }
 
-    const cuts = this.cutRepo.findAll().filter((c) => c.creatorId === creatorId)
+    const cuts = this.cutRepo.findByCreatorId(creatorId)
     for (const cut of cuts) {
       if (cut.status === 'deleted' || cut.status === 'missing') continue
       this.cutRepo.updateStatus(cut.id, 'missing', null)

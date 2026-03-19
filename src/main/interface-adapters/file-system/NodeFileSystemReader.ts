@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { readdirSync, readFileSync, statSync } from 'fs'
 import type { IFileSystemReader } from '@domain/ports'
 
 /**
@@ -9,7 +9,7 @@ import type { IFileSystemReader } from '@domain/ports'
 export class NodeFileSystemReader implements IFileSystemReader {
   directoryExists(dirPath: string): boolean {
     try {
-      return existsSync(dirPath) && statSync(dirPath).isDirectory()
+      return statSync(dirPath).isDirectory()
     } catch {
       return false
     }
@@ -17,7 +17,7 @@ export class NodeFileSystemReader implements IFileSystemReader {
 
   fileExists(filePath: string): boolean {
     try {
-      return existsSync(filePath) && statSync(filePath).isFile()
+      return statSync(filePath).isFile()
     } catch {
       return false
     }
@@ -25,7 +25,6 @@ export class NodeFileSystemReader implements IFileSystemReader {
 
   listDirectories(dirPath: string): string[] {
     try {
-      if (!this.directoryExists(dirPath)) return []
       return readdirSync(dirPath, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name)
@@ -36,7 +35,6 @@ export class NodeFileSystemReader implements IFileSystemReader {
 
   listFiles(dirPath: string): string[] {
     try {
-      if (!this.directoryExists(dirPath)) return []
       return readdirSync(dirPath, { withFileTypes: true })
         .filter((entry) => entry.isFile())
         .map((entry) => entry.name)
@@ -47,7 +45,6 @@ export class NodeFileSystemReader implements IFileSystemReader {
 
   readJsonFile<T = unknown>(filePath: string): T | null {
     try {
-      if (!this.fileExists(filePath)) return null
       const raw = readFileSync(filePath, 'utf-8')
       return JSON.parse(raw) as T
     } catch {

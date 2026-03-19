@@ -42,6 +42,7 @@ export default defineConfig({
       include: ['src/main/**/*.ts', 'src/renderer/**/*.{ts,tsx}'],
       exclude: [
         'src/main/index.ts',
+        'src/main/composition-root.ts',
         'src/main/**/index.ts',
         'src/main/domain/entities/**',
         'src/main/domain/repositories/I*.ts',
@@ -49,6 +50,7 @@ export default defineConfig({
         'src/main/domain/types/entity-status.ts',
         'src/main/domain/types/file-event.ts',
         'src/main/domain/types/notification-events.ts',
+        'src/main/use-cases/IReconcileDirectory.ts',
         'src/main/interface-adapters/controllers/**',
         'src/main/interface-adapters/file-system/**',
         'src/main/framework-drivers/electron/**',

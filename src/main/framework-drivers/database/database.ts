@@ -1,6 +1,6 @@
 import BetterSqlite3 from 'better-sqlite3'
 
-const CURRENT_SCHEMA_VERSION = 2
+const CURRENT_SCHEMA_VERSION = 3
 
 /**
  * Run all migrations sequentially from the current version to CURRENT_SCHEMA_VERSION.
@@ -68,6 +68,15 @@ function migrate(db: BetterSqlite3.Database, fromVersion: number): void {
 
         ALTER TABLE cuts ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
         ALTER TABLE cuts ADD COLUMN deleted_at TEXT;
+      `)
+    // falls through
+    case 2:
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status);
+        CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status);
+        CREATE INDEX IF NOT EXISTS idx_cuts_status ON cuts(status);
+        CREATE INDEX IF NOT EXISTS idx_videos_status_created ON videos(status, created_at);
+        CREATE INDEX IF NOT EXISTS idx_cuts_status_created ON cuts(status, created_at);
       `)
     // falls through
   }

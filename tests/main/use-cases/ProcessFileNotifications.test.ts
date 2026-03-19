@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProcessFileNotifications, RECONCILE_THRESHOLD } from '@use-cases/ProcessFileNotifications'
 import type { INotificationQueue, IDebouncer, INotifier } from '@domain/ports'
 import type { FileEvent } from '@domain/types'
-import type { ReconcileDirectory, ReconcileResult } from '@use-cases/ReconcileDirectory'
+import type { IReconcileDirectory, ReconcileResult } from '@use-cases/IReconcileDirectory'
 
 // ── Helpers ──
 
@@ -32,7 +32,7 @@ function uniqueEvents(count: number): FileEvent[] {
 describe('ProcessFileNotifications', () => {
   let mockQueue: INotificationQueue
   let mockDebouncer: IDebouncer
-  let mockReconcile: ReconcileDirectory
+  let mockReconcile: IReconcileDirectory
   let mockNotifier: INotifier
   let useCase: ProcessFileNotifications
 
@@ -47,8 +47,9 @@ describe('ProcessFileNotifications', () => {
       cancel: vi.fn()
     }
     mockReconcile = {
-      execute: vi.fn().mockReturnValue(makeReconcileResult())
-    } as unknown as ReconcileDirectory
+      execute: vi.fn().mockReturnValue(makeReconcileResult()),
+      executeForCreator: vi.fn().mockReturnValue(makeReconcileResult())
+    }
     mockNotifier = {
       notify: vi.fn()
     }
@@ -94,22 +95,14 @@ describe('ProcessFileNotifications', () => {
       await flushFn()
     }
 
-    it('calls reconcile when collapsed events < threshold', async () => {
-      const events = uniqueEvents(5)
-      vi.mocked(mockQueue.drain).mockResolvedValue(events)
-
-      await triggerFlush()
-
-      expect(mockReconcile.execute).toHaveBeenCalledWith('/root')
-    })
-
-    it('calls reconcile when collapsed events >= threshold', async () => {
+    it('calls full reconcile when collapsed events >= threshold', async () => {
       const events = uniqueEvents(RECONCILE_THRESHOLD + 10)
       vi.mocked(mockQueue.drain).mockResolvedValue(events)
 
       await triggerFlush()
 
       expect(mockReconcile.execute).toHaveBeenCalledWith('/root')
+      expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
     })
 
     it('sends db-updated notification exactly once per flush', async () => {
@@ -131,6 +124,7 @@ describe('ProcessFileNotifications', () => {
       await triggerFlush()
 
       expect(mockReconcile.execute).not.toHaveBeenCalled()
+      expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
       expect(mockNotifier.notify).not.toHaveBeenCalled()
     })
 
@@ -140,7 +134,66 @@ describe('ProcessFileNotifications', () => {
       await triggerFlush()
 
       expect(mockReconcile.execute).not.toHaveBeenCalled()
+      expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
       expect(mockNotifier.notify).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── Granular processing (< threshold) ──
+
+  describe('granular processing', () => {
+    async function triggerFlush(): Promise<void> {
+      useCase.handleEvent(makeEvent('/root/trigger'))
+      const flushFn = vi.mocked(mockDebouncer.schedule).mock.calls[0][0]
+      await flushFn()
+    }
+
+    it('calls executeForCreator for each affected creator when < threshold', async () => {
+      vi.mocked(mockQueue.drain).mockResolvedValue([
+        makeEvent('/root/creatorA/downloads/v1/video.mp4', 'add'),
+        makeEvent('/root/creatorB/cuts/c1/cut.mp4', 'add')
+      ])
+
+      await triggerFlush()
+
+      expect(mockReconcile.execute).not.toHaveBeenCalled()
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledTimes(2)
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'creatorA')
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'creatorB')
+    })
+
+    it('deduplicates creators: multiple events for same creator → single executeForCreator', async () => {
+      vi.mocked(mockQueue.drain).mockResolvedValue([
+        makeEvent('/root/creatorA/downloads/v1/video.mp4', 'add'),
+        makeEvent('/root/creatorA/downloads/v2/video.mp4', 'add'),
+        makeEvent('/root/creatorA/cuts/c1/cut.mp4', 'change')
+      ])
+
+      await triggerFlush()
+
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledTimes(1)
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'creatorA')
+    })
+
+    it('handles creator-level directory events', async () => {
+      vi.mocked(mockQueue.drain).mockResolvedValue([makeEvent('/root/newCreator', 'addDir')])
+
+      await triggerFlush()
+
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'newCreator')
+    })
+
+    it('skips unknown paths without error', async () => {
+      vi.mocked(mockQueue.drain).mockResolvedValue([
+        makeEvent('/root', 'change') // root itself → unknown
+      ])
+
+      await triggerFlush()
+
+      expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
+      // Should still notify since events existed (even if all unknown → no creators affected)
+      // Actually, if no creators affected, no reconcile runs, but notify still fires since collapsed.length > 0
+      expect(mockNotifier.notify).toHaveBeenCalledOnce()
     })
   })
 
@@ -199,7 +252,7 @@ describe('ProcessFileNotifications', () => {
 
   describe('error handling', () => {
     it('resets flushing flag even if reconcile throws', async () => {
-      vi.mocked(mockQueue.drain).mockResolvedValue(uniqueEvents(2))
+      vi.mocked(mockQueue.drain).mockResolvedValue(uniqueEvents(RECONCILE_THRESHOLD + 1))
       vi.mocked(mockReconcile.execute).mockImplementation(() => {
         throw new Error('DB error')
       })

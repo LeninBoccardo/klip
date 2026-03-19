@@ -53,7 +53,7 @@ export class SqliteCutRepository implements ICutRepository {
     const rows = this.db
       .prepare(
         `SELECT ${ALL_COLUMNS}
-         FROM cuts WHERE creator_id = ? AND status = 'active' ORDER BY created_at DESC`
+         FROM cuts WHERE creator_id = ? ORDER BY created_at DESC`
       )
       .all(creatorId) as RawCutRow[]
 
@@ -225,13 +225,23 @@ interface RawCutRow {
   updated_at: string
 }
 
+function parseCutTags(tagsStr: string): string[] {
+  try {
+    const parsed = JSON.parse(tagsStr)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (e) {
+    console.error(e)
+    return []
+  }
+}
+
 function mapRowToCut(row: RawCutRow): Cut {
   return {
     id: row.id,
     creatorId: row.creator_id,
     videoId: row.video_id,
     title: row.title,
-    tags: JSON.parse(row.tags) as string[],
+    tags: parseCutTags(row.tags),
     startTimestamp: row.start_timestamp,
     endTimestamp: row.end_timestamp,
     duration: row.duration,

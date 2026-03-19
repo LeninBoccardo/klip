@@ -26,7 +26,7 @@ describe('initializeDatabase', () => {
   it('sets user_version to the current schema version', () => {
     db = createTestDb()
     const version = db.pragma('user_version', { simple: true }) as number
-    expect(version).toBe(2)
+    expect(version).toBe(3)
   })
 
   it('creates all expected tables', () => {
@@ -58,7 +58,7 @@ describe('initializeDatabase', () => {
   it('is idempotent — calling twice on the same DB does not throw', () => {
     db = createTestDb()
     const version = db.pragma('user_version', { simple: true }) as number
-    expect(version).toBe(2)
+    expect(version).toBe(3)
   })
 
   it('adds status and deleted_at columns to all tables (migration v2)', () => {
@@ -69,5 +69,19 @@ describe('initializeDatabase', () => {
       expect(colNames).toContain('status')
       expect(colNames).toContain('deleted_at')
     }
+  })
+
+  it('creates status indexes (migration v3)', () => {
+    db = createTestDb()
+    const indexes = db
+      .prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'`)
+      .all() as { name: string }[]
+
+    const names = indexes.map((i) => i.name)
+    expect(names).toContain('idx_creators_status')
+    expect(names).toContain('idx_videos_status')
+    expect(names).toContain('idx_cuts_status')
+    expect(names).toContain('idx_videos_status_created')
+    expect(names).toContain('idx_cuts_status_created')
   })
 })

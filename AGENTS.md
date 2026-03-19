@@ -59,17 +59,19 @@ To ensure high performance when filtering large amounts of media, strictly follo
 
 The Main process must adhere to SOLID principles and isolate business logic from framework tools. Structure src/main/ accordingly:
 
-- `domain/`: Core entities (Creator, Video, Cut), repository interfaces (e.g., `IVideoRepository`), and port interfaces (e.g., `IFileSystemReader` in `domain/ports/`). No external deps.
+- `domain/`: Core entities (Creator, Video, Cut), repository interfaces (e.g., `IVideoRepository`), and port interfaces (e.g., `IFileSystemReader`, `IPathResolver`, `ITransactionScope` in `domain/ports/`). No external deps.
 
-- `use-cases/`: Application rules (e.g., `ReconcileDirectory`, `ProcessFileNotifications`). Each use case receives its dependencies (repositories, ports) via constructor injection.
+- `use-cases/`: Application rules (e.g., `ReconcileDirectory`, `ProcessFileNotifications`). Each use case receives its dependencies (repositories, ports) via constructor injection. Use-case interfaces (e.g., `IReconcileDirectory`) live alongside their implementations.
 
 - `interface-adapters/`: Four subdirectories:
   - `controllers/` — IPC handlers (e.g., `ReconcileController.ts`)
   - `repositories/` — SQLite implementations (e.g., `SqliteCreatorRepository`)
-  - `file-system/` — Port implementations (e.g., `NodeFileSystemReader`)
+  - `file-system/` — Port implementations (e.g., `NodeFileSystemReader`, `NodePathResolver`)
   - `queue/` — Notification queue implementation (`PQueueNotificationQueue`)
 
-- `framework-drivers/`: Raw DB initialization (`database/database.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`), file-system watcher (`file-system/ChokidarWatcher.ts`), and window management.
+- `framework-drivers/`: Raw DB initialization (`database/database.ts`), transaction scope (`database/SqliteTransactionScope.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`), file-system watcher (`file-system/ChokidarWatcher.ts`), and window management.
+
+- `composition-root.ts` (`src/main/composition-root.ts`): Creates and wires all concrete dependencies into an `AppContainer`. The `index.ts` entry point calls `createAppContainer()` and uses the returned container — no module-level mutable singletons.
 
 ## Path Aliases
 
@@ -88,7 +90,7 @@ Always use `@/components/ui/...` and `@/lib/utils` for renderer imports—this m
 
 ## Coding Conventions
 
-1. **Dependency Inversion:** Use-cases must never import `better-sqlite3` or `chokidar` directly. They must use interfaces defined in `@domain/repositories`.
+1. **Dependency Inversion:** Use-cases must never import `better-sqlite3`, `chokidar`, or Node built-in modules (e.g., `path`, `fs`) directly. They must use interfaces defined in `@domain/ports` and `@domain/repositories`. Path manipulation goes through `IPathResolver`, file access through `IFileSystemReader`, and transactions through `ITransactionScope`.
 2. **IPC Isolation:** IPC Handlers in `interface-adapters/controllers` are the _only_ place allowed to use `ipcMain.handle`. They should call a Use Case and return the result.
 3. **Slim Renderer:** The React layer should not know about file paths or SQL. It calls `window.api.getCreators()` and receives typed DTOs (Data Transfer Objects).
 4. **Single Source of Truth:** The UI only queries the SQLite index. The `chokidar` driver in `framework-drivers` is responsible for keeping the SQLite index in sync with the root directory (default: `app.getPath('documents')/klip`).
@@ -144,7 +146,7 @@ tests/
 
 - Global: 80% (statements, branches, functions, lines).
 - `src/main/use-cases/`: 90% target (not yet enforced per-project; will be added to `vitest.config.ts` when use-cases grow).
-- Excluded from coverage: `src/main/index.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), port interfaces (`src/main/domain/ports/I*.ts`), pure type-only files (`entity-status.ts`, `file-event.ts`, `notification-events.ts`), IPC controllers (`src/main/interface-adapters/controllers/**`), file-system adapters (`src/main/interface-adapters/file-system/**`), Electron-dependent drivers (`src/main/framework-drivers/electron/**`), file-system drivers (`src/main/framework-drivers/file-system/**`), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
+- Excluded from coverage: `src/main/index.ts`, `src/main/composition-root.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), port interfaces (`src/main/domain/ports/I*.ts`), pure type-only files (`entity-status.ts`, `file-event.ts`, `notification-events.ts`), use-case interfaces (`src/main/use-cases/IReconcileDirectory.ts`), IPC controllers (`src/main/interface-adapters/controllers/**`), file-system adapters (`src/main/interface-adapters/file-system/**`), Electron-dependent drivers (`src/main/framework-drivers/electron/**`), file-system drivers (`src/main/framework-drivers/file-system/**`), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
 
 ## CI Pipeline
 

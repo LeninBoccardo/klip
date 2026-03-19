@@ -2,32 +2,11 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { initializeDatabase } from './framework-drivers/database'
-import {
-  SqliteCreatorRepository,
-  SqliteVideoRepository,
-  SqliteCutRepository
-} from './interface-adapters/repositories'
-import { NodeFileSystemReader } from './interface-adapters/file-system'
-import { ReconcileDirectory } from '@use-cases/ReconcileDirectory'
-import { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
+import { createAppContainer, type AppContainer } from './composition-root'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
-import { PQueueNotificationQueue } from './interface-adapters/queue'
-import { NodeDebouncer } from './framework-drivers/timers'
-import { ElectronNotifier } from './framework-drivers/electron/ElectronNotifier'
-import { ChokidarWatcher } from './framework-drivers/file-system/ChokidarWatcher'
-import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
-import type { IFileWatcher } from '@domain/ports'
 
-// ── Repository singletons (initialised in createDb, consumed by IPC controllers) ──
-export let creatorRepository: ICreatorRepository
-export let videoRepository: IVideoRepository
-export let cutRepository: ICutRepository
-
-// ── Notification processor + file watcher (initialised in app.whenReady) ──
-export let processNotifications: ProcessFileNotifications
-let fileWatcher: IFileWatcher
-let debouncer: NodeDebouncer
+// ── Application container (initialised in app.whenReady) ──
+let container: AppContainer
 
 function createWindow(): void {
   // Create the browser window.
@@ -61,17 +40,6 @@ function createWindow(): void {
   }
 }
 
-function createDb(): void {
-  const dbPath = join(app.getPath('userData'), 'klip.db')
-  const db = initializeDatabase(dbPath)
-
-  creatorRepository = new SqliteCreatorRepository(db)
-  videoRepository = new SqliteVideoRepository(db)
-  cutRepository = new SqliteCutRepository(db)
-
-  console.log(`[klip] Database initialised at ${dbPath}`)
-}
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -89,45 +57,26 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  createDb()
-
-  // ── Reconciliation setup ──
+  // ── Create DI container ──
   const rootPath = join(app.getPath('documents'), 'klip')
-  const fsReader = new NodeFileSystemReader()
-  const reconcile = new ReconcileDirectory(
-    creatorRepository,
-    videoRepository,
-    cutRepository,
-    fsReader
-  )
-  registerReconcileController(reconcile, rootPath)
-  console.log(`[klip] Reconciliation controller registered (root: ${rootPath})`)
+  const dbPath = join(app.getPath('userData'), 'klip.db')
+  container = createAppContainer({ dbPath, rootPath })
+  console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
 
-  // ── Notification queue setup ──
-  const notificationQueue = new PQueueNotificationQueue()
-  debouncer = new NodeDebouncer()
-  const electronNotifier = new ElectronNotifier()
-  processNotifications = new ProcessFileNotifications(
-    notificationQueue,
-    debouncer,
-    reconcile,
-    electronNotifier,
-    rootPath
-  )
-  console.log(`[klip] Notification queue initialised (debounce: 1000ms, threshold: 50)`)
+  // ── Register IPC controllers ──
+  registerReconcileController(container.useCases.reconcile, rootPath)
+  console.log(`[klip] Reconciliation controller registered`)
 
   // ── Initial reconciliation (one-time full scan at startup) ──
   try {
-    const result = reconcile.execute(rootPath)
+    const result = container.useCases.reconcile.execute(rootPath)
     console.log(`[klip] Initial reconciliation complete:`, result)
   } catch (error) {
     console.error(`[klip] Initial reconciliation failed:`, error)
   }
 
-  // ── File watcher setup (runtime changes only, ignoreInitial: true) ──
-  fileWatcher = new ChokidarWatcher(rootPath)
-  fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
-  fileWatcher.start()
+  // ── Start file watcher (runtime changes only, ignoreInitial: true) ──
+  container.services.fileWatcher.start()
 
   createWindow()
 
@@ -138,11 +87,9 @@ app.whenReady().then(() => {
   })
 })
 
-// Graceful shutdown: stop watcher and cancel pending debounce before quit
+// Graceful shutdown
 app.on('before-quit', () => {
-  fileWatcher?.stop()
-  debouncer?.cancel()
-  console.log('[klip] File watcher stopped, debouncer cancelled')
+  container?.shutdown()
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

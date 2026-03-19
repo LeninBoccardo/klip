@@ -12,48 +12,48 @@ Uses a **double-buffer model**: `drain()` atomically swaps the buffer so events 
 
 ### Domain Layer
 
-| File | Purpose |
-|---|---|
-| `src/main/domain/types/file-event.ts` | `FileEventType` and `FileEvent` — internal abstraction over chokidar events |
-| `src/main/domain/types/collapse-events.ts` | Pure `collapseEvents()` function — deduplicates and collapses event sequences per path using a 16-entry rule lookup table |
-| `src/main/domain/types/notification-events.ts` | `NotificationEventMap` typed event map + `NotificationChannel` union — contract for renderer notifications |
-| `src/main/domain/ports/INotificationQueue.ts` | Queue port: `enqueue()`, `drain(): Promise<FileEvent[]>`, `size()` |
-| `src/main/domain/ports/IDebouncer.ts` | Timer port: `schedule(cb, ms)`, `cancel()` |
-| `src/main/domain/ports/INotifier.ts` | Typed push-notification port using `NotificationEventMap` — channels with `void` payloads require no args, data channels require typed payload |
+| File                                           | Purpose                                                                                                                                        |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/domain/types/file-event.ts`          | `FileEventType` and `FileEvent` — internal abstraction over chokidar events                                                                    |
+| `src/main/domain/types/collapse-events.ts`     | Pure `collapseEvents()` function — deduplicates and collapses event sequences per path using a 16-entry rule lookup table                      |
+| `src/main/domain/types/notification-events.ts` | `NotificationEventMap` typed event map + `NotificationChannel` union — contract for renderer notifications                                     |
+| `src/main/domain/ports/INotificationQueue.ts`  | Queue port: `enqueue()`, `drain(): Promise<FileEvent[]>`, `size()`                                                                             |
+| `src/main/domain/ports/IDebouncer.ts`          | Timer port: `schedule(cb, ms)`, `cancel()`                                                                                                     |
+| `src/main/domain/ports/INotifier.ts`           | Typed push-notification port using `NotificationEventMap` — channels with `void` payloads require no args, data channels require typed payload |
 
 ### Use-Case Layer
 
-| File | Purpose |
-|---|---|
+| File                                             | Purpose                                                                                                                |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | `src/main/use-cases/ProcessFileNotifications.ts` | Orchestrator: buffer → debounce → collapse → threshold check → reconcile or granular (stubbed) → notify `'db-updated'` |
 
 ### Interface-Adapter Layer
 
-| File | Purpose |
-|---|---|
+| File                                                           | Purpose                                                   |
+| -------------------------------------------------------------- | --------------------------------------------------------- |
 | `src/main/interface-adapters/queue/PQueueNotificationQueue.ts` | p-queue backed buffer with concurrency:1 serialized drain |
 
 ### Framework-Driver Layer
 
-| File | Purpose |
-|---|---|
-| `src/main/framework-drivers/timers/NodeDebouncer.ts` | `setTimeout`/`clearTimeout` wrapper implementing `IDebouncer` |
+| File                                                      | Purpose                                                                           |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/main/framework-drivers/timers/NodeDebouncer.ts`      | `setTimeout`/`clearTimeout` wrapper implementing `IDebouncer`                     |
 | `src/main/framework-drivers/electron/ElectronNotifier.ts` | `BrowserWindow.getAllWindows().webContents.send()` implementing typed `INotifier` |
 
 ### Wiring
 
-| File | Change |
-|---|---|
+| File                | Change                                                                                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/main/index.ts` | Instantiates `PQueueNotificationQueue`, `NodeDebouncer`, `ElectronNotifier`, `ProcessFileNotifications` after reconciliation setup. Exports `processNotifications` for future ChokidarWatcher |
 
 ### Tests
 
-| File | Tests |
-|---|---|
-| `tests/main/domain/types/collapse-events.test.ts` | 26 tests — all file×file, dir×dir, mixed, multi-step, multi-path, IGNORE, unlisted-fallback cases |
-| `tests/main/use-cases/ProcessFileNotifications.test.ts` | 12 tests — enqueue, debounce scheduling, flush thresholds, IGNORE→skip, notify once, double-buffer flushing flag, post-flush re-schedule, error recovery |
-| `tests/main/interface-adapters/queue/PQueueNotificationQueue.test.ts` | 8 tests — size, drain, empty drain, buffer isolation, disjoint snapshots, insertion order |
-| `tests/main/framework-drivers/NodeDebouncer.test.ts` | 5 tests — timer fire, reset, cancel, cancel-when-idle, schedule-after-cancel |
+| File                                                                  | Tests                                                                                                                                                    |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/main/domain/types/collapse-events.test.ts`                     | 26 tests — all file×file, dir×dir, mixed, multi-step, multi-path, IGNORE, unlisted-fallback cases                                                        |
+| `tests/main/use-cases/ProcessFileNotifications.test.ts`               | 12 tests — enqueue, debounce scheduling, flush thresholds, IGNORE→skip, notify once, double-buffer flushing flag, post-flush re-schedule, error recovery |
+| `tests/main/interface-adapters/queue/PQueueNotificationQueue.test.ts` | 8 tests — size, drain, empty drain, buffer isolation, disjoint snapshots, insertion order                                                                |
+| `tests/main/framework-drivers/NodeDebouncer.test.ts`                  | 5 tests — timer fire, reset, cancel, cancel-when-idle, schedule-after-cancel                                                                             |
 
 **Total: 125 tests (51 new), all passing. Coverage thresholds met.**
 
@@ -71,14 +71,14 @@ Per-path sequential collapse using a lookup table:
 
 ## Design Decisions
 
-| Decision | Value | Rationale |
-|---|---|---|
-| Debounce | 1 000 ms | Captures full CapCut/yt-dlp bursts (~200-500ms) while user is in OS file manager |
-| Reconcile threshold | 50 collapsed events | ~8-16 assets. Below: individual upserts cheaper (once granular path exists). Above: single reconciliation walk reuses FS snapshots |
-| Granular path | Stubbed → reconciliation | PathClassifier + EntityMapper don't exist yet. Only the `else` branch in `flush()` changes later |
-| Double-buffer atomicity | p-queue concurrency: 1 | `drain()` serialized via p-queue task — buffer swap can never interleave with pending operations |
-| Event collapsing | Pure function in domain/types | Zero deps, fully testable, reusable by any consumer |
-| Typed notifier | `NotificationEventMap` contract | Add new channels by extending the map — type safety enforced at compile time |
+| Decision                | Value                           | Rationale                                                                                                                          |
+| ----------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Debounce                | 1 000 ms                        | Captures full CapCut/yt-dlp bursts (~200-500ms) while user is in OS file manager                                                   |
+| Reconcile threshold     | 50 collapsed events             | ~8-16 assets. Below: individual upserts cheaper (once granular path exists). Above: single reconciliation walk reuses FS snapshots |
+| Granular path           | Stubbed → reconciliation        | PathClassifier + EntityMapper don't exist yet. Only the `else` branch in `flush()` changes later                                   |
+| Double-buffer atomicity | p-queue concurrency: 1          | `drain()` serialized via p-queue task — buffer swap can never interleave with pending operations                                   |
+| Event collapsing        | Pure function in domain/types   | Zero deps, fully testable, reusable by any consumer                                                                                |
+| Typed notifier          | `NotificationEventMap` contract | Add new channels by extending the map — type safety enforced at compile time                                                       |
 
 ## Configuration Constants
 
@@ -97,4 +97,3 @@ When `ChokidarWatcher` is implemented:
 // In src/main/index.ts, after watcher creation:
 watcher.onEvent((event) => processNotifications.handleEvent(event))
 ```
-

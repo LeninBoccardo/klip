@@ -51,7 +51,7 @@ export class SqliteVideoRepository implements IVideoRepository {
     const rows = this.db
       .prepare(
         `SELECT ${ALL_COLUMNS}
-         FROM videos WHERE creator_id = ? AND status = 'active' ORDER BY created_at DESC`
+         FROM videos WHERE creator_id = ? ORDER BY created_at DESC`
       )
       .all(creatorId) as RawVideoRow[]
 

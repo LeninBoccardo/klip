@@ -178,4 +178,50 @@ describe('SqliteVideoRepository', () => {
       expect(result.data).toHaveLength(3)
     })
   })
+
+  // ── updateStatus ──
+
+  it('sets status and deletedAt', () => {
+    videoRepo.upsert(makeVideo())
+    videoRepo.updateStatus('video-1', 'deleted', '2025-06-01T00:00:00.000Z')
+
+    const result = videoRepo.findById('video-1')
+    expect(result?.status).toBe('deleted')
+    expect(result?.deletedAt).toBe('2025-06-01T00:00:00.000Z')
+  })
+
+  it('updateStatus + findPaginated: missing videos excluded by default filter', () => {
+    videoRepo.upsert(makeVideo({ id: 'v-1' }))
+    videoRepo.upsert(makeVideo({ id: 'v-2' }))
+    videoRepo.updateStatus('v-1', 'missing', null)
+
+    const result = videoRepo.findPaginated({ page: 1, pageSize: 50 })
+    expect(result.total).toBe(1)
+    expect(result.data[0].id).toBe('v-2')
+  })
+
+  // ── findByCreatorId returns all statuses ──
+
+  it('findByCreatorId returns videos of all statuses', () => {
+    videoRepo.upsert(makeVideo({ id: 'v-active', status: 'active' }))
+    videoRepo.upsert(makeVideo({ id: 'v-missing', status: 'missing' }))
+    videoRepo.upsert(makeVideo({ id: 'v-deleted', status: 'deleted', deletedAt: '2025-06-01' }))
+
+    const results = videoRepo.findByCreatorId('creator-1')
+    expect(results).toHaveLength(3)
+    const ids = results.map((v) => v.id).sort()
+    expect(ids).toEqual(['v-active', 'v-deleted', 'v-missing'])
+  })
+
+  // ── findAllActive ──
+
+  it('returns only active videos', () => {
+    videoRepo.upsert(makeVideo({ id: 'v-1', status: 'active' }))
+    videoRepo.upsert(makeVideo({ id: 'v-2', status: 'missing' }))
+    videoRepo.upsert(makeVideo({ id: 'v-3', status: 'deleted', deletedAt: '2025-06-01' }))
+
+    const active = videoRepo.findAllActive()
+    expect(active).toHaveLength(1)
+    expect(active[0].id).toBe('v-1')
+  })
 })
