@@ -10,13 +10,20 @@ import {
 } from './interface-adapters/repositories'
 import { NodeFileSystemReader } from './interface-adapters/file-system'
 import { ReconcileDirectory } from './use-cases/ReconcileDirectory'
+import { ProcessFileNotifications } from './use-cases/ProcessFileNotifications'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
+import { PQueueNotificationQueue } from './interface-adapters/queue'
+import { NodeDebouncer } from './framework-drivers/timers'
+import { ElectronNotifier } from './framework-drivers/electron/ElectronNotifier'
 import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
 
 // ── Repository singletons (initialised in createDb, consumed by IPC controllers) ──
 export let creatorRepository: ICreatorRepository
 export let videoRepository: IVideoRepository
 export let cutRepository: ICutRepository
+
+// ── Notification processor (initialised in app.whenReady, consumed by future ChokidarWatcher) ──
+export let processNotifications: ProcessFileNotifications
 
 function createWindow(): void {
   // Create the browser window.
@@ -91,6 +98,19 @@ app.whenReady().then(() => {
   )
   registerReconcileController(reconcile, rootPath)
   console.log(`[klip] Reconciliation controller registered (root: ${rootPath})`)
+
+  // ── Notification queue setup ──
+  const notificationQueue = new PQueueNotificationQueue()
+  const debouncer = new NodeDebouncer()
+  const electronNotifier = new ElectronNotifier()
+  processNotifications = new ProcessFileNotifications(
+    notificationQueue,
+    debouncer,
+    reconcile,
+    electronNotifier,
+    rootPath
+  )
+  console.log(`[klip] Notification queue initialised (debounce: 1000ms, threshold: 50)`)
 
   createWindow()
 

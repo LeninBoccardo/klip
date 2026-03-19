@@ -45,6 +45,13 @@ export default defineConfig({
         'src/main/**/index.ts',
         'src/main/domain/entities/**',
         'src/main/domain/repositories/I*.ts',
+        'src/main/domain/ports/I*.ts',
+        'src/main/domain/types/entity-status.ts',
+        'src/main/domain/types/file-event.ts',
+        'src/main/domain/types/notification-events.ts',
+        'src/main/interface-adapters/controllers/**',
+        'src/main/interface-adapters/file-system/**',
+        'src/main/framework-drivers/electron/**',
         'src/renderer/components/ui/**',
         'src/renderer/src/env.d.ts'
       ],

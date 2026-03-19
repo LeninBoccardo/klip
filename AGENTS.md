@@ -61,14 +61,15 @@ The Main process must adhere to SOLID principles and isolate business logic from
 
 - `domain/`: Core entities (Creator, Video, Cut), repository interfaces (e.g., `IVideoRepository`), and port interfaces (e.g., `IFileSystemReader` in `domain/ports/`). No external deps.
 
-- `use-cases/`: Application rules (e.g., `ReconcileDirectory`). Each use case receives its dependencies (repositories, ports) via constructor injection.
+- `use-cases/`: Application rules (e.g., `ReconcileDirectory`, `ProcessFileNotifications`). Each use case receives its dependencies (repositories, ports) via constructor injection.
 
-- `interface-adapters/`: Three subdirectories:
+- `interface-adapters/`: Four subdirectories:
   - `controllers/` — IPC handlers (e.g., `ReconcileController.ts`)
   - `repositories/` — SQLite implementations (e.g., `SqliteCreatorRepository`)
   - `file-system/` — Port implementations (e.g., `NodeFileSystemReader`)
+  - `queue/` — Notification queue implementation (`PQueueNotificationQueue`)
 
-- `framework-drivers/`: Raw DB initialization (`database/database.ts`), binary execution logic, and Electron window management.
+- `framework-drivers/`: Raw DB initialization (`database/database.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`), and window management.
 
 ## Path Aliases
 
@@ -143,7 +144,7 @@ tests/
 
 - Global: 80% (statements, branches, functions, lines).
 - `src/main/use-cases/`: 90% target (not yet enforced per-project; will be added to `vitest.config.ts` when use-cases grow).
-- Excluded from coverage: `src/main/index.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
+- Excluded from coverage: `src/main/index.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), port interfaces (`src/main/domain/ports/I*.ts`), pure type-only files (`entity-status.ts`, `file-event.ts`, `notification-events.ts`), IPC controllers (`src/main/interface-adapters/controllers/**`), file-system adapters (`src/main/interface-adapters/file-system/**`), Electron-dependent drivers (`src/main/framework-drivers/electron/**`), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
 
 ## CI Pipeline
 
