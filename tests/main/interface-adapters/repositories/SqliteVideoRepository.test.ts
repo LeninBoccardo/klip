@@ -5,6 +5,7 @@ import {
 } from '@main/interface-adapters/repositories'
 import type { Creator } from '@domain/entities'
 import type { Video } from '@domain/entities'
+import type { DatabaseInstance } from '@main/framework-drivers/database'
 import { createTestDb } from '../../helpers/createTestDb'
 
 // ── factories ──
@@ -12,6 +13,7 @@ import { createTestDb } from '../../helpers/createTestDb'
 function makeCreator(overrides: Partial<Creator> = {}): Creator {
   return {
     id: 'creator-1',
+    folderName: 'creator-1',
     name: 'Test Creator',
     profileImagePath: null,
     status: 'active',
@@ -43,20 +45,20 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
 }
 
 describe('SqliteVideoRepository', () => {
-  let db: ReturnType<typeof createTestDb>
+  let database: DatabaseInstance
   let videoRepo: SqliteVideoRepository
   let creatorRepo: SqliteCreatorRepository
 
   beforeEach(() => {
-    db = createTestDb()
-    creatorRepo = new SqliteCreatorRepository(db)
-    videoRepo = new SqliteVideoRepository(db)
+    database = createTestDb()
+    creatorRepo = new SqliteCreatorRepository(database.db)
+    videoRepo = new SqliteVideoRepository(database.db)
     // FK constraint: creator must exist first
     creatorRepo.upsert(makeCreator())
   })
 
   afterEach(() => {
-    db.close()
+    database.raw.close()
   })
 
   // ── findAll ──
@@ -89,7 +91,7 @@ describe('SqliteVideoRepository', () => {
   // ── findByCreatorId ──
 
   it('returns only videos belonging to the given creator', () => {
-    creatorRepo.upsert(makeCreator({ id: 'creator-2', name: 'Other' }))
+    creatorRepo.upsert(makeCreator({ id: 'creator-2', folderName: 'creator-2', name: 'Other' }))
     videoRepo.upsert(makeVideo({ id: 'v-1', creatorId: 'creator-1' }))
     videoRepo.upsert(makeVideo({ id: 'v-2', creatorId: 'creator-2' }))
 
@@ -145,7 +147,7 @@ describe('SqliteVideoRepository', () => {
     })
 
     it('filters by creatorId', () => {
-      creatorRepo.upsert(makeCreator({ id: 'creator-2', name: 'Other' }))
+      creatorRepo.upsert(makeCreator({ id: 'creator-2', folderName: 'creator-2', name: 'Other' }))
       videoRepo.upsert(makeVideo({ id: 'v-other', creatorId: 'creator-2', title: 'Other' }))
 
       const result = videoRepo.findPaginated({ page: 1, pageSize: 50, creatorId: 'creator-2' })

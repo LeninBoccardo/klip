@@ -14,3 +14,4 @@ export type {
   VideoInfo
 } from './download'
 export type { MediaProbeResult } from './media-probe'
+export { slugify } from './slugify'

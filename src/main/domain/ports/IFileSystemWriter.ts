@@ -8,4 +8,7 @@ export interface IFileSystemWriter {
 
   /** Write a UTF-8 string to a file, creating parent directories if needed */
   writeFile(filePath: string, content: string): void
+
+  /** Rename/move a directory from oldPath to newPath */
+  renameDirectory(oldPath: string, newPath: string): void
 }

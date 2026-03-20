@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { SqliteCreatorRepository } from '@main/interface-adapters/repositories'
 import type { Creator } from '@domain/entities'
+import type { DatabaseInstance } from '@main/framework-drivers/database'
 import { createTestDb } from '../../helpers/createTestDb'
 
 function makeCreator(overrides: Partial<Creator> = {}): Creator {
   return {
     id: 'creator-1',
+    folderName: 'creator-1',
     name: 'Test Creator',
     profileImagePath: null,
     status: 'active',
@@ -17,16 +19,16 @@ function makeCreator(overrides: Partial<Creator> = {}): Creator {
 }
 
 describe('SqliteCreatorRepository', () => {
-  let db: ReturnType<typeof createTestDb>
+  let database: DatabaseInstance
   let repo: SqliteCreatorRepository
 
   beforeEach(() => {
-    db = createTestDb()
-    repo = new SqliteCreatorRepository(db)
+    database = createTestDb()
+    repo = new SqliteCreatorRepository(database.db)
   })
 
   afterEach(() => {
-    db.close()
+    database.raw.close()
   })
 
   // ── findAll ──
@@ -36,9 +38,9 @@ describe('SqliteCreatorRepository', () => {
   })
 
   it('returns all creators ordered by name ASC', () => {
-    repo.upsert(makeCreator({ id: 'c-2', name: 'Bravo' }))
-    repo.upsert(makeCreator({ id: 'c-1', name: 'Alpha' }))
-    repo.upsert(makeCreator({ id: 'c-3', name: 'Charlie' }))
+    repo.upsert(makeCreator({ id: 'c-2', folderName: 'c-2', name: 'Bravo' }))
+    repo.upsert(makeCreator({ id: 'c-1', folderName: 'c-1', name: 'Alpha' }))
+    repo.upsert(makeCreator({ id: 'c-3', folderName: 'c-3', name: 'Charlie' }))
 
     const names = repo.findAll().map((c) => c.name)
     expect(names).toEqual(['Alpha', 'Bravo', 'Charlie'])
@@ -54,6 +56,18 @@ describe('SqliteCreatorRepository', () => {
     const creator = makeCreator()
     repo.upsert(creator)
     expect(repo.findById('creator-1')).toEqual(creator)
+  })
+
+  // ── findByFolderName ──
+
+  it('returns null for a non-existent folder name', () => {
+    expect(repo.findByFolderName('nope')).toBeNull()
+  })
+
+  it('returns the creator by folder name', () => {
+    const creator = makeCreator()
+    repo.upsert(creator)
+    expect(repo.findByFolderName('creator-1')?.id).toBe('creator-1')
   })
 
   // ── upsert ──
@@ -89,10 +103,12 @@ describe('SqliteCreatorRepository', () => {
   describe('findPaginated', () => {
     beforeEach(() => {
       for (let i = 1; i <= 25; i++) {
+        const padded = String(i).padStart(2, '0')
         repo.upsert(
           makeCreator({
-            id: `c-${String(i).padStart(2, '0')}`,
-            name: `Creator ${String(i).padStart(2, '0')}`
+            id: `c-${padded}`,
+            folderName: `c-${padded}`,
+            name: `Creator ${padded}`
           })
         )
       }
@@ -134,7 +150,6 @@ describe('SqliteCreatorRepository', () => {
         pageSize: 3,
         sortBy: 'INVALID; DROP TABLE creators;--'
       })
-      // Default sort is 'name' ASC — should not throw and should return valid data
       expect(result.data).toHaveLength(3)
       expect(result.data[0].name).toBe('Creator 01')
     })
@@ -176,10 +191,16 @@ describe('SqliteCreatorRepository', () => {
   // ── findAllActive ──
 
   it('returns only active creators', () => {
-    repo.upsert(makeCreator({ id: 'c-1', name: 'Active' }))
-    repo.upsert(makeCreator({ id: 'c-2', name: 'Missing', status: 'missing' }))
+    repo.upsert(makeCreator({ id: 'c-1', folderName: 'c-1', name: 'Active' }))
+    repo.upsert(makeCreator({ id: 'c-2', folderName: 'c-2', name: 'Missing', status: 'missing' }))
     repo.upsert(
-      makeCreator({ id: 'c-3', name: 'Deleted', status: 'deleted', deletedAt: '2025-06-01' })
+      makeCreator({
+        id: 'c-3',
+        folderName: 'c-3',
+        name: 'Deleted',
+        status: 'deleted',
+        deletedAt: '2025-06-01'
+      })
     )
 
     const active = repo.findAllActive()

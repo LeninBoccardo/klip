@@ -1,28 +1,31 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { SqliteTransactionScope } from '@main/framework-drivers/database/SqliteTransactionScope'
 import { createTestDb } from '../helpers/createTestDb'
+import type { DatabaseInstance } from '@main/framework-drivers/database'
 
 describe('SqliteTransactionScope', () => {
-  let db: ReturnType<typeof createTestDb>
+  let database: DatabaseInstance
   let scope: SqliteTransactionScope
 
   beforeEach(() => {
-    db = createTestDb()
-    scope = new SqliteTransactionScope(db)
+    database = createTestDb()
+    scope = new SqliteTransactionScope(database.raw)
   })
 
   afterEach(() => {
-    db.close()
+    database.raw.close()
   })
 
   it('commits on successful execution', () => {
     scope.run(() => {
-      db.prepare(
-        `INSERT INTO creators (id, name, status, created_at, updated_at) VALUES ('c1', 'Test', 'active', datetime('now'), datetime('now'))`
-      ).run()
+      database.raw
+        .prepare(
+          `INSERT INTO creators (id, folder_name, name, status, created_at, updated_at) VALUES ('c1', 'c1', 'Test', 'active', datetime('now'), datetime('now'))`
+        )
+        .run()
     })
 
-    const row = db.prepare('SELECT id FROM creators WHERE id = ?').get('c1') as
+    const row = database.raw.prepare('SELECT id FROM creators WHERE id = ?').get('c1') as
       | { id: string }
       | undefined
     expect(row?.id).toBe('c1')
@@ -31,14 +34,16 @@ describe('SqliteTransactionScope', () => {
   it('rolls back on error', () => {
     expect(() => {
       scope.run(() => {
-        db.prepare(
-          `INSERT INTO creators (id, name, status, created_at, updated_at) VALUES ('c2', 'Test', 'active', datetime('now'), datetime('now'))`
-        ).run()
+        database.raw
+          .prepare(
+            `INSERT INTO creators (id, folder_name, name, status, created_at, updated_at) VALUES ('c2', 'c2', 'Test', 'active', datetime('now'), datetime('now'))`
+          )
+          .run()
         throw new Error('Simulated failure')
       })
     }).toThrow('Simulated failure')
 
-    const row = db.prepare('SELECT id FROM creators WHERE id = ?').get('c2')
+    const row = database.raw.prepare('SELECT id FROM creators WHERE id = ?').get('c2')
     expect(row).toBeUndefined()
   })
 
@@ -49,10 +54,14 @@ describe('SqliteTransactionScope', () => {
 
   it('supports nested reads inside the transaction', () => {
     const result = scope.run(() => {
-      db.prepare(
-        `INSERT INTO creators (id, name, status, created_at, updated_at) VALUES ('c3', 'Nested', 'active', datetime('now'), datetime('now'))`
-      ).run()
-      const row = db.prepare('SELECT name FROM creators WHERE id = ?').get('c3') as { name: string }
+      database.raw
+        .prepare(
+          `INSERT INTO creators (id, folder_name, name, status, created_at, updated_at) VALUES ('c3', 'c3', 'Nested', 'active', datetime('now'), datetime('now'))`
+        )
+        .run()
+      const row = database.raw.prepare('SELECT name FROM creators WHERE id = ?').get('c3') as {
+        name: string
+      }
       return row.name
     })
     expect(result).toBe('Nested')

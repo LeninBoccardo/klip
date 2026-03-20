@@ -146,6 +146,7 @@ export class DownloadVideo implements IDownloadVideo {
       const now = new Date().toISOString()
       const creator: Creator = {
         id: creatorName,
+        folderName: creatorName,
         name: creatorName,
         profileImagePath: null,
         status: 'active',

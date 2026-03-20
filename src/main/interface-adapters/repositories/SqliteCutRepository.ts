@@ -1,121 +1,151 @@
-import type BetterSqlite3 from 'better-sqlite3'
+import { eq, and, like, inArray, asc, desc, sql } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
+import type { AppDatabase } from '@main/framework-drivers/database'
+import { cuts } from '@main/framework-drivers/database/schema'
 import type { Cut } from '@domain/entities'
 import type { ICutRepository, CutQueryParams } from '@domain/repositories'
 import type { PaginatedResult, EntityStatus } from '@domain/types'
 import { paginatedResult } from '@domain/types'
 
-// ── sort-column allowlist (camelCase UI key → snake_case DB column) ──
+// ── sort-column allowlist (camelCase UI key → Drizzle column reference) ──
 
-const CUT_SORT_COLUMNS: Record<string, string> = {
-  title: 'title',
-  duration: 'duration',
-  fileSize: 'file_size',
-  startTimestamp: 'start_timestamp',
-  endTimestamp: 'end_timestamp',
-  status: 'status',
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
+const SORT_COLUMNS: Record<string, SQLiteColumn> = {
+  title: cuts.title,
+  duration: cuts.duration,
+  fileSize: cuts.fileSize,
+  startTimestamp: cuts.startTimestamp,
+  endTimestamp: cuts.endTimestamp,
+  status: cuts.status,
+  createdAt: cuts.createdAt,
+  updatedAt: cuts.updatedAt
 }
-const DEFAULT_SORT_COLUMN = 'created_at'
+const DEFAULT_SORT_COLUMN = cuts.createdAt
 
-const ALL_COLUMNS = `id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
-                duration, resolution, file_size, file_path, thumbnail_path,
-                status, deleted_at, created_at, updated_at`
+// ── Helpers for tags JSON serialization ──
+
+function parseTags(tagsStr: string | null): string[] {
+  if (!tagsStr) return []
+  try {
+    const parsed = JSON.parse(tagsStr)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+/** Map a raw Drizzle row (tags as JSON string) to a Cut entity (tags as string[]) */
+function mapRowToCut(row: {
+  id: string
+  creatorId: string
+  videoId: string | null
+  title: string
+  tags: string | null
+  startTimestamp: number | null
+  endTimestamp: number | null
+  duration: number | null
+  resolution: string | null
+  fileSize: number | null
+  filePath: string
+  thumbnailPath: string | null
+  status: string
+  deletedAt: string | null
+  createdAt: string
+  updatedAt: string
+}): Cut {
+  return {
+    ...row,
+    tags: parseTags(row.tags),
+    status: row.status as EntityStatus
+  }
+}
 
 export class SqliteCutRepository implements ICutRepository {
-  constructor(private db: BetterSqlite3.Database) {}
+  constructor(private db: AppDatabase) {}
 
   findAll(): Cut[] {
-    const rows = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM cuts ORDER BY created_at DESC`)
-      .all() as RawCutRow[]
-
-    return rows.map(mapRowToCut)
+    return this.db.select().from(cuts).orderBy(desc(cuts.createdAt)).all().map(mapRowToCut)
   }
 
   findAllActive(): Cut[] {
-    const rows = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM cuts WHERE status = 'active' ORDER BY created_at DESC`)
-      .all() as RawCutRow[]
-
-    return rows.map(mapRowToCut)
+    return this.db
+      .select()
+      .from(cuts)
+      .where(eq(cuts.status, 'active'))
+      .orderBy(desc(cuts.createdAt))
+      .all()
+      .map(mapRowToCut)
   }
 
   findById(id: string): Cut | null {
-    const row = this.db.prepare(`SELECT ${ALL_COLUMNS} FROM cuts WHERE id = ?`).get(id) as
-      | RawCutRow
-      | undefined
-
+    const row = this.db.select().from(cuts).where(eq(cuts.id, id)).get()
     return row ? mapRowToCut(row) : null
   }
 
   findByCreatorId(creatorId: string): Cut[] {
-    const rows = this.db
-      .prepare(
-        `SELECT ${ALL_COLUMNS}
-         FROM cuts WHERE creator_id = ? ORDER BY created_at DESC`
-      )
-      .all(creatorId) as RawCutRow[]
-
-    return rows.map(mapRowToCut)
+    return this.db
+      .select()
+      .from(cuts)
+      .where(eq(cuts.creatorId, creatorId))
+      .orderBy(desc(cuts.createdAt))
+      .all()
+      .map(mapRowToCut)
   }
 
   findByVideoId(videoId: string): Cut[] {
-    const rows = this.db
-      .prepare(
-        `SELECT ${ALL_COLUMNS}
-         FROM cuts WHERE video_id = ? AND status = 'active' ORDER BY created_at DESC`
-      )
-      .all(videoId) as RawCutRow[]
-
-    return rows.map(mapRowToCut)
+    return this.db
+      .select()
+      .from(cuts)
+      .where(and(eq(cuts.videoId, videoId), eq(cuts.status, 'active')))
+      .orderBy(desc(cuts.createdAt))
+      .all()
+      .map(mapRowToCut)
   }
 
   findByTags(tags: string[]): Cut[] {
     if (tags.length === 0) return []
 
-    const placeholders = tags.map(() => '?').join(', ')
-    const rows = this.db
-      .prepare(
-        `SELECT DISTINCT c.id, c.creator_id, c.video_id, c.title, c.tags,
-                c.start_timestamp, c.end_timestamp, c.duration, c.resolution,
-                c.file_size, c.file_path, c.thumbnail_path,
-                c.status, c.deleted_at, c.created_at, c.updated_at
+    const tagValues = sql.join(
+      tags.map((t) => sql`${t}`),
+      sql`, `
+    )
+
+    const rows = this.db.all(
+      sql`SELECT DISTINCT c.id, c.creator_id AS creatorId, c.video_id AS videoId,
+                c.title, c.tags, c.start_timestamp AS startTimestamp,
+                c.end_timestamp AS endTimestamp, c.duration, c.resolution,
+                c.file_size AS fileSize, c.file_path AS filePath,
+                c.thumbnail_path AS thumbnailPath,
+                c.status, c.deleted_at AS deletedAt,
+                c.created_at AS createdAt, c.updated_at AS updatedAt
          FROM cuts c, json_each(c.tags) AS t
-         WHERE c.status = 'active' AND t.value IN (${placeholders})
+         WHERE c.status = 'active' AND t.value IN (${tagValues})
          ORDER BY c.created_at DESC`
-      )
-      .all(...tags) as RawCutRow[]
+    ) as Array<{
+      id: string
+      creatorId: string
+      videoId: string | null
+      title: string
+      tags: string | null
+      startTimestamp: number | null
+      endTimestamp: number | null
+      duration: number | null
+      resolution: string | null
+      fileSize: number | null
+      filePath: string
+      thumbnailPath: string | null
+      status: string
+      deletedAt: string | null
+      createdAt: string
+      updatedAt: string
+    }>
 
     return rows.map(mapRowToCut)
   }
 
   upsert(cut: Cut): void {
     this.db
-      .prepare(
-        `INSERT INTO cuts (id, creator_id, video_id, title, tags, start_timestamp, end_timestamp,
-                           duration, resolution, file_size, file_path, thumbnail_path,
-                           status, deleted_at, created_at, updated_at)
-         VALUES (@id, @creatorId, @videoId, @title, @tags, @startTimestamp, @endTimestamp,
-                 @duration, @resolution, @fileSize, @filePath, @thumbnailPath,
-                 @status, @deletedAt, @createdAt, @updatedAt)
-         ON CONFLICT(id) DO UPDATE SET
-           creator_id      = excluded.creator_id,
-           video_id        = excluded.video_id,
-           title           = excluded.title,
-           tags            = excluded.tags,
-           start_timestamp = excluded.start_timestamp,
-           end_timestamp   = excluded.end_timestamp,
-           duration        = excluded.duration,
-           resolution      = excluded.resolution,
-           file_size       = excluded.file_size,
-           file_path       = excluded.file_path,
-           thumbnail_path  = excluded.thumbnail_path,
-           status          = excluded.status,
-           deleted_at      = excluded.deleted_at,
-           updated_at      = excluded.updated_at`
-      )
-      .run({
+      .insert(cuts)
+      .values({
         id: cut.id,
         creatorId: cut.creatorId,
         videoId: cut.videoId,
@@ -133,125 +163,86 @@ export class SqliteCutRepository implements ICutRepository {
         createdAt: cut.createdAt,
         updatedAt: cut.updatedAt
       })
+      .onConflictDoUpdate({
+        target: cuts.id,
+        set: {
+          creatorId: sql`excluded.creator_id`,
+          videoId: sql`excluded.video_id`,
+          title: sql`excluded.title`,
+          tags: sql`excluded.tags`,
+          startTimestamp: sql`excluded.start_timestamp`,
+          endTimestamp: sql`excluded.end_timestamp`,
+          duration: sql`excluded.duration`,
+          resolution: sql`excluded.resolution`,
+          fileSize: sql`excluded.file_size`,
+          filePath: sql`excluded.file_path`,
+          thumbnailPath: sql`excluded.thumbnail_path`,
+          status: sql`excluded.status`,
+          deletedAt: sql`excluded.deleted_at`,
+          updatedAt: sql`excluded.updated_at`
+        }
+      })
+      .run()
   }
 
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void {
     this.db
-      .prepare(
-        `UPDATE cuts SET status = ?, deleted_at = ?, updated_at = datetime('now') WHERE id = ?`
-      )
-      .run(status, deletedAt, id)
+      .update(cuts)
+      .set({ status, deletedAt, updatedAt: new Date().toISOString() })
+      .where(eq(cuts.id, id))
+      .run()
   }
 
   delete(id: string): void {
-    this.db.prepare('DELETE FROM cuts WHERE id = ?').run(id)
+    this.db.delete(cuts).where(eq(cuts.id, id)).run()
   }
 
   findPaginated(params: CutQueryParams): PaginatedResult<Cut> {
-    const conditions: string[] = []
-    const bindings: unknown[] = []
-
-    // Status filter — defaults to ['active']
     const statuses = params.status && params.status.length > 0 ? params.status : ['active']
-    const statusPlaceholders = statuses.map(() => '?').join(', ')
-    conditions.push(`status IN (${statusPlaceholders})`)
-    bindings.push(...statuses)
+    const conditions = [inArray(cuts.status, statuses)]
 
     if (params.creatorId) {
-      conditions.push('creator_id = ?')
-      bindings.push(params.creatorId)
+      conditions.push(eq(cuts.creatorId, params.creatorId))
     }
 
     if (params.videoId) {
-      conditions.push('video_id = ?')
-      bindings.push(params.videoId)
-    }
-
-    if (params.tags && params.tags.length > 0) {
-      const tagPlaceholders = params.tags.map(() => '?').join(', ')
-      conditions.push(
-        `EXISTS (SELECT 1 FROM json_each(cuts.tags) WHERE value IN (${tagPlaceholders}))`
-      )
-      bindings.push(...params.tags)
+      conditions.push(eq(cuts.videoId, params.videoId))
     }
 
     if (params.search) {
-      conditions.push('title LIKE ?')
-      bindings.push(`%${params.search}%`)
+      conditions.push(like(cuts.title, `%${params.search}%`))
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-    const sortCol = CUT_SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
-    const sortDir = params.sortDirection === 'desc' ? 'DESC' : 'ASC'
+    // Tags filter uses a raw SQL EXISTS subquery
+    const tagFilter =
+      params.tags && params.tags.length > 0
+        ? sql`EXISTS (SELECT 1 FROM json_each(${cuts.tags}) WHERE value IN (${sql.join(
+            params.tags.map((t) => sql`${t}`),
+            sql`, `
+          )}))`
+        : undefined
+
+    const where = tagFilter ? and(...conditions, tagFilter) : and(...conditions)
+    const sortColumn = SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
+    const direction = params.sortDirection === 'desc' ? desc(sortColumn) : asc(sortColumn)
     const offset = (params.page - 1) * params.pageSize
 
-    const total = (
-      this.db.prepare(`SELECT COUNT(*) AS count FROM cuts ${where}`).get(...bindings) as {
-        count: number
-      }
-    ).count
+    const [{ count }] = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(cuts)
+      .where(where)
+      .all()
 
     const rows = this.db
-      .prepare(
-        `SELECT ${ALL_COLUMNS}
-         FROM cuts ${where}
-         ORDER BY ${sortCol} ${sortDir}
-         LIMIT ? OFFSET ?`
-      )
-      .all(...bindings, params.pageSize, offset) as RawCutRow[]
+      .select()
+      .from(cuts)
+      .where(where)
+      .orderBy(direction)
+      .limit(params.pageSize)
+      .offset(offset)
+      .all()
+      .map(mapRowToCut)
 
-    return paginatedResult(rows.map(mapRowToCut), total, params)
-  }
-}
-
-// ── internal helpers ──
-
-interface RawCutRow {
-  id: string
-  creator_id: string
-  video_id: string | null
-  title: string
-  tags: string
-  start_timestamp: number | null
-  end_timestamp: number | null
-  duration: number | null
-  resolution: string | null
-  file_size: number | null
-  file_path: string
-  thumbnail_path: string | null
-  status: string
-  deleted_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-function parseCutTags(tagsStr: string): string[] {
-  try {
-    const parsed = JSON.parse(tagsStr)
-    return Array.isArray(parsed) ? parsed : []
-  } catch (e) {
-    console.error(e)
-    return []
-  }
-}
-
-function mapRowToCut(row: RawCutRow): Cut {
-  return {
-    id: row.id,
-    creatorId: row.creator_id,
-    videoId: row.video_id,
-    title: row.title,
-    tags: parseCutTags(row.tags),
-    startTimestamp: row.start_timestamp,
-    endTimestamp: row.end_timestamp,
-    duration: row.duration,
-    resolution: row.resolution,
-    fileSize: row.file_size,
-    filePath: row.file_path,
-    thumbnailPath: row.thumbnail_path,
-    status: row.status as EntityStatus,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    return paginatedResult(rows, count, params)
   }
 }

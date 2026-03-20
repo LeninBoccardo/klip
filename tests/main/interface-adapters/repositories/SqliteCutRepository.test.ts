@@ -5,6 +5,7 @@ import {
   SqliteCutRepository
 } from '@main/interface-adapters/repositories'
 import type { Creator, Video, Cut } from '@domain/entities'
+import type { DatabaseInstance } from '@main/framework-drivers/database'
 import { createTestDb } from '../../helpers/createTestDb'
 
 // ── factories ──
@@ -12,6 +13,7 @@ import { createTestDb } from '../../helpers/createTestDb'
 function makeCreator(overrides: Partial<Creator> = {}): Creator {
   return {
     id: 'creator-1',
+    folderName: 'creator-1',
     name: 'Test Creator',
     profileImagePath: null,
     status: 'active',
@@ -65,16 +67,16 @@ function makeCut(overrides: Partial<Cut> = {}): Cut {
 }
 
 describe('SqliteCutRepository', () => {
-  let db: ReturnType<typeof createTestDb>
+  let database: DatabaseInstance
   let creatorRepo: SqliteCreatorRepository
   let videoRepo: SqliteVideoRepository
   let cutRepo: SqliteCutRepository
 
   beforeEach(() => {
-    db = createTestDb()
-    creatorRepo = new SqliteCreatorRepository(db)
-    videoRepo = new SqliteVideoRepository(db)
-    cutRepo = new SqliteCutRepository(db)
+    database = createTestDb()
+    creatorRepo = new SqliteCreatorRepository(database.db)
+    videoRepo = new SqliteVideoRepository(database.db)
+    cutRepo = new SqliteCutRepository(database.db)
 
     // FK prerequisites
     creatorRepo.upsert(makeCreator())
@@ -82,7 +84,7 @@ describe('SqliteCutRepository', () => {
   })
 
   afterEach(() => {
-    db.close()
+    database.raw.close()
   })
 
   // ── findAll ──
@@ -115,7 +117,7 @@ describe('SqliteCutRepository', () => {
   // ── findByCreatorId ──
 
   it('returns only cuts belonging to a creator', () => {
-    creatorRepo.upsert(makeCreator({ id: 'creator-2', name: 'Other' }))
+    creatorRepo.upsert(makeCreator({ id: 'creator-2', folderName: 'creator-2', name: 'Other' }))
     cutRepo.upsert(makeCut({ id: 'c-1', creatorId: 'creator-1' }))
     cutRepo.upsert(makeCut({ id: 'c-2', creatorId: 'creator-2', videoId: null }))
 
@@ -188,10 +190,12 @@ describe('SqliteCutRepository', () => {
 
   it('returns empty array for malformed JSON tags instead of crashing', () => {
     // Directly insert a row with invalid JSON in the tags column
-    db.prepare(
-      `INSERT INTO cuts (id, creator_id, video_id, title, tags, file_path, status, created_at, updated_at)
+    database.raw
+      .prepare(
+        `INSERT INTO cuts (id, creator_id, video_id, title, tags, file_path, status, created_at, updated_at)
        VALUES ('bad-tags', 'creator-1', 'video-1', 'Bad', 'NOT_JSON', '/test', 'active', datetime('now'), datetime('now'))`
-    ).run()
+      )
+      .run()
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const result = cutRepo.findById('bad-tags')
@@ -232,7 +236,7 @@ describe('SqliteCutRepository', () => {
     })
 
     it('filters by creatorId', () => {
-      creatorRepo.upsert(makeCreator({ id: 'creator-2', name: 'Other' }))
+      creatorRepo.upsert(makeCreator({ id: 'creator-2', folderName: 'creator-2', name: 'Other' }))
       cutRepo.upsert(makeCut({ id: 'c-extra', creatorId: 'creator-2', videoId: null }))
 
       const result = cutRepo.findPaginated({ page: 1, pageSize: 50, creatorId: 'creator-2' })

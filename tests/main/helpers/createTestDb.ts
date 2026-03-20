@@ -1,16 +1,16 @@
-import { initializeDatabase } from '@main/framework-drivers/database'
+import { initializeDatabase, type DatabaseInstance } from '@main/framework-drivers/database'
 
 /**
- * Creates a fresh in-memory SQLite database with all migrations applied.
+ * Creates a fresh in-memory SQLite database with all tables via Drizzle schema push.
  * Each test (or describe block) should call this to get an isolated DB instance.
  *
  * @example
  * ```ts
- * let db: ReturnType<typeof createTestDb>
- * beforeEach(() => { db = createTestDb() })
- * afterEach(() => { db.close() })
+ * let database: DatabaseInstance
+ * beforeEach(() => { database = createTestDb() })
+ * afterEach(() => { database.raw.close() })
  * ```
  */
-export function createTestDb(): ReturnType<typeof initializeDatabase> {
+export function createTestDb(): DatabaseInstance {
   return initializeDatabase(':memory:')
 }

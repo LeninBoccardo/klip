@@ -1,62 +1,61 @@
-import type BetterSqlite3 from 'better-sqlite3'
+import { eq, and, like, inArray, asc, desc, sql } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
+import type { AppDatabase } from '@main/framework-drivers/database'
+import { creators } from '@main/framework-drivers/database/schema'
 import type { Creator } from '@domain/entities'
 import type { ICreatorRepository } from '@domain/repositories'
 import type { PaginationParams, PaginatedResult, EntityStatus } from '@domain/types'
 import { paginatedResult } from '@domain/types'
 
-// ── sort-column allowlist (camelCase UI key → snake_case DB column) ──
+// ── sort-column allowlist (camelCase UI key → Drizzle column reference) ──
 
-const CREATOR_SORT_COLUMNS: Record<string, string> = {
-  name: 'name',
-  status: 'status',
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
+const SORT_COLUMNS: Record<string, SQLiteColumn> = {
+  name: creators.name,
+  status: creators.status,
+  createdAt: creators.createdAt,
+  updatedAt: creators.updatedAt
 }
-const DEFAULT_SORT_COLUMN = 'name'
+const DEFAULT_SORT_COLUMN = creators.name
 
-const ALL_COLUMNS = `id, name, profile_image_path, status, deleted_at, created_at, updated_at`
+type CreatorRow = typeof creators.$inferSelect
+
+function mapRow(row: CreatorRow): Creator {
+  return { ...row, status: row.status as EntityStatus }
+}
 
 export class SqliteCreatorRepository implements ICreatorRepository {
-  constructor(private db: BetterSqlite3.Database) {}
+  constructor(private db: AppDatabase) {}
 
   findAll(): Creator[] {
-    const rows = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM creators ORDER BY name ASC`)
-      .all() as RawCreatorRow[]
-
-    return rows.map(mapRowToCreator)
+    return this.db.select().from(creators).orderBy(asc(creators.name)).all().map(mapRow)
   }
 
   findAllActive(): Creator[] {
-    const rows = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM creators WHERE status = 'active' ORDER BY name ASC`)
-      .all() as RawCreatorRow[]
-
-    return rows.map(mapRowToCreator)
+    return this.db
+      .select()
+      .from(creators)
+      .where(eq(creators.status, 'active'))
+      .orderBy(asc(creators.name))
+      .all()
+      .map(mapRow)
   }
 
   findById(id: string): Creator | null {
-    const row = this.db.prepare(`SELECT ${ALL_COLUMNS} FROM creators WHERE id = ?`).get(id) as
-      | RawCreatorRow
-      | undefined
+    const row = this.db.select().from(creators).where(eq(creators.id, id)).get()
+    return row ? mapRow(row) : null
+  }
 
-    return row ? mapRowToCreator(row) : null
+  findByFolderName(folderName: string): Creator | null {
+    const row = this.db.select().from(creators).where(eq(creators.folderName, folderName)).get()
+    return row ? mapRow(row) : null
   }
 
   upsert(creator: Creator): void {
     this.db
-      .prepare(
-        `INSERT INTO creators (id, name, profile_image_path, status, deleted_at, created_at, updated_at)
-         VALUES (@id, @name, @profileImagePath, @status, @deletedAt, @createdAt, @updatedAt)
-         ON CONFLICT(id) DO UPDATE SET
-           name               = excluded.name,
-           profile_image_path = excluded.profile_image_path,
-           status             = excluded.status,
-           deleted_at         = excluded.deleted_at,
-           updated_at         = excluded.updated_at`
-      )
-      .run({
+      .insert(creators)
+      .values({
         id: creator.id,
+        folderName: creator.folderName,
         name: creator.name,
         profileImagePath: creator.profileImagePath,
         status: creator.status,
@@ -64,79 +63,60 @@ export class SqliteCreatorRepository implements ICreatorRepository {
         createdAt: creator.createdAt,
         updatedAt: creator.updatedAt
       })
+      .onConflictDoUpdate({
+        target: creators.id,
+        set: {
+          folderName: sql`excluded.folder_name`,
+          name: sql`excluded.name`,
+          profileImagePath: sql`excluded.profile_image_path`,
+          status: sql`excluded.status`,
+          deletedAt: sql`excluded.deleted_at`,
+          updatedAt: sql`excluded.updated_at`
+        }
+      })
+      .run()
   }
 
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void {
     this.db
-      .prepare(
-        `UPDATE creators SET status = ?, deleted_at = ?, updated_at = datetime('now') WHERE id = ?`
-      )
-      .run(status, deletedAt, id)
+      .update(creators)
+      .set({ status, deletedAt, updatedAt: new Date().toISOString() })
+      .where(eq(creators.id, id))
+      .run()
   }
 
   delete(id: string): void {
-    this.db.prepare('DELETE FROM creators WHERE id = ?').run(id)
+    this.db.delete(creators).where(eq(creators.id, id)).run()
   }
 
   findPaginated(params: PaginationParams): PaginatedResult<Creator> {
-    const conditions: string[] = []
-    const bindings: unknown[] = []
-
-    // Status filter — defaults to ['active']
     const statuses = params.status && params.status.length > 0 ? params.status : ['active']
-    const statusPlaceholders = statuses.map(() => '?').join(', ')
-    conditions.push(`status IN (${statusPlaceholders})`)
-    bindings.push(...statuses)
+    const conditions = [inArray(creators.status, statuses)]
 
     if (params.search) {
-      conditions.push('name LIKE ?')
-      bindings.push(`%${params.search}%`)
+      conditions.push(like(creators.name, `%${params.search}%`))
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-    const sortCol = CREATOR_SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
-    const sortDir = params.sortDirection === 'desc' ? 'DESC' : 'ASC'
+    const where = and(...conditions)
+    const sortColumn = SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
+    const direction = params.sortDirection === 'desc' ? desc(sortColumn) : asc(sortColumn)
     const offset = (params.page - 1) * params.pageSize
 
-    const total = (
-      this.db.prepare(`SELECT COUNT(*) AS count FROM creators ${where}`).get(...bindings) as {
-        count: number
-      }
-    ).count
+    const [{ count }] = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(creators)
+      .where(where)
+      .all()
 
     const rows = this.db
-      .prepare(
-        `SELECT ${ALL_COLUMNS}
-         FROM creators ${where}
-         ORDER BY ${sortCol} ${sortDir}
-         LIMIT ? OFFSET ?`
-      )
-      .all(...bindings, params.pageSize, offset) as RawCreatorRow[]
+      .select()
+      .from(creators)
+      .where(where)
+      .orderBy(direction)
+      .limit(params.pageSize)
+      .offset(offset)
+      .all()
 
-    return paginatedResult(rows.map(mapRowToCreator), total, params)
-  }
-}
-
-// ── internal helpers ──
-
-interface RawCreatorRow {
-  id: string
-  name: string
-  profile_image_path: string | null
-  status: string
-  deleted_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-function mapRowToCreator(row: RawCreatorRow): Creator {
-  return {
-    id: row.id,
-    name: row.name,
-    profileImagePath: row.profile_image_path,
-    status: row.status as EntityStatus,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    return paginatedResult(rows.map(mapRow), count, params)
   }
 }

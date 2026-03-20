@@ -4,9 +4,7 @@ import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
 import { registerDownloadController } from './interface-adapters/controllers/DownloadController'
-import { NodePathResolver } from '@main/interface-adapters/file-system'
-
-const nodePathResolver = new NodePathResolver()
+import { join } from 'path'
 
 // ── Application container (initialised in app.whenReady) ──
 let container: AppContainer
@@ -20,7 +18,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: nodePathResolver.join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
   })
@@ -39,7 +37,7 @@ function createWindow(): void {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(nodePathResolver.join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
@@ -61,9 +59,16 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   // ── Create DI container ──
-  const rootPath = nodePathResolver.join(app.getPath('documents'), 'klip')
-  const dbPath = nodePathResolver.join(app.getPath('userData'), 'klip.db')
-  container = createAppContainer({ dbPath, rootPath })
+  const defaultRootPath = join(app.getPath('documents'), 'klip')
+  const dbPath = join(app.getPath('userData'), 'klip.db')
+  container = createAppContainer({ dbPath, rootPath: defaultRootPath })
+
+  // ── Resolve rootPath from settings (or persist default on first launch) ──
+  const storedRootPath = container.repositories.settings.get('rootPath')
+  const rootPath = storedRootPath ?? defaultRootPath
+  if (!storedRootPath) {
+    container.repositories.settings.set('rootPath', rootPath)
+  }
   console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
 
   // ── Register IPC controllers ──

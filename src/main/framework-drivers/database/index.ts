@@ -1,2 +1,2 @@
-export { initializeDatabase } from './database'
+export { initializeDatabase, type DatabaseInstance, type AppDatabase } from './database'
 export { SqliteTransactionScope } from './SqliteTransactionScope'

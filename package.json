@@ -25,7 +25,10 @@
     "test:main": "vitest run --project main",
     "test:renderer": "vitest run --project renderer",
     "test:coverage": "vitest run --coverage",
-    "setup": "tsx scripts/download-binaries.ts"
+    "setup": "tsx scripts/download-binaries.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -36,6 +39,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.1",
     "electron-updater": "^6.3.9",
     "lucide-react": "^0.577.0",
     "p-queue": "^9.1.0",
@@ -60,6 +64,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^4.1.0",
+    "drizzle-kit": "^0.31.10",
     "electron": "^39.2.6",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",

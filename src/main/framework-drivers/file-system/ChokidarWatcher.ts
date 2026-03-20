@@ -45,8 +45,11 @@ export class ChokidarWatcher implements IFileWatcher {
   private callback: ((event: FileEvent) => void) | null = null
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private stopped = false
+  private rootPath: string
 
-  constructor(private readonly rootPath: string) {}
+  constructor(rootPath: string) {
+    this.rootPath = rootPath
+  }
 
   onEvent(callback: (event: FileEvent) => void): void {
     this.callback = callback
@@ -69,6 +72,12 @@ export class ChokidarWatcher implements IFileWatcher {
       void this.watcher.close()
       this.watcher = null
     }
+  }
+
+  restart(newRootPath: string): void {
+    this.stop()
+    this.rootPath = newRootPath
+    this.start()
   }
 
   // ── Private ──

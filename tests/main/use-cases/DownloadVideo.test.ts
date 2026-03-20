@@ -55,6 +55,7 @@ function mockCreatorRepo(overrides: Partial<ICreatorRepository> = {}): ICreatorR
     findAll: vi.fn().mockReturnValue([]),
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
+    findByFolderName: vi.fn().mockReturnValue(null),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     delete: vi.fn(),
@@ -86,7 +87,8 @@ function mockPathResolver(): IPathResolver {
 function mockFsWriter(): IFileSystemWriter {
   return {
     ensureDirectory: vi.fn(),
-    writeFile: vi.fn()
+    writeFile: vi.fn(),
+    renameDirectory: vi.fn()
   }
 }
 

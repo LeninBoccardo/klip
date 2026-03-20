@@ -1,5 +1,9 @@
-import type BetterSqlite3 from 'better-sqlite3'
 import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
+import type {
+  IOperationRepository,
+  IAuditLogRepository,
+  ISettingsRepository
+} from '@domain/repositories'
 import type {
   IFileWatcher,
   IDebouncer,
@@ -17,11 +21,21 @@ import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
 import type { IDownloadVideo } from '@use-cases/IDownloadVideo'
 import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
-import { initializeDatabase, SqliteTransactionScope } from './framework-drivers/database'
+import {
+  initializeDatabase,
+  type DatabaseInstance,
+  SqliteTransactionScope
+} from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
   SqliteVideoRepository,
-  SqliteCutRepository
+  SqliteCutRepository,
+  SqliteSettingsRepository,
+  SqliteOperationRepository,
+  SqliteAuditLogRepository,
+  AuditedCreatorRepository,
+  AuditedVideoRepository,
+  AuditedCutRepository
 } from './interface-adapters/repositories'
 import {
   NodeFileSystemReader,
@@ -46,11 +60,14 @@ import { ProbeMediaFile } from '@use-cases/ProbeMediaFile'
  * All concrete instances are wired here — the rest of the app depends only on interfaces.
  */
 export interface AppContainer {
-  db: BetterSqlite3.Database
+  database: DatabaseInstance
   repositories: {
     creator: ICreatorRepository
     video: IVideoRepository
     cut: ICutRepository
+    settings: ISettingsRepository
+    operation: IOperationRepository
+    auditLog: IAuditLogRepository
   }
   ports: {
     fsReader: IFileSystemReader
@@ -89,13 +106,13 @@ export interface AppConfig {
  */
 export function createAppContainer(config: AppConfig): AppContainer {
   // ── Framework drivers ──
-  const db = initializeDatabase(config.dbPath)
+  const database = initializeDatabase(config.dbPath)
 
   // ── Ports / adapters ──
   const fsReader = new NodeFileSystemReader()
   const fsWriter = new NodeFileSystemWriter()
   const pathResolver = new NodePathResolver()
-  const transactionScope = new SqliteTransactionScope(db)
+  const transactionScope = new SqliteTransactionScope(database.raw)
   const notifier = new ElectronNotifier()
   const debouncer = new NodeDebouncer()
   const binaryResolver = new ElectronBinaryResolver()
@@ -103,10 +120,18 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const mediaProbe = new FfprobeMediaProbe(binaryResolver)
   const downloadQueue = new PQueueDownloadQueue(2)
 
-  // ── Repositories ──
-  const creatorRepo = new SqliteCreatorRepository(db)
-  const videoRepo = new SqliteVideoRepository(db)
-  const cutRepo = new SqliteCutRepository(db)
+  // ── Repositories (raw Drizzle) ──
+  const sqliteCreatorRepo = new SqliteCreatorRepository(database.db)
+  const sqliteVideoRepo = new SqliteVideoRepository(database.db)
+  const sqliteCutRepo = new SqliteCutRepository(database.db)
+  const settingsRepo = new SqliteSettingsRepository(database.db)
+  const operationRepo = new SqliteOperationRepository(database.db)
+  const auditLogRepo = new SqliteAuditLogRepository(database.db)
+
+  // ── Audited repository decorators ──
+  const creatorRepo = new AuditedCreatorRepository(sqliteCreatorRepo, auditLogRepo)
+  const videoRepo = new AuditedVideoRepository(sqliteVideoRepo, auditLogRepo)
+  const cutRepo = new AuditedCutRepository(sqliteCutRepo, auditLogRepo)
 
   // ── Use cases ──
   const reconcile = new ReconcileDirectory(
@@ -148,11 +173,14 @@ export function createAppContainer(config: AppConfig): AppContainer {
   fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
 
   return {
-    db,
+    database,
     repositories: {
       creator: creatorRepo,
       video: videoRepo,
-      cut: cutRepo
+      cut: cutRepo,
+      settings: settingsRepo,
+      operation: operationRepo,
+      auditLog: auditLogRepo
     },
     ports: {
       fsReader,
@@ -180,7 +208,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
       fileWatcher.stop()
       debouncer.cancel()
       downloadQueue.clear()
-      db.close()
+      database.raw.close()
       console.log('[klip] Container shut down: watcher stopped, debouncer cancelled, DB closed')
     }
   }

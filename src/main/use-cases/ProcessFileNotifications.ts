@@ -42,6 +42,7 @@ function mergeResults(a: ReconcileResult, b: ReconcileResult): ReconcileResult {
  */
 export class ProcessFileNotifications {
   private flushing = false
+  private suspended = false
 
   constructor(
     private queue: INotificationQueue,
@@ -56,12 +57,36 @@ export class ProcessFileNotifications {
   ) {}
 
   /**
+   * Suspend event processing. Events arriving while suspended are silently dropped.
+   * Cancels any pending debounced flush.
+   */
+  suspend(): void {
+    this.suspended = true
+    this.debouncer.cancel()
+  }
+
+  /**
+   * Resume event processing. Drains and discards any stale buffered events
+   * that accumulated during the suspension window.
+   */
+  async resume(): Promise<void> {
+    // Discard stale events from the buffer
+    await this.queue.drain()
+    this.suspended = false
+  }
+
+  /** Whether the notification processor is currently suspended */
+  isSuspended(): boolean {
+    return this.suspended
+  }
+
+  /**
    * Receive a single file-system event.
    * Buffers it and (re)starts the debounce timer.
-   * If a flush is in progress, events accumulate in the staging buffer
-   * and are picked up after the current flush completes.
+   * If a flush is in progress or processor is suspended, events are dropped.
    */
   handleEvent(event: FileEvent): void {
+    if (this.suspended) return
     this.queue.enqueue(event)
     if (!this.flushing) {
       this.debouncer.schedule(() => this.flush(), this.config.debounceMs)

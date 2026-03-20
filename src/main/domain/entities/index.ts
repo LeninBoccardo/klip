@@ -1,3 +1,6 @@
 export type { Creator } from './Creator'
 export type { Video } from './Video'
 export type { Cut } from './Cut'
+export type { Operation, OperationStatus, OperationType } from './Operation'
+export type { AuditEntry, AuditAction } from './AuditEntry'
+export type { AppSetting } from './AppSetting'

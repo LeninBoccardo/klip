@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'fs'
+import { mkdirSync, writeFileSync, renameSync } from 'fs'
 import { dirname } from 'path'
 import type { IFileSystemWriter } from '@domain/ports'
 
@@ -13,5 +13,9 @@ export class NodeFileSystemWriter implements IFileSystemWriter {
   writeFile(filePath: string, content: string): void {
     mkdirSync(dirname(filePath), { recursive: true })
     writeFileSync(filePath, content, 'utf-8')
+  }
+
+  renameDirectory(oldPath: string, newPath: string): void {
+    renameSync(oldPath, newPath)
   }
 }

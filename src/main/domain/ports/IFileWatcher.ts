@@ -11,6 +11,9 @@ export interface IFileWatcher {
   /** Stop watching and release all OS handles. Safe to call multiple times. */
   stop(): void
 
+  /** Stop the current watcher, switch to a new root path, and start watching again. */
+  restart(newRootPath: string): void
+
   /** Register the handler invoked for every file-system change. Must be called before `start`. */
   onEvent(callback: (event: FileEvent) => void): void
 }

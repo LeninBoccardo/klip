@@ -1,87 +1,67 @@
-import type BetterSqlite3 from 'better-sqlite3'
+import { eq, and, like, inArray, asc, desc, sql } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
+import type { AppDatabase } from '@main/framework-drivers/database'
+import { videos } from '@main/framework-drivers/database/schema'
 import type { Video } from '@domain/entities'
 import type { IVideoRepository, VideoQueryParams } from '@domain/repositories'
 import type { PaginatedResult, EntityStatus } from '@domain/types'
 import { paginatedResult } from '@domain/types'
 
-// ── sort-column allowlist (camelCase UI key → snake_case DB column) ──
+// ── sort-column allowlist (camelCase UI key → Drizzle column reference) ──
 
-const VIDEO_SORT_COLUMNS: Record<string, string> = {
-  title: 'title',
-  duration: 'duration',
-  fileSize: 'file_size',
-  downloadDate: 'download_date',
-  status: 'status',
-  createdAt: 'created_at',
-  updatedAt: 'updated_at'
+const SORT_COLUMNS: Record<string, SQLiteColumn> = {
+  title: videos.title,
+  duration: videos.duration,
+  fileSize: videos.fileSize,
+  downloadDate: videos.downloadDate,
+  status: videos.status,
+  createdAt: videos.createdAt,
+  updatedAt: videos.updatedAt
 }
-const DEFAULT_SORT_COLUMN = 'created_at'
+const DEFAULT_SORT_COLUMN = videos.createdAt
 
-const ALL_COLUMNS = `id, creator_id, title, url, duration, resolution, file_size,
-                file_path, thumbnail_path, download_date, status, deleted_at, created_at, updated_at`
+type VideoRow = typeof videos.$inferSelect
+
+function mapRow(row: VideoRow): Video {
+  return { ...row, status: row.status as EntityStatus }
+}
 
 export class SqliteVideoRepository implements IVideoRepository {
-  constructor(private db: BetterSqlite3.Database) {}
+  constructor(private db: AppDatabase) {}
 
   findAll(): Video[] {
-    const rows = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM videos ORDER BY created_at DESC`)
-      .all() as RawVideoRow[]
-
-    return rows.map(mapRowToVideo)
+    return this.db.select().from(videos).orderBy(desc(videos.createdAt)).all().map(mapRow)
   }
 
   findAllActive(): Video[] {
-    const rows = this.db
-      .prepare(`SELECT ${ALL_COLUMNS} FROM videos WHERE status = 'active' ORDER BY created_at DESC`)
-      .all() as RawVideoRow[]
-
-    return rows.map(mapRowToVideo)
+    return this.db
+      .select()
+      .from(videos)
+      .where(eq(videos.status, 'active'))
+      .orderBy(desc(videos.createdAt))
+      .all()
+      .map(mapRow)
   }
 
   findById(id: string): Video | null {
-    const row = this.db.prepare(`SELECT ${ALL_COLUMNS} FROM videos WHERE id = ?`).get(id) as
-      | RawVideoRow
-      | undefined
-
-    return row ? mapRowToVideo(row) : null
+    const row = this.db.select().from(videos).where(eq(videos.id, id)).get()
+    return row ? mapRow(row) : null
   }
 
   findByCreatorId(creatorId: string): Video[] {
-    const rows = this.db
-      .prepare(
-        `SELECT ${ALL_COLUMNS}
-         FROM videos WHERE creator_id = ? ORDER BY created_at DESC`
-      )
-      .all(creatorId) as RawVideoRow[]
-
-    return rows.map(mapRowToVideo)
+    return this.db
+      .select()
+      .from(videos)
+      .where(eq(videos.creatorId, creatorId))
+      .orderBy(desc(videos.createdAt))
+      .all()
+      .map(mapRow)
   }
 
   upsert(video: Video): void {
     this.db
-      .prepare(
-        `INSERT INTO videos (id, creator_id, title, url, duration, resolution, file_size,
-                             file_path, thumbnail_path, download_date, status, deleted_at,
-                             created_at, updated_at)
-         VALUES (@id, @creatorId, @title, @url, @duration, @resolution, @fileSize,
-                 @filePath, @thumbnailPath, @downloadDate, @status, @deletedAt,
-                 @createdAt, @updatedAt)
-         ON CONFLICT(id) DO UPDATE SET
-           creator_id     = excluded.creator_id,
-           title          = excluded.title,
-           url            = excluded.url,
-           duration       = excluded.duration,
-           resolution     = excluded.resolution,
-           file_size      = excluded.file_size,
-           file_path      = excluded.file_path,
-           thumbnail_path = excluded.thumbnail_path,
-           download_date  = excluded.download_date,
-           status         = excluded.status,
-           deleted_at     = excluded.deleted_at,
-           updated_at     = excluded.updated_at`
-      )
-      .run({
+      .insert(videos)
+      .values({
         id: video.id,
         creatorId: video.creatorId,
         title: video.title,
@@ -97,98 +77,70 @@ export class SqliteVideoRepository implements IVideoRepository {
         createdAt: video.createdAt,
         updatedAt: video.updatedAt
       })
+      .onConflictDoUpdate({
+        target: videos.id,
+        set: {
+          creatorId: sql`excluded.creator_id`,
+          title: sql`excluded.title`,
+          url: sql`excluded.url`,
+          duration: sql`excluded.duration`,
+          resolution: sql`excluded.resolution`,
+          fileSize: sql`excluded.file_size`,
+          filePath: sql`excluded.file_path`,
+          thumbnailPath: sql`excluded.thumbnail_path`,
+          downloadDate: sql`excluded.download_date`,
+          status: sql`excluded.status`,
+          deletedAt: sql`excluded.deleted_at`,
+          updatedAt: sql`excluded.updated_at`
+        }
+      })
+      .run()
   }
 
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void {
     this.db
-      .prepare(
-        `UPDATE videos SET status = ?, deleted_at = ?, updated_at = datetime('now') WHERE id = ?`
-      )
-      .run(status, deletedAt, id)
+      .update(videos)
+      .set({ status, deletedAt, updatedAt: new Date().toISOString() })
+      .where(eq(videos.id, id))
+      .run()
   }
 
   delete(id: string): void {
-    this.db.prepare('DELETE FROM videos WHERE id = ?').run(id)
+    this.db.delete(videos).where(eq(videos.id, id)).run()
   }
 
   findPaginated(params: VideoQueryParams): PaginatedResult<Video> {
-    const conditions: string[] = []
-    const bindings: unknown[] = []
-
-    // Status filter — defaults to ['active']
     const statuses = params.status && params.status.length > 0 ? params.status : ['active']
-    const statusPlaceholders = statuses.map(() => '?').join(', ')
-    conditions.push(`status IN (${statusPlaceholders})`)
-    bindings.push(...statuses)
+    const conditions = [inArray(videos.status, statuses)]
 
     if (params.creatorId) {
-      conditions.push('creator_id = ?')
-      bindings.push(params.creatorId)
+      conditions.push(eq(videos.creatorId, params.creatorId))
     }
 
     if (params.search) {
-      conditions.push('title LIKE ?')
-      bindings.push(`%${params.search}%`)
+      conditions.push(like(videos.title, `%${params.search}%`))
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-    const sortCol = VIDEO_SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
-    const sortDir = params.sortDirection === 'desc' ? 'DESC' : 'ASC'
+    const where = and(...conditions)
+    const sortColumn = SORT_COLUMNS[params.sortBy ?? ''] ?? DEFAULT_SORT_COLUMN
+    const direction = params.sortDirection === 'desc' ? desc(sortColumn) : asc(sortColumn)
     const offset = (params.page - 1) * params.pageSize
 
-    const total = (
-      this.db.prepare(`SELECT COUNT(*) AS count FROM videos ${where}`).get(...bindings) as {
-        count: number
-      }
-    ).count
+    const [{ count }] = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(videos)
+      .where(where)
+      .all()
 
     const rows = this.db
-      .prepare(
-        `SELECT ${ALL_COLUMNS}
-         FROM videos ${where}
-         ORDER BY ${sortCol} ${sortDir}
-         LIMIT ? OFFSET ?`
-      )
-      .all(...bindings, params.pageSize, offset) as RawVideoRow[]
+      .select()
+      .from(videos)
+      .where(where)
+      .orderBy(direction)
+      .limit(params.pageSize)
+      .offset(offset)
+      .all()
 
-    return paginatedResult(rows.map(mapRowToVideo), total, params)
-  }
-}
-
-// ── internal helpers ──
-
-interface RawVideoRow {
-  id: string
-  creator_id: string
-  title: string
-  url: string | null
-  duration: number | null
-  resolution: string | null
-  file_size: number | null
-  file_path: string
-  thumbnail_path: string | null
-  download_date: string | null
-  status: string
-  deleted_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-function mapRowToVideo(row: RawVideoRow): Video {
-  return {
-    id: row.id,
-    creatorId: row.creator_id,
-    title: row.title,
-    url: row.url,
-    duration: row.duration,
-    resolution: row.resolution,
-    fileSize: row.file_size,
-    filePath: row.file_path,
-    thumbnailPath: row.thumbnail_path,
-    downloadDate: row.download_date,
-    status: row.status as EntityStatus,
-    deletedAt: row.deleted_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    return paginatedResult(rows.map(mapRow), count, params)
   }
 }

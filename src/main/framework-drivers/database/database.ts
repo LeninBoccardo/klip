@@ -1,107 +1,144 @@
 import BetterSqlite3 from 'better-sqlite3'
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import { sql } from 'drizzle-orm'
+import * as schema from './schema'
+import { join } from 'path'
 
-const CURRENT_SCHEMA_VERSION = 3
+export type AppDatabase = BetterSQLite3Database<typeof schema>
 
-/**
- * Run all migrations sequentially from the current version to CURRENT_SCHEMA_VERSION.
- * Each case falls through intentionally to apply every subsequent migration.
- */
-function migrate(db: BetterSqlite3.Database, fromVersion: number): void {
-  switch (fromVersion) {
-    case 0:
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS creators (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          profile_image_path TEXT,
-          created_at TEXT NOT NULL DEFAULT (datetime('now')),
-          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS videos (
-          id TEXT PRIMARY KEY,
-          creator_id TEXT NOT NULL,
-          title TEXT NOT NULL,
-          url TEXT,
-          duration INTEGER,
-          resolution TEXT,
-          file_size INTEGER,
-          file_path TEXT NOT NULL,
-          thumbnail_path TEXT,
-          download_date TEXT,
-          created_at TEXT NOT NULL DEFAULT (datetime('now')),
-          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-          FOREIGN KEY (creator_id) REFERENCES creators(id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS cuts (
-          id TEXT PRIMARY KEY,
-          creator_id TEXT NOT NULL,
-          video_id TEXT,
-          title TEXT NOT NULL,
-          tags TEXT NOT NULL DEFAULT '[]',
-          start_timestamp REAL,
-          end_timestamp REAL,
-          duration INTEGER,
-          resolution TEXT,
-          file_size INTEGER,
-          file_path TEXT NOT NULL,
-          thumbnail_path TEXT,
-          created_at TEXT NOT NULL DEFAULT (datetime('now')),
-          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-          FOREIGN KEY (creator_id) REFERENCES creators(id) ON DELETE CASCADE,
-          FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE SET NULL
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_videos_creator_id ON videos(creator_id);
-        CREATE INDEX IF NOT EXISTS idx_cuts_creator_id ON cuts(creator_id);
-        CREATE INDEX IF NOT EXISTS idx_cuts_video_id ON cuts(video_id);
-      `)
-    // falls through — future case 1, case 2, etc. go here
-    case 1:
-      db.exec(`
-        ALTER TABLE creators ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
-        ALTER TABLE creators ADD COLUMN deleted_at TEXT;
-
-        ALTER TABLE videos ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
-        ALTER TABLE videos ADD COLUMN deleted_at TEXT;
-
-        ALTER TABLE cuts ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
-        ALTER TABLE cuts ADD COLUMN deleted_at TEXT;
-      `)
-    // falls through
-    case 2:
-      db.exec(`
-        CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status);
-        CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status);
-        CREATE INDEX IF NOT EXISTS idx_cuts_status ON cuts(status);
-        CREATE INDEX IF NOT EXISTS idx_videos_status_created ON videos(status, created_at);
-        CREATE INDEX IF NOT EXISTS idx_cuts_status_created ON cuts(status, created_at);
-      `)
-    // falls through
-  }
-
-  db.pragma(`user_version = ${CURRENT_SCHEMA_VERSION}`)
+export interface DatabaseInstance {
+  /** Raw better-sqlite3 handle — used for transactions and shutdown */
+  raw: BetterSqlite3.Database
+  /** Drizzle ORM instance — used by all repositories */
+  db: AppDatabase
 }
 
 /**
  * Open (or create) the SQLite database at `dbPath`, enable WAL mode and
- * foreign keys, and run any pending schema migrations.
+ * foreign keys, wrap with Drizzle, and apply all pending migrations.
+ *
+ * For in-memory databases (`:memory:`), schema is pushed directly
+ * since file-based migrations are not available.
  */
-export function initializeDatabase(dbPath: string): BetterSqlite3.Database {
-  const db = new BetterSqlite3(dbPath)
+export function initializeDatabase(dbPath: string): DatabaseInstance {
+  const raw = new BetterSqlite3(dbPath)
 
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
+  raw.pragma('journal_mode = WAL')
+  raw.pragma('foreign_keys = ON')
 
-  const currentVersion = db.pragma('user_version', { simple: true }) as number
+  const db = drizzle(raw, { schema })
 
-  // Wrap the entire migration sequence in a single transaction
-  if (currentVersion < CURRENT_SCHEMA_VERSION) {
-    db.transaction(() => {
-      migrate(db, currentVersion)
-    })()
+  if (dbPath === ':memory:') {
+    pushSchema(db)
+  } else {
+    const migrationsFolder = join(__dirname, 'migrations')
+    migrate(db, { migrationsFolder })
   }
 
-  return db
+  return { raw, db }
+}
+
+/**
+ * Push schema directly to an in-memory database.
+ * Used by test helpers — avoids needing migration files on disk.
+ */
+function pushSchema(db: AppDatabase): void {
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS creators (
+      id TEXT PRIMARY KEY,
+      folder_name TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      profile_image_path TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      deleted_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS videos (
+      id TEXT PRIMARY KEY,
+      creator_id TEXT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      url TEXT,
+      duration INTEGER,
+      resolution TEXT,
+      file_size INTEGER,
+      file_path TEXT NOT NULL,
+      thumbnail_path TEXT,
+      download_date TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      deleted_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS cuts (
+      id TEXT PRIMARY KEY,
+      creator_id TEXT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+      video_id TEXT REFERENCES videos(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      tags TEXT NOT NULL DEFAULT '[]',
+      start_timestamp REAL,
+      end_timestamp REAL,
+      duration INTEGER,
+      resolution TEXT,
+      file_size INTEGER,
+      file_path TEXT NOT NULL,
+      thumbnail_path TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      deleted_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS operations (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      payload TEXT NOT NULL DEFAULT '{}',
+      error TEXT,
+      started_at TEXT,
+      completed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      changes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
+  // Indexes
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_creator_id ON videos(creator_id)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status_created ON videos(status, created_at)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_cuts_creator_id ON cuts(creator_id)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_cuts_video_id ON cuts(video_id)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_cuts_status ON cuts(status)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_cuts_status_created ON cuts(status, created_at)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_operations_status ON operations(status)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at)`)
 }

@@ -111,6 +111,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       const now = new Date().toISOString()
       const newCreator: Creator = {
         id: dirName,
+        folderName: dirName,
         name: creatorJson?.name ?? dirName,
         profileImagePath: creatorJson?.profileImagePath ?? null,
         status: 'active',
@@ -163,6 +164,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       const now = new Date().toISOString()
       const newCreator: Creator = {
         id: creatorName,
+        folderName: creatorName,
         name: creatorJson?.name ?? creatorName,
         profileImagePath: creatorJson?.profileImagePath ?? null,
         status: 'active',

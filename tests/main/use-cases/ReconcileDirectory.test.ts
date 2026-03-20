@@ -9,6 +9,7 @@ import type { Creator, Video, Cut } from '@domain/entities'
 function makeCreator(overrides: Partial<Creator> = {}): Creator {
   return {
     id: 'creator-1',
+    folderName: 'creator-1',
     name: 'creator-1',
     profileImagePath: null,
     status: 'active',
@@ -68,6 +69,7 @@ function mockCreatorRepo(): ICreatorRepository {
     findAll: vi.fn().mockReturnValue([]),
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
+    findByFolderName: vi.fn().mockReturnValue(null),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     delete: vi.fn(),
