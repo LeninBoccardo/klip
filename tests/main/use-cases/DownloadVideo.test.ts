@@ -348,4 +348,156 @@ describe('DownloadVideo', () => {
       )
     expect(errorCalls.length).toBe(0)
   })
+
+  // ── Edge: existing active creator (no upsert/updateStatus needed) ──
+
+  it('should not upsert or updateStatus for an existing active creator', async () => {
+    const activeCreator: Creator = {
+      id: 'TestCreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      status: 'active',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findById).mockReturnValue(activeCreator)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(creatorRepo.upsert).not.toHaveBeenCalled()
+    expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  // ── Edge: deleted creator — left as-is (intentional) ──
+
+  it('should not recover a deleted creator', async () => {
+    const deletedCreator: Creator = {
+      id: 'TestCreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      status: 'deleted',
+      deletedAt: '2025-06-01T00:00:00.000Z',
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findById).mockReturnValue(deletedCreator)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(creatorRepo.upsert).not.toHaveBeenCalled()
+    expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  // ── Edge: fetchInfo failure ──
+
+  it('should notify error when fetchInfo fails', async () => {
+    vi.mocked(fetchInfo.execute).mockRejectedValue(new Error('Invalid URL'))
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(notifier.notify).toHaveBeenCalledWith(
+      'download-progress',
+      expect.objectContaining({ status: 'error' })
+    )
+    expect(downloader.download).not.toHaveBeenCalled()
+    expect(videoRepo.upsert).not.toHaveBeenCalled()
+  })
+
+  // ── Edge: ensureDirectory failure ──
+
+  it('should notify error when ensureDirectory fails', async () => {
+    vi.mocked(fsWriter.ensureDirectory).mockImplementation(() => {
+      throw new Error('Permission denied')
+    })
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(notifier.notify).toHaveBeenCalledWith(
+      'download-progress',
+      expect.objectContaining({ status: 'error' })
+    )
+    expect(downloader.download).not.toHaveBeenCalled()
+  })
+
+  // ── Edge: video result with null/missing fields (fallback chain) ──
+
+  it('should use info.title as fallback when result.title is empty', async () => {
+    vi.mocked(downloader.download).mockImplementation(async (opts) => ({
+      downloadId: opts.downloadId,
+      videoId: 'abc123',
+      creatorName: 'TestChannel',
+      filePath: '/root/TestCreator/downloads/abc123/abc123.mp4',
+      title: '', // empty
+      duration: null,
+      thumbnailPath: null
+    }))
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(videoRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Test Video' // falls back to info.title
+      })
+    )
+  })
+
+  it('should use videoId as last-resort title when both result and info are empty', async () => {
+    vi.mocked(fetchInfo.execute).mockResolvedValue({
+      ...videoInfo,
+      title: '' // empty
+    })
+    vi.mocked(downloader.download).mockImplementation(async (opts) => ({
+      downloadId: opts.downloadId,
+      videoId: 'abc123',
+      creatorName: 'TestChannel',
+      filePath: '/root/TestCreator/downloads/abc123/abc123.mp4',
+      title: '', // empty
+      duration: null,
+      thumbnailPath: null
+    }))
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(videoRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'abc123' // last fallback
+      })
+    )
+  })
+
+  // ── Edge: concurrent downloads get unique IDs ──
+
+  it('should assign unique downloadIds to concurrent requests', async () => {
+    const result1 = await useCase.execute({
+      url: 'https://youtube.com/watch?v=vid1',
+      creatorName: 'Creator'
+    })
+    const result2 = await useCase.execute({
+      url: 'https://youtube.com/watch?v=vid2',
+      creatorName: 'Creator'
+    })
+
+    expect(result1.downloadId).not.toBe(result2.downloadId)
+  })
+
+  // ── Edge: whitespace-only creator name (after trimming) ──
+
+  it('should throw if creator name is only whitespace', async () => {
+    await expect(
+      useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: '   ' })
+    ).rejects.toThrow('Creator name is required')
+  })
+
+  it('should throw if URL is only whitespace', async () => {
+    await expect(
+      useCase.execute({ url: '   ', creatorName: 'TestCreator' })
+    ).rejects.toThrow('URL is required')
+  })
 })

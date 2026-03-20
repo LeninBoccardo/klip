@@ -340,4 +340,160 @@ describe('SqliteCutRepository', () => {
     expect(active).toHaveLength(1)
     expect(active[0].id).toBe('c-1')
   })
+
+  // ── Edge cases: sort columns ──
+
+  describe('findPaginated sort columns', () => {
+    beforeEach(() => {
+      cutRepo.upsert(
+        makeCut({
+          id: 'c-short',
+          title: 'Short',
+          duration: 5,
+          startTimestamp: 10,
+          endTimestamp: 15
+        })
+      )
+      cutRepo.upsert(
+        makeCut({
+          id: 'c-long',
+          title: 'Long',
+          duration: 60,
+          startTimestamp: 100,
+          endTimestamp: 160
+        })
+      )
+    })
+
+    it('sorts by duration ascending', () => {
+      const result = cutRepo.findPaginated({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'duration',
+        sortDirection: 'asc'
+      })
+      expect(result.data[0].id).toBe('c-short')
+    })
+
+    it('sorts by startTimestamp descending', () => {
+      const result = cutRepo.findPaginated({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'startTimestamp',
+        sortDirection: 'desc'
+      })
+      expect(result.data[0].id).toBe('c-long')
+    })
+
+    it('sorts by endTimestamp ascending', () => {
+      const result = cutRepo.findPaginated({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'endTimestamp',
+        sortDirection: 'asc'
+      })
+      expect(result.data[0].id).toBe('c-short')
+    })
+  })
+
+  // ── Edge cases: FK ON DELETE SET NULL ──
+
+  it('sets videoId to null when linked video is deleted (FK SET NULL)', () => {
+    cutRepo.upsert(makeCut({ id: 'c-linked', videoId: 'video-1' }))
+    expect(cutRepo.findById('c-linked')?.videoId).toBe('video-1')
+
+    videoRepo.delete('video-1')
+
+    const updated = cutRepo.findById('c-linked')
+    expect(updated).not.toBeNull()
+    expect(updated!.videoId).toBeNull()
+  })
+
+  // ── Edge cases: FK CASCADE from creator ──
+
+  it('cascade deletes cuts when creator is deleted', () => {
+    cutRepo.upsert(makeCut({ id: 'c-1' }))
+    cutRepo.upsert(makeCut({ id: 'c-2' }))
+    expect(cutRepo.findAll()).toHaveLength(2)
+
+    creatorRepo.delete('creator-1')
+
+    expect(cutRepo.findAll()).toEqual([])
+  })
+
+  // ── Edge cases: cuts without a linked video ──
+
+  it('inserts and retrieves a cut with null videoId', () => {
+    cutRepo.upsert(makeCut({ id: 'c-no-video', videoId: null }))
+
+    const result = cutRepo.findById('c-no-video')
+    expect(result).not.toBeNull()
+    expect(result!.videoId).toBeNull()
+  })
+
+  it('findByVideoId does not return cuts with null videoId', () => {
+    cutRepo.upsert(makeCut({ id: 'c-linked', videoId: 'video-1' }))
+    cutRepo.upsert(makeCut({ id: 'c-unlinked', videoId: null }))
+
+    const results = cutRepo.findByVideoId('video-1')
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe('c-linked')
+  })
+
+  // ── Edge cases: findByTags with special characters ──
+
+  it('findByTags handles tags with special characters', () => {
+    cutRepo.upsert(makeCut({ id: 'c-special', tags: ['c++', 'c#', 'node.js'] }))
+
+    const results = cutRepo.findByTags(['c++'])
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe('c-special')
+  })
+
+  it('findByTags handles tags with unicode characters', () => {
+    cutRepo.upsert(makeCut({ id: 'c-unicode', tags: ['日本語', 'español'] }))
+
+    const results = cutRepo.findByTags(['日本語'])
+    expect(results).toHaveLength(1)
+    expect(results[0].id).toBe('c-unicode')
+  })
+
+  // ── Edge cases: empty tags array ──
+
+  it('round-trips empty tags array', () => {
+    cutRepo.upsert(makeCut({ id: 'c-empty-tags', tags: [] }))
+    const result = cutRepo.findById('c-empty-tags')
+    expect(result?.tags).toEqual([])
+  })
+
+  // ── Edge cases: tags column default ──
+
+  it('uses default empty JSON array when tags column omitted', () => {
+    // Insert without specifying tags — relies on schema default of '[]'
+    database.raw
+      .prepare(
+        `INSERT INTO cuts (id, creator_id, video_id, title, file_path, status, created_at, updated_at)
+       VALUES ('default-tags', 'creator-1', 'video-1', 'Default', '/test', 'active', datetime('now'), datetime('now'))`
+      )
+      .run()
+
+    const result = cutRepo.findById('default-tags')
+    expect(result).not.toBeNull()
+    expect(result!.tags).toEqual([])
+  })
+
+  // ── Edge cases: findPaginated multiple statuses ──
+
+  it('findPaginated filters by multiple statuses', () => {
+    cutRepo.upsert(makeCut({ id: 'c-active', status: 'active' }))
+    cutRepo.upsert(makeCut({ id: 'c-missing', status: 'missing' }))
+    cutRepo.upsert(makeCut({ id: 'c-deleted', status: 'deleted', deletedAt: '2025-06-01' }))
+
+    const result = cutRepo.findPaginated({
+      page: 1,
+      pageSize: 50,
+      status: ['active', 'missing']
+    })
+    expect(result.total).toBe(2)
+  })
 })

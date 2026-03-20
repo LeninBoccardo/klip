@@ -272,4 +272,97 @@ describe('ProcessFileNotifications', () => {
       consoleSpy.mockRestore()
     })
   })
+
+  // ── Suspend / Resume lifecycle ──
+
+  describe('suspend / resume', () => {
+    it('drops events when suspended', () => {
+      useCase.suspend()
+      useCase.handleEvent(makeEvent('/root/a'))
+      useCase.handleEvent(makeEvent('/root/b'))
+
+      expect(mockQueue.enqueue).not.toHaveBeenCalled()
+      expect(mockDebouncer.schedule).not.toHaveBeenCalled()
+    })
+
+    it('cancels pending debounce on suspend', () => {
+      useCase.handleEvent(makeEvent('/root/a'))
+      useCase.suspend()
+
+      expect(mockDebouncer.cancel).toHaveBeenCalledOnce()
+    })
+
+    it('drains stale events on resume', async () => {
+      useCase.suspend()
+      await useCase.resume()
+
+      expect(mockQueue.drain).toHaveBeenCalledOnce()
+    })
+
+    it('accepts events again after resume', async () => {
+      useCase.suspend()
+      await useCase.resume()
+
+      useCase.handleEvent(makeEvent('/root/a'))
+      expect(mockQueue.enqueue).toHaveBeenCalledOnce()
+      expect(mockDebouncer.schedule).toHaveBeenCalledOnce()
+    })
+
+    it('isSuspended tracks state correctly', async () => {
+      expect(useCase.isSuspended()).toBe(false)
+
+      useCase.suspend()
+      expect(useCase.isSuspended()).toBe(true)
+
+      await useCase.resume()
+      expect(useCase.isSuspended()).toBe(false)
+    })
+
+    it('double-suspend is safe', () => {
+      useCase.suspend()
+      useCase.suspend()
+      expect(useCase.isSuspended()).toBe(true)
+      expect(mockDebouncer.cancel).toHaveBeenCalledTimes(2)
+    })
+
+    it('resume without suspend is safe', async () => {
+      await useCase.resume()
+      expect(useCase.isSuspended()).toBe(false)
+    })
+  })
+
+  // ── Granular: mixed known + unknown paths ──
+
+  describe('granular with mixed paths', () => {
+    async function triggerFlush(): Promise<void> {
+      useCase.handleEvent(makeEvent('/root/trigger'))
+      const flushFn = vi.mocked(mockDebouncer.schedule).mock.calls[0][0]
+      await flushFn()
+    }
+
+    it('processes only known creators, ignores unknown paths', async () => {
+      vi.mocked(mockQueue.drain).mockResolvedValue([
+        makeEvent('/root/creatorA/downloads/v1/video.mp4', 'add'),
+        makeEvent('/root', 'change'), // unknown — root itself
+        makeEvent('/root/creatorB/randomfile.txt', 'add') // unknown — unrecognised second segment
+      ])
+
+      await triggerFlush()
+
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledTimes(1)
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'creatorA')
+    })
+
+    it('notifies even when all events classify to unknown (collapsed.length > 0)', async () => {
+      vi.mocked(mockQueue.drain).mockResolvedValue([
+        makeEvent('/root', 'change') // unknown
+      ])
+
+      await triggerFlush()
+
+      // No reconcile should run, but notify fires since collapsed is not empty
+      expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
+      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated')
+    })
+  })
 })

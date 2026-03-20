@@ -165,4 +165,51 @@ describe('collapseEvents', () => {
       expect(collapseEvents([ev('change', '/f'), ev('addDir', '/f')])).toEqual([ev('addDir', '/f')])
     })
   })
+
+  // ── Additional edge cases ──
+
+  describe('additional edge cases', () => {
+    it('single change event passes through', () => {
+      expect(collapseEvents([ev('change', '/f')])).toEqual([ev('change', '/f')])
+    })
+
+    it('single unlink event passes through', () => {
+      expect(collapseEvents([ev('unlink', '/f')])).toEqual([ev('unlink', '/f')])
+    })
+
+    it('single addDir event passes through', () => {
+      expect(collapseEvents([ev('addDir', '/d')])).toEqual([ev('addDir', '/d')])
+    })
+
+    it('single unlinkDir event passes through', () => {
+      expect(collapseEvents([ev('unlinkDir', '/d')])).toEqual([ev('unlinkDir', '/d')])
+    })
+
+    it('addDir → change = addDir (mixed, dir dominates as unlisted → latest wins)', () => {
+      // addDir → change is not in the table → latest wins = change
+      expect(collapseEvents([ev('addDir', '/p'), ev('change', '/p')])).toEqual([
+        ev('change', '/p')
+      ])
+    })
+
+    it('handles large input (1000 events) without error', () => {
+      const events: FileEvent[] = []
+      for (let i = 0; i < 1000; i++) {
+        events.push(ev('add', `/path/${i % 100}`))
+      }
+      const result = collapseEvents(events)
+      // 100 unique paths, all collapsed to 'add'
+      expect(result).toHaveLength(100)
+    })
+
+    it('handles alternating add/unlink pairs for many paths', () => {
+      const events: FileEvent[] = []
+      for (let i = 0; i < 50; i++) {
+        events.push(ev('add', `/file${i}`))
+        events.push(ev('unlink', `/file${i}`))
+      }
+      // Each pair add→unlink = null, all paths removed
+      expect(collapseEvents(events)).toEqual([])
+    })
+  })
 })

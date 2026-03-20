@@ -111,4 +111,45 @@ describe('classifyPath', () => {
       videoId: 'vid1'
     })
   })
+
+  // ── Additional edge cases ──
+
+  it('handles path with trailing slash', () => {
+    expect(classifyPath(ROOT, `${ROOT}/MyCreator/`)).toEqual({
+      kind: 'creator',
+      creatorName: 'MyCreator'
+    })
+  })
+
+  it('handles path with double slashes', () => {
+    expect(classifyPath(ROOT, `${ROOT}//MyCreator//downloads//vid1`)).toEqual({
+      kind: 'video',
+      creatorName: 'MyCreator',
+      videoId: 'vid1'
+    })
+  })
+
+  it('returns unknown for root with trailing slash', () => {
+    expect(classifyPath(ROOT, `${ROOT}/`)).toEqual({ kind: 'unknown' })
+  })
+
+  it('handles deeply nested files inside video directory', () => {
+    expect(
+      classifyPath(ROOT, `${ROOT}/Creator/downloads/vid1/subfolder/deep.mp4`)
+    ).toEqual({
+      kind: 'video',
+      creatorName: 'Creator',
+      videoId: 'vid1'
+    })
+  })
+
+  it('handles deeply nested files inside cut directory', () => {
+    expect(
+      classifyPath(ROOT, `${ROOT}/Creator/cuts/cut1/subfolder/deep.mp4`)
+    ).toEqual({
+      kind: 'cut',
+      creatorName: 'Creator',
+      cutId: 'cut1'
+    })
+  })
 })

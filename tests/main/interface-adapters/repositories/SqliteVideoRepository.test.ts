@@ -226,4 +226,138 @@ describe('SqliteVideoRepository', () => {
     expect(active).toHaveLength(1)
     expect(active[0].id).toBe('v-1')
   })
+
+  // ── Edge cases: sort columns ──
+
+  describe('findPaginated sort columns', () => {
+    beforeEach(() => {
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v-short',
+          title: 'Short',
+          duration: 30,
+          fileSize: 1_000_000,
+          downloadDate: '2025-01-01T00:00:00.000Z'
+        })
+      )
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v-long',
+          title: 'Long',
+          duration: 600,
+          fileSize: 100_000_000,
+          downloadDate: '2025-06-01T00:00:00.000Z'
+        })
+      )
+    })
+
+    it('sorts by duration ascending', () => {
+      const result = videoRepo.findPaginated({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'duration',
+        sortDirection: 'asc'
+      })
+      expect(result.data[0].id).toBe('v-short')
+    })
+
+    it('sorts by duration descending', () => {
+      const result = videoRepo.findPaginated({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'duration',
+        sortDirection: 'desc'
+      })
+      expect(result.data[0].id).toBe('v-long')
+    })
+
+    it('sorts by fileSize ascending', () => {
+      const result = videoRepo.findPaginated({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'fileSize',
+        sortDirection: 'asc'
+      })
+      expect(result.data[0].id).toBe('v-short')
+    })
+
+    it('sorts by downloadDate descending', () => {
+      const result = videoRepo.findPaginated({
+        page: 1,
+        pageSize: 10,
+        sortBy: 'downloadDate',
+        sortDirection: 'desc'
+      })
+      expect(result.data[0].id).toBe('v-long')
+    })
+  })
+
+  // ── Edge cases: multiple statuses filter ──
+
+  it('findPaginated filters by multiple statuses', () => {
+    videoRepo.upsert(makeVideo({ id: 'v-active', status: 'active' }))
+    videoRepo.upsert(makeVideo({ id: 'v-missing', status: 'missing' }))
+    videoRepo.upsert(makeVideo({ id: 'v-deleted', status: 'deleted', deletedAt: '2025-06-01' }))
+
+    const result = videoRepo.findPaginated({
+      page: 1,
+      pageSize: 50,
+      status: ['active', 'missing']
+    })
+    expect(result.total).toBe(2)
+    const ids = result.data.map((v) => v.id).sort()
+    expect(ids).toEqual(['v-active', 'v-missing'])
+  })
+
+  // ── Edge cases: search with no results ──
+
+  it('findPaginated search returning no results', () => {
+    videoRepo.upsert(makeVideo({ title: 'Cooking Tutorial' }))
+    const result = videoRepo.findPaginated({
+      page: 1,
+      pageSize: 50,
+      search: 'NonExistentSearchTerm'
+    })
+    expect(result.total).toBe(0)
+    expect(result.data).toEqual([])
+  })
+
+  // ── FK cascade: creator deletion cascades to videos ──
+
+  it('cascade deletes videos when creator is deleted', () => {
+    videoRepo.upsert(makeVideo({ id: 'v-1' }))
+    videoRepo.upsert(makeVideo({ id: 'v-2' }))
+    expect(videoRepo.findAll()).toHaveLength(2)
+
+    creatorRepo.delete('creator-1')
+
+    expect(videoRepo.findAll()).toEqual([])
+    expect(videoRepo.findById('v-1')).toBeNull()
+  })
+
+  // ── Edge cases: null optional fields ──
+
+  it('handles video with all nullable fields set to null', () => {
+    videoRepo.upsert(
+      makeVideo({
+        id: 'v-nulls',
+        url: null,
+        duration: null,
+        resolution: null,
+        fileSize: null,
+        thumbnailPath: null,
+        downloadDate: null,
+        deletedAt: null
+      })
+    )
+
+    const result = videoRepo.findById('v-nulls')
+    expect(result).not.toBeNull()
+    expect(result!.url).toBeNull()
+    expect(result!.duration).toBeNull()
+    expect(result!.resolution).toBeNull()
+    expect(result!.fileSize).toBeNull()
+    expect(result!.thumbnailPath).toBeNull()
+    expect(result!.downloadDate).toBeNull()
+  })
 })

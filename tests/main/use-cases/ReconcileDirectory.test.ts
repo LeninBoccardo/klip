@@ -505,4 +505,338 @@ describe('ReconcileDirectory', () => {
       expect(result.cutsAdded).toBe(1)
     })
   })
+
+  // ── Edge cases: Partial/malformed metadata ──
+
+  describe('metadata edge cases', () => {
+    it('handles meta.json with partial fields (missing title)', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('downloads')) return ['vid-partial']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue([])
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('meta.json')) return { url: 'https://yt.com/x' } // no title
+        return null
+      })
+
+      useCase.execute(ROOT)
+
+      expect(videoRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'vid-partial', title: 'vid-partial', url: 'https://yt.com/x' })
+      )
+    })
+
+    it('handles cut-data.json with null tags and missing title', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('cuts')) return ['cut-partial']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue([])
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('cut-data.json')) return { startTimestamp: 5 } // no title, no tags
+        return null
+      })
+
+      useCase.execute(ROOT)
+
+      expect(cutRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'cut-partial',
+          title: 'cut-partial',
+          tags: [],
+          startTimestamp: 5
+        })
+      )
+    })
+
+    it('reads profileImagePath from creator.json', () => {
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['new-creator']
+        return []
+      })
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('creator.json'))
+          return { name: 'The Creator', profileImagePath: '/img/avatar.jpg' }
+        return null
+      })
+
+      useCase.execute(ROOT)
+
+      expect(creatorRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'The Creator',
+          profileImagePath: '/img/avatar.jpg'
+        })
+      )
+    })
+  })
+
+  // ── Edge cases: media and thumbnail file detection ──
+
+  describe('file detection in video/cut directories', () => {
+    it('detects .mkv and .webm video files', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('downloads')) return ['vid-mkv']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['clip.mkv', 'thumbnail.png'])
+      fs.readJsonFile = vi.fn().mockReturnValue(null)
+
+      useCase.execute(ROOT)
+
+      expect(videoRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filePath: expect.stringContaining('clip.mkv'),
+          thumbnailPath: expect.stringContaining('thumbnail.png')
+        })
+      )
+    })
+
+    it('ignores non-media files and non-thumbnail files', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('downloads')) return ['vid-other']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['readme.txt', 'notes.pdf'])
+      fs.readJsonFile = vi.fn().mockReturnValue(null)
+
+      useCase.execute(ROOT)
+
+      // filePath falls back to videoDir, thumbnailPath is null
+      expect(videoRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filePath: expect.stringContaining('vid-other'),
+          thumbnailPath: null
+        })
+      )
+    })
+
+    it('detects thumbnail.webp format', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('cuts')) return ['cut-webp']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['cut.mp4', 'thumbnail.webp'])
+      fs.readJsonFile = vi.fn().mockReturnValue(null)
+
+      useCase.execute(ROOT)
+
+      expect(cutRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          thumbnailPath: expect.stringContaining('thumbnail.webp')
+        })
+      )
+    })
+  })
+
+  // ── Edge cases: already-missing entities don't re-increment counters ──
+
+  describe('already-missing entities stay missing', () => {
+    it('does NOT re-mark an already missing creator', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator({ status: 'missing' })])
+      fs.listDirectories = vi.fn().mockReturnValue([]) // still gone
+
+      const result = useCase.execute(ROOT)
+
+      expect(result.creatorsMarkedMissing).toBe(0)
+      expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
+    })
+
+    it('does NOT re-mark already missing videos during reconcileVideos', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      videoRepo.findByCreatorId = vi.fn().mockReturnValue([makeVideo({ status: 'missing' })])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        return [] // no video folders
+      })
+
+      const result = useCase.execute(ROOT)
+
+      expect(result.videosMarkedMissing).toBe(0)
+      expect(videoRepo.updateStatus).not.toHaveBeenCalled()
+    })
+
+    it('does NOT re-mark already missing cuts during reconcileCuts', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      cutRepo.findByCreatorId = vi.fn().mockReturnValue([makeCut({ status: 'missing' })])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        return []
+      })
+
+      const result = useCase.execute(ROOT)
+
+      expect(result.cutsMarkedMissing).toBe(0)
+      expect(cutRepo.updateStatus).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── Edge cases: deleted children inside active creator ──
+
+  describe('deleted children are skipped during reconciliation', () => {
+    it('skips deleted videos during reconcileVideos', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      videoRepo.findByCreatorId = vi
+        .fn()
+        .mockReturnValue([makeVideo({ status: 'deleted', deletedAt: '2025-06-01' })])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        return [] // folder gone
+      })
+
+      const result = useCase.execute(ROOT)
+
+      expect(result.videosMarkedMissing).toBe(0)
+      expect(videoRepo.updateStatus).not.toHaveBeenCalled()
+    })
+
+    it('skips deleted cuts during reconcileCuts', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      cutRepo.findByCreatorId = vi
+        .fn()
+        .mockReturnValue([makeCut({ status: 'deleted', deletedAt: '2025-06-01' })])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        return []
+      })
+
+      const result = useCase.execute(ROOT)
+
+      expect(result.cutsMarkedMissing).toBe(0)
+      expect(cutRepo.updateStatus).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── Edge cases: discoverCuts guards (mirroring discoverVideos tests) ──
+
+  describe('discoverCuts edge cases', () => {
+    it('does NOT overwrite an existing active cut during discoverCuts', () => {
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['new-creator']
+        if (p.endsWith('cuts')) return ['existing-cut']
+        return []
+      })
+      cutRepo.findById = vi.fn().mockReturnValue(makeCut({ id: 'existing-cut', status: 'active' }))
+
+      const result = useCase.execute(ROOT)
+
+      expect(cutRepo.upsert).not.toHaveBeenCalled()
+      expect(result.cutsAdded).toBe(0)
+    })
+
+    it('recovers a missing cut found during discoverCuts', () => {
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['new-creator']
+        if (p.endsWith('cuts')) return ['missing-cut']
+        return []
+      })
+      cutRepo.findById = vi.fn().mockReturnValue(makeCut({ id: 'missing-cut', status: 'missing' }))
+
+      const result = useCase.execute(ROOT)
+
+      expect(result.cutsRecovered).toBe(1)
+      expect(cutRepo.updateStatus).toHaveBeenCalledWith('missing-cut', 'active', null)
+      expect(cutRepo.upsert).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── Edge cases: executeForCreator cascading missing to children ──
+
+  describe('executeForCreator cascading', () => {
+    it('marks children missing when creator folder disappears', () => {
+      creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
+      fs.directoryExists = vi.fn().mockReturnValue(false)
+      videoRepo.findByCreatorId = vi
+        .fn()
+        .mockReturnValue([makeVideo({ id: 'v1', creatorId: 'c1' })])
+      cutRepo.findByCreatorId = vi.fn().mockReturnValue([makeCut({ id: 'ct1', creatorId: 'c1' })])
+
+      const result = useCase.executeForCreator(ROOT, 'c1')
+
+      expect(result.creatorsMarkedMissing).toBe(1)
+      expect(result.videosMarkedMissing).toBe(1)
+      expect(result.cutsMarkedMissing).toBe(1)
+    })
+
+    it('does not mark already-missing/deleted children when cascading', () => {
+      creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
+      fs.directoryExists = vi.fn().mockReturnValue(false)
+      videoRepo.findByCreatorId = vi.fn().mockReturnValue([
+        makeVideo({ id: 'v-active', creatorId: 'c1', status: 'active' }),
+        makeVideo({ id: 'v-missing', creatorId: 'c1', status: 'missing' }),
+        makeVideo({ id: 'v-deleted', creatorId: 'c1', status: 'deleted', deletedAt: '2025-06-01' })
+      ])
+      cutRepo.findByCreatorId = vi.fn().mockReturnValue([])
+
+      const result = useCase.executeForCreator(ROOT, 'c1')
+
+      // Only the active video should be marked missing
+      expect(result.videosMarkedMissing).toBe(1)
+      expect(videoRepo.updateStatus).toHaveBeenCalledOnce()
+      expect(videoRepo.updateStatus).toHaveBeenCalledWith('v-active', 'missing', null)
+    })
+
+    it('reads creator.json for newly discovered single creator', () => {
+      fs.directoryExists = vi.fn().mockReturnValue(true)
+      fs.listDirectories = vi.fn().mockReturnValue([])
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('creator.json')) return { name: 'Custom Display Name' }
+        return null
+      })
+
+      useCase.executeForCreator(ROOT, 'new-slug')
+
+      expect(creatorRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'new-slug',
+          name: 'Custom Display Name'
+        })
+      )
+    })
+  })
+
+  // ── Edge cases: empty downloads/cuts directories ──
+
+  it('handles creator with empty downloads and cuts directories', () => {
+    creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+    fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+      if (p === ROOT) return ['creator-1']
+      return [] // empty downloads/ and cuts/
+    })
+
+    const result = useCase.execute(ROOT)
+
+    expect(result.videosAdded).toBe(0)
+    expect(result.cutsAdded).toBe(0)
+    expect(result.creatorsMarkedMissing).toBe(0)
+  })
+
+  // ── Edge cases: recovers missing cut during reconcileCuts ──
+
+  it('recovers a missing cut when its folder reappears', () => {
+    creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+    cutRepo.findByCreatorId = vi.fn().mockReturnValue([makeCut({ status: 'missing' })])
+    fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+      if (p === ROOT) return ['creator-1']
+      if (p.endsWith('cuts')) return ['cut-1']
+      return []
+    })
+    fs.listFiles = vi.fn().mockReturnValue([])
+
+    const result = useCase.execute(ROOT)
+
+    expect(result.cutsRecovered).toBe(1)
+    expect(cutRepo.updateStatus).toHaveBeenCalledWith('cut-1', 'active', null)
+  })
 })

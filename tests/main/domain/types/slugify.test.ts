@@ -53,4 +53,43 @@ describe('slugify', () => {
   it('preserves numbers', () => {
     expect(slugify('Channel 123')).toBe('channel-123')
   })
+
+  // ── Additional edge cases ──
+
+  it('returns empty string for empty input', () => {
+    expect(slugify('')).toBe('')
+  })
+
+  it('handles very long input', () => {
+    const long = 'a'.repeat(1000)
+    expect(slugify(long)).toBe(long)
+  })
+
+  it('handles string of only hyphens', () => {
+    expect(slugify('---')).toBe('')
+  })
+
+  it('handles tab characters', () => {
+    expect(slugify('hello\tworld')).toBe('hello-world')
+  })
+
+  it('handles CJK characters by stripping them', () => {
+    expect(slugify('Hello 世界')).toBe('hello')
+  })
+
+  it('handles mixed CJK and Latin', () => {
+    expect(slugify('日本 Tokyo 東京')).toBe('tokyo')
+  })
+
+  it('handles newline characters', () => {
+    expect(slugify('hello\nworld')).toBe('hello-world')
+  })
+
+  it('handles single character', () => {
+    expect(slugify('A')).toBe('a')
+  })
+
+  it('handles numeric-only input', () => {
+    expect(slugify('12345')).toBe('12345')
+  })
 })
