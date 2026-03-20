@@ -1,11 +1,8 @@
 import type { Cut } from '@domain/entities'
-import type { PaginationParams, PaginatedResult, EntityStatus } from '@domain/types'
+import type { PaginatedResult, EntityStatus } from '@domain/types'
+import type { CutQueryParams } from '@shared/types'
 
-export interface CutQueryParams extends PaginationParams {
-  creatorId?: string
-  videoId?: string
-  tags?: string[]
-}
+export type { CutQueryParams } from '@shared/types'
 
 export interface ICutRepository {
   findAll(): Cut[]

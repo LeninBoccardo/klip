@@ -1,0 +1,72 @@
+import type {
+  ReconcileResult,
+  DownloadVideoResult,
+  VideoInfo,
+  MediaProbeResult,
+  DownloadProgress,
+  PaginationParams,
+  PaginatedResult,
+  VideoQueryParams,
+  CutQueryParams
+} from './types'
+import type { CreatorDto, VideoDto, CutDto } from './dtos'
+
+/**
+ * Typed map of every IPC channel to its parameter tuple and return type.
+ * Keys match the string literal values defined in {@link IpcChannels}.
+ * Provides compile-time safety for both the main-process handlers and the preload bridge.
+ */
+export interface IpcContract {
+  // ── Download & Media ──
+  reconcile: { params: []; result: ReconcileResult }
+  'fetch-video-info': { params: [url: string]; result: VideoInfo }
+  'download-video': {
+    params: [url: string, creatorName: string]
+    result: DownloadVideoResult
+  }
+  'cancel-download': { params: [downloadId: string]; result: void }
+  'probe-media-file': { params: [filePath: string]; result: MediaProbeResult }
+
+  // ── Creators ──
+  'get-creators-paginated': {
+    params: [params: PaginationParams]
+    result: PaginatedResult<CreatorDto>
+  }
+  'get-creator-by-id': { params: [id: string]; result: CreatorDto | null }
+  'delete-creator': { params: [id: string]; result: void }
+  'restore-creator': { params: [id: string]; result: void }
+
+  // ── Videos ──
+  'get-videos-paginated': {
+    params: [params: VideoQueryParams]
+    result: PaginatedResult<VideoDto>
+  }
+  'get-video-by-id': { params: [id: string]; result: VideoDto | null }
+  'delete-video': { params: [id: string]; result: void }
+  'restore-video': { params: [id: string]; result: void }
+
+  // ── Cuts ──
+  'get-cuts-paginated': {
+    params: [params: CutQueryParams]
+    result: PaginatedResult<CutDto>
+  }
+  'get-cut-by-id': { params: [id: string]; result: CutDto | null }
+  'get-cuts-by-tags': { params: [tags: string[]]; result: CutDto[] }
+  'delete-cut': { params: [id: string]; result: void }
+  'restore-cut': { params: [id: string]; result: void }
+
+  // ── Settings ──
+  'get-settings': { params: []; result: Record<string, string> }
+  'get-setting': { params: [key: string]; result: string | null }
+  'set-setting': { params: [key: string, value: string]; result: void }
+
+  // ── Push events (main → renderer) ──
+  'db-updated': { params: []; result: void }
+  'download-progress': { params: [data: DownloadProgress]; result: void }
+}
+
+/** Extract the result type for a given channel */
+export type IpcResult<C extends keyof IpcContract> = IpcContract[C]['result']
+
+/** Extract the parameter tuple for a given channel */
+export type IpcParams<C extends keyof IpcContract> = IpcContract[C]['params']

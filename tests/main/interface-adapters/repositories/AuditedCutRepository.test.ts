@@ -213,4 +213,3 @@ describe('AuditedCutRepository', () => {
     expect(repo.findById('cut-1')).toBeNull()
   })
 })
-

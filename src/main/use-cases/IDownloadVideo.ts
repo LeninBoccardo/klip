@@ -1,9 +1,8 @@
 import type { DownloadRequest } from '@domain/types'
+import type { DownloadVideoResult } from '@shared/types'
 
-/** Result returned to the caller when a download is enqueued */
-export interface DownloadVideoResult {
-  downloadId: string
-}
+/** Re-exported from shared — canonical definition lives in @shared/types */
+export type { DownloadVideoResult } from '@shared/types'
 
 /**
  * Port for the video download use case.

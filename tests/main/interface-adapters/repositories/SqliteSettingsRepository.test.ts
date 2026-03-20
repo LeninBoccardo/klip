@@ -78,4 +78,3 @@ describe('SqliteSettingsRepository', () => {
     expect(all.key).toBe('v2')
   })
 })
-

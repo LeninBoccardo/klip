@@ -5,7 +5,8 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.tsx",
     "src/renderer/components/**/*.ts",
-    "src/preload/*.d.ts"
+    "src/preload/*.d.ts",
+    "src/shared/**/*"
   ],
   "compilerOptions": {
     "composite": true,
@@ -32,6 +33,9 @@
       ],
       "@use-cases/*": [
         "src/main/use-cases/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
       ],
       "@preload/*": [
         "src/preload/*"

@@ -525,7 +525,11 @@ describe('ReconcileDirectory', () => {
       useCase.execute(ROOT)
 
       expect(videoRepo.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'vid-partial', title: 'vid-partial', url: 'https://yt.com/x' })
+        expect.objectContaining({
+          id: 'vid-partial',
+          title: 'vid-partial',
+          url: 'https://yt.com/x'
+        })
       )
     })
 
@@ -772,11 +776,18 @@ describe('ReconcileDirectory', () => {
     it('does not mark already-missing/deleted children when cascading', () => {
       creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
       fs.directoryExists = vi.fn().mockReturnValue(false)
-      videoRepo.findByCreatorId = vi.fn().mockReturnValue([
-        makeVideo({ id: 'v-active', creatorId: 'c1', status: 'active' }),
-        makeVideo({ id: 'v-missing', creatorId: 'c1', status: 'missing' }),
-        makeVideo({ id: 'v-deleted', creatorId: 'c1', status: 'deleted', deletedAt: '2025-06-01' })
-      ])
+      videoRepo.findByCreatorId = vi
+        .fn()
+        .mockReturnValue([
+          makeVideo({ id: 'v-active', creatorId: 'c1', status: 'active' }),
+          makeVideo({ id: 'v-missing', creatorId: 'c1', status: 'missing' }),
+          makeVideo({
+            id: 'v-deleted',
+            creatorId: 'c1',
+            status: 'deleted',
+            deletedAt: '2025-06-01'
+          })
+        ])
       cutRepo.findByCreatorId = vi.fn().mockReturnValue([])
 
       const result = useCase.executeForCreator(ROOT, 'c1')

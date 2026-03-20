@@ -21,6 +21,7 @@ import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
 import type { IDownloadVideo } from '@use-cases/IDownloadVideo'
 import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
+import type { IRecoverOperations } from '@use-cases/IRecoverOperations'
 import {
   initializeDatabase,
   type DatabaseInstance,
@@ -54,6 +55,7 @@ import { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
 import { FetchVideoInfo } from '@use-cases/FetchVideoInfo'
 import { DownloadVideo } from '@use-cases/DownloadVideo'
 import { ProbeMediaFile } from '@use-cases/ProbeMediaFile'
+import { RecoverOperations } from '@use-cases/RecoverOperations'
 
 /**
  * Application dependency container.
@@ -87,6 +89,7 @@ export interface AppContainer {
     fetchVideoInfo: IFetchVideoInfo
     downloadVideo: IDownloadVideo
     probeMediaFile: IProbeMediaFile
+    recoverOperations: IRecoverOperations
   }
   services: {
     fileWatcher: IFileWatcher
@@ -168,6 +171,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const probeMediaFile = new ProbeMediaFile(mediaProbe)
 
+  const recoverOperations = new RecoverOperations(operationRepo, fsReader)
+
   // ── File watcher ──
   const fileWatcher = new ChokidarWatcher(config.rootPath)
   fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
@@ -199,7 +204,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       processNotifications,
       fetchVideoInfo,
       downloadVideo,
-      probeMediaFile
+      probeMediaFile,
+      recoverOperations
     },
     services: {
       fileWatcher

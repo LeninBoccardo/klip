@@ -15,7 +15,8 @@ export default defineConfig({
           alias: {
             '@main': resolve(__dirname, 'src/main'),
             '@domain': resolve(__dirname, 'src/main/domain'),
-            '@use-cases': resolve(__dirname, 'src/main/use-cases')
+            '@use-cases': resolve(__dirname, 'src/main/use-cases'),
+            '@shared': resolve(__dirname, 'src/shared')
           }
         }
       },
@@ -31,7 +32,8 @@ export default defineConfig({
             '@': resolve(__dirname, 'src/renderer'),
             '@renderer': resolve(__dirname, 'src/renderer/src'),
             '@components': resolve(__dirname, 'src/renderer/components'),
-            '@ui': resolve(__dirname, 'src/renderer/components/ui')
+            '@ui': resolve(__dirname, 'src/renderer/components/ui'),
+            '@shared': resolve(__dirname, 'src/shared')
           }
         }
       }
@@ -39,7 +41,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
-      include: ['src/main/**/*.ts', 'src/renderer/**/*.{ts,tsx}'],
+      include: ['src/main/**/*.ts', 'src/renderer/**/*.{ts,tsx}', 'src/shared/**/*.ts'],
       exclude: [
         'src/main/index.ts',
         'src/main/composition-root.ts',
@@ -56,12 +58,16 @@ export default defineConfig({
         'src/main/use-cases/IFetchVideoInfo.ts',
         'src/main/use-cases/IDownloadVideo.ts',
         'src/main/use-cases/IProbeMediaFile.ts',
+        'src/main/use-cases/IRecoverOperations.ts',
         'src/main/interface-adapters/controllers/**',
         'src/main/interface-adapters/file-system/**',
         'src/main/framework-drivers/electron/**',
         'src/main/framework-drivers/file-system/**',
         'src/main/framework-drivers/yt-dlp/**',
         'src/main/framework-drivers/ffprobe/**',
+        'src/main/framework-drivers/database/schema.ts',
+        'src/main/framework-drivers/database/migrations/**',
+        'src/shared/**',
         'src/renderer/components/ui/**',
         'src/renderer/src/env.d.ts'
       ],

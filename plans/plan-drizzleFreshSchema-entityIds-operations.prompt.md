@@ -7,17 +7,17 @@ Start Drizzle ORM from a clean slate (no legacy migration bridge), add `folderNa
 
 ## Decisions Log
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| Schema strategy | Fresh from zero — no legacy migration bridge | No production data yet; eliminates Phase 8 of old Drizzle plan |
-| Folder ID strategy | Slugified folder name as stable PK + explicit `folderName` field on Creator | Self-documenting code, future-proof if ID ever diverges |
-| Folder rename on discovery | Yes — rename user-created folders to slug pattern | Long-term consistency; crash-safe via operations table |
-| Audit log placement | Repository-level via decorator pattern | Catches ALL mutations automatically; clean separation |
-| Audit retention | Keep all indefinitely | Prune use case deferred to future |
-| Move vs copy for root migration | Move with rollback via operations table | Fast (same-partition), recoverable |
-| Watcher during operations | Guard pattern — `suspend()`/`resume()` on `ProcessFileNotifications` | Single boolean check per event, negligible overhead; dropped events are fine because full reconciliation runs after every operation |
-| `INotificationGate` interface | Not needed — `suspend()`/`resume()` live directly on `ProcessFileNotifications` | YAGNI; class is already exposed as concrete type in container |
-| Transaction scope | Keep using raw `better-sqlite3` `db.transaction()` (unchanged) | Same underlying connection; simpler |
+| Decision                        | Choice                                                                          | Rationale                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Schema strategy                 | Fresh from zero — no legacy migration bridge                                    | No production data yet; eliminates Phase 8 of old Drizzle plan                                                                      |
+| Folder ID strategy              | Slugified folder name as stable PK + explicit `folderName` field on Creator     | Self-documenting code, future-proof if ID ever diverges                                                                             |
+| Folder rename on discovery      | Yes — rename user-created folders to slug pattern                               | Long-term consistency; crash-safe via operations table                                                                              |
+| Audit log placement             | Repository-level via decorator pattern                                          | Catches ALL mutations automatically; clean separation                                                                               |
+| Audit retention                 | Keep all indefinitely                                                           | Prune use case deferred to future                                                                                                   |
+| Move vs copy for root migration | Move with rollback via operations table                                         | Fast (same-partition), recoverable                                                                                                  |
+| Watcher during operations       | Guard pattern — `suspend()`/`resume()` on `ProcessFileNotifications`            | Single boolean check per event, negligible overhead; dropped events are fine because full reconciliation runs after every operation |
+| `INotificationGate` interface   | Not needed — `suspend()`/`resume()` live directly on `ProcessFileNotifications` | YAGNI; class is already exposed as concrete type in container                                                                       |
+| Transaction scope               | Keep using raw `better-sqlite3` `db.transaction()` (unchanged)                  | Same underlying connection; simpler                                                                                                 |
 
 ---
 
@@ -26,43 +26,48 @@ Start Drizzle ORM from a clean slate (no legacy migration bridge), add `folderNa
 ### Existing (updated)
 
 #### `creators`
+
 - **New column:** `folder_name TEXT NOT NULL UNIQUE` — actual directory name on disk (slugified)
 - `id` remains `TEXT PRIMARY KEY` (= `folder_name` for disk-discovered creators)
 - `name` is display name (from `creator.json` or original user input)
 
 #### `videos` — unchanged columns
+
 #### `cuts` — unchanged columns
 
 ### New
 
 #### `settings`
-| Column | Type | Purpose |
-|---|---|---|
-| `key` | `TEXT PRIMARY KEY` | Setting key (e.g., `'rootPath'`) |
-| `value` | `TEXT NOT NULL` | Setting value |
-| `updated_at` | `TEXT NOT NULL` | ISO timestamp |
+
+| Column       | Type               | Purpose                          |
+| ------------ | ------------------ | -------------------------------- |
+| `key`        | `TEXT PRIMARY KEY` | Setting key (e.g., `'rootPath'`) |
+| `value`      | `TEXT NOT NULL`    | Setting value                    |
+| `updated_at` | `TEXT NOT NULL`    | ISO timestamp                    |
 
 #### `operations`
-| Column | Type | Purpose |
-|---|---|---|
-| `id` | `TEXT PRIMARY KEY` | UUID |
-| `type` | `TEXT NOT NULL` | `'rename_folder'`, `'migrate_root'`, `'bulk_import'` |
-| `status` | `TEXT NOT NULL` | `'pending'` → `'in_progress'` → `'completed'` / `'failed'` / `'rolled_back'` |
-| `payload` | `TEXT NOT NULL` | JSON — operation-specific data (old/new paths, progress checkpoints) |
-| `error` | `TEXT` | Error message if failed |
-| `started_at` | `TEXT` | ISO timestamp |
-| `completed_at` | `TEXT` | ISO timestamp |
-| `created_at` | `TEXT NOT NULL` | ISO timestamp |
+
+| Column         | Type               | Purpose                                                                      |
+| -------------- | ------------------ | ---------------------------------------------------------------------------- |
+| `id`           | `TEXT PRIMARY KEY` | UUID                                                                         |
+| `type`         | `TEXT NOT NULL`    | `'rename_folder'`, `'migrate_root'`, `'bulk_import'`                         |
+| `status`       | `TEXT NOT NULL`    | `'pending'` → `'in_progress'` → `'completed'` / `'failed'` / `'rolled_back'` |
+| `payload`      | `TEXT NOT NULL`    | JSON — operation-specific data (old/new paths, progress checkpoints)         |
+| `error`        | `TEXT`             | Error message if failed                                                      |
+| `started_at`   | `TEXT`             | ISO timestamp                                                                |
+| `completed_at` | `TEXT`             | ISO timestamp                                                                |
+| `created_at`   | `TEXT NOT NULL`    | ISO timestamp                                                                |
 
 #### `audit_log`
-| Column | Type | Purpose |
-|---|---|---|
-| `id` | `INTEGER PRIMARY KEY AUTOINCREMENT` | Sequential for ordering |
-| `entity_type` | `TEXT NOT NULL` | `'creator'`, `'video'`, `'cut'`, `'settings'`, `'operation'` |
-| `entity_id` | `TEXT NOT NULL` | PK of the affected entity |
-| `action` | `TEXT NOT NULL` | `'created'`, `'updated'`, `'status_changed'`, `'deleted'` |
-| `changes` | `TEXT` | JSON diff: `{ field: { old, new } }` — null for `'created'` |
-| `created_at` | `TEXT NOT NULL` | ISO timestamp |
+
+| Column        | Type                                | Purpose                                                      |
+| ------------- | ----------------------------------- | ------------------------------------------------------------ |
+| `id`          | `INTEGER PRIMARY KEY AUTOINCREMENT` | Sequential for ordering                                      |
+| `entity_type` | `TEXT NOT NULL`                     | `'creator'`, `'video'`, `'cut'`, `'settings'`, `'operation'` |
+| `entity_id`   | `TEXT NOT NULL`                     | PK of the affected entity                                    |
+| `action`      | `TEXT NOT NULL`                     | `'created'`, `'updated'`, `'status_changed'`, `'deleted'`    |
+| `changes`     | `TEXT`                              | JSON diff: `{ field: { old, new } }` — null for `'created'`  |
+| `created_at`  | `TEXT NOT NULL`                     | ISO timestamp                                                |
 
 ---
 
@@ -113,6 +118,7 @@ Start Drizzle ORM from a clean slate (no legacy migration bridge), add `folderNa
 ### Repositories (Drizzle rewrite)
 
 All 3 existing `Sqlite*Repository` classes rewritten with Drizzle query builder. Plus 3 new ones:
+
 - `SqliteOperationRepository`
 - `SqliteAuditLogRepository`
 - `SqliteSettingsRepository`
@@ -120,6 +126,7 @@ All 3 existing `Sqlite*Repository` classes rewritten with Drizzle query builder.
 ### Audited Decorators
 
 3 new decorator classes wrapping the core entity repositories:
+
 - `AuditedCreatorRepository` wraps `ICreatorRepository`
 - `AuditedVideoRepository` wraps `IVideoRepository`
 - `AuditedCutRepository` wraps `ICutRepository`
@@ -142,11 +149,12 @@ Each delegates reads directly, intercepts mutations (`upsert`, `updateStatus`, `
 ## Watcher Suspension Design
 
 ### Guard on `ProcessFileNotifications`
-
 ```
+
 suspend() → this.suspended = true; this.debouncer.cancel()
-resume()  → this.suspended = false; this.queue.drain() (discard stale events)
-handleEvent() → if (this.suspended) return  // one-line guard at top
+resume() → this.suspended = false; this.queue.drain() (discard stale events)
+handleEvent() → if (this.suspended) return // one-line guard at top
+
 ```
 
 ### Flow A — Folder rename (same root)
@@ -333,4 +341,3 @@ Execute sequentially. Each step must pass `npm run typecheck && npm run test` be
 - `src/preload/` — unchanged
 - `src/renderer/` — unchanged
 ```
-

@@ -167,5 +167,3 @@ describe('AuditedCreatorRepository', () => {
     expect(repo.findById('creator-1')).toBeNull()
   })
 })
-
-

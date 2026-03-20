@@ -134,9 +134,7 @@ describe('classifyPath', () => {
   })
 
   it('handles deeply nested files inside video directory', () => {
-    expect(
-      classifyPath(ROOT, `${ROOT}/Creator/downloads/vid1/subfolder/deep.mp4`)
-    ).toEqual({
+    expect(classifyPath(ROOT, `${ROOT}/Creator/downloads/vid1/subfolder/deep.mp4`)).toEqual({
       kind: 'video',
       creatorName: 'Creator',
       videoId: 'vid1'
@@ -144,9 +142,7 @@ describe('classifyPath', () => {
   })
 
   it('handles deeply nested files inside cut directory', () => {
-    expect(
-      classifyPath(ROOT, `${ROOT}/Creator/cuts/cut1/subfolder/deep.mp4`)
-    ).toEqual({
+    expect(classifyPath(ROOT, `${ROOT}/Creator/cuts/cut1/subfolder/deep.mp4`)).toEqual({
       kind: 'cut',
       creatorName: 'Creator',
       cutId: 'cut1'

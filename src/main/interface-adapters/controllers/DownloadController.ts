@@ -1,8 +1,9 @@
 import { ipcMain } from 'electron'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
-import type { IDownloadVideo, DownloadVideoResult } from '@use-cases/IDownloadVideo'
+import type { IDownloadVideo } from '@use-cases/IDownloadVideo'
 import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
-import type { VideoInfo, MediaProbeResult } from '@domain/types'
+import type { VideoInfo, DownloadVideoResult, MediaProbeResult } from '@shared/types'
+import { IpcChannels } from '@shared/ipc-channels'
 
 /**
  * IPC controller for download and media-probe features.
@@ -18,23 +19,23 @@ export function registerDownloadController(
   downloadVideo: IDownloadVideo,
   probeMediaFile: IProbeMediaFile
 ): void {
-  ipcMain.handle('fetch-video-info', async (_event, url: string): Promise<VideoInfo> => {
+  ipcMain.handle(IpcChannels.FetchVideoInfo, async (_event, url: string): Promise<VideoInfo> => {
     return fetchVideoInfo.execute(url)
   })
 
   ipcMain.handle(
-    'download-video',
+    IpcChannels.DownloadVideo,
     async (_event, url: string, creatorName: string): Promise<DownloadVideoResult> => {
       return downloadVideo.execute({ url, creatorName })
     }
   )
 
-  ipcMain.handle('cancel-download', async (_event, downloadId: string): Promise<void> => {
+  ipcMain.handle(IpcChannels.CancelDownload, async (_event, downloadId: string): Promise<void> => {
     downloadVideo.cancel(downloadId)
   })
 
   ipcMain.handle(
-    'probe-media-file',
+    IpcChannels.ProbeMediaFile,
     async (_event, filePath: string): Promise<MediaProbeResult> => {
       return probeMediaFile.execute(filePath)
     }

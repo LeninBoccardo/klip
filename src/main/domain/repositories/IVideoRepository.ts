@@ -1,9 +1,8 @@
 import type { Video } from '@domain/entities'
-import type { PaginationParams, PaginatedResult, EntityStatus } from '@domain/types'
+import type { PaginatedResult, EntityStatus } from '@domain/types'
+import type { VideoQueryParams } from '@shared/types'
 
-export interface VideoQueryParams extends PaginationParams {
-  creatorId?: string
-}
+export type { VideoQueryParams } from '@shared/types'
 
 export interface IVideoRepository {
   findAll(): Video[]

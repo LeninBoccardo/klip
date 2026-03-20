@@ -1,4 +1,4 @@
-import type { DownloadProgress } from './download'
+import type { DownloadProgress } from '@shared/types'
 
 /**
  * Typed event map for renderer notifications.

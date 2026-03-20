@@ -9,7 +9,8 @@ export default defineConfig({
       alias: {
         '@main': resolve('src/main'),
         '@domain': resolve('src/main/domain'),
-        '@use-cases': resolve('src/main/use-cases')
+        '@use-cases': resolve('src/main/use-cases'),
+        '@shared': resolve('src/shared')
       }
     },
     build: {
@@ -24,7 +25,8 @@ export default defineConfig({
   preload: {
     resolve: {
       alias: {
-        '@preload': resolve('src/preload')
+        '@preload': resolve('src/preload'),
+        '@shared': resolve('src/shared')
       }
     }
   },
@@ -34,7 +36,8 @@ export default defineConfig({
         '@': resolve('src/renderer'),
         '@renderer': resolve('src/renderer/src'),
         '@components': resolve('src/renderer/components'),
-        '@ui': resolve('src/renderer/components/ui')
+        '@ui': resolve('src/renderer/components/ui'),
+        '@shared': resolve('src/shared')
       }
     },
     plugins: [react(), tailwindcss()]

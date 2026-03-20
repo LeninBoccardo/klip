@@ -197,4 +197,3 @@ describe('SqliteOperationRepository', () => {
     expect(found?.completedAt).toBe('2025-01-01T10:05:00.000Z')
   })
 })
-

@@ -4,6 +4,10 @@ import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
 import { registerDownloadController } from './interface-adapters/controllers/DownloadController'
+import { registerCreatorController } from './interface-adapters/controllers/CreatorController'
+import { registerVideoController } from './interface-adapters/controllers/VideoController'
+import { registerCutController } from './interface-adapters/controllers/CutController'
+import { registerSettingsController } from './interface-adapters/controllers/SettingsController'
 import { join } from 'path'
 
 // ── Application container (initialised in app.whenReady) ──
@@ -78,7 +82,21 @@ app.whenReady().then(() => {
     container.useCases.downloadVideo,
     container.useCases.probeMediaFile
   )
+  registerCreatorController(container.repositories.creator)
+  registerVideoController(container.repositories.video)
+  registerCutController(container.repositories.cut)
+  registerSettingsController(container.repositories.settings)
   console.log(`[klip] IPC controllers registered`)
+
+  // ── Recover stale operations from previous crash ──
+  try {
+    const recoverResult = container.useCases.recoverOperations.execute()
+    if (recoverResult.total > 0) {
+      console.log(`[klip] Operation recovery complete:`, recoverResult)
+    }
+  } catch (error) {
+    console.error(`[klip] Operation recovery failed:`, error)
+  }
 
   // ── Initial reconciliation (one-time full scan at startup) ──
   try {

@@ -8,6 +8,7 @@ import type {
   INotifier
 } from '@domain/ports'
 import type { DownloadRequest, DownloadProgress } from '@domain/types'
+import { slugify } from '@domain/types'
 import type { Video, Creator } from '@domain/entities'
 import type { IDownloadVideo, DownloadVideoResult } from './IDownloadVideo'
 import type { IFetchVideoInfo } from './IFetchVideoInfo'
@@ -81,14 +82,17 @@ export class DownloadVideo implements IDownloadVideo {
       const info = await this.fetchInfo.execute(url)
       const videoId = info.videoId
 
-      // 2. Ensure creator exists in DB
-      this.ensureCreator(creatorName)
+      // 2. Slugify creator name for disk/DB identity
+      const folderName = slugify(creatorName)
 
-      // 3. Prepare output directory
-      const outputDir = this.pathResolver.join(this.rootPath, creatorName, 'downloads', videoId)
+      // 3. Ensure creator exists in DB
+      this.ensureCreator(folderName, creatorName)
+
+      // 4. Prepare output directory
+      const outputDir = this.pathResolver.join(this.rootPath, folderName, 'downloads', videoId)
       this.fsWriter.ensureDirectory(outputDir)
 
-      // 4. Download with progress relay
+      // 5. Download with progress relay
       const onProgress = (progress: DownloadProgress): void => {
         this.notifier.notify('download-progress', progress)
       }
@@ -98,11 +102,11 @@ export class DownloadVideo implements IDownloadVideo {
         onProgress
       )
 
-      // 5. Upsert Video entity
+      // 6. Upsert Video entity
       const now = new Date().toISOString()
       const video: Video = {
         id: videoId,
-        creatorId: creatorName,
+        creatorId: folderName,
         title: result.title || info.title || videoId,
         url,
         duration: result.duration ?? info.duration ?? null,
@@ -118,7 +122,7 @@ export class DownloadVideo implements IDownloadVideo {
       }
       this.videoRepo.upsert(video)
 
-      // 6. Notify UI to refresh
+      // 7. Notify UI to refresh
       this.notifier.notify('db-updated')
     } catch (error) {
       // If it's a cancellation, the progress event was already sent by the driver
@@ -140,14 +144,14 @@ export class DownloadVideo implements IDownloadVideo {
     }
   }
 
-  private ensureCreator(creatorName: string): void {
-    const existing = this.creatorRepo.findById(creatorName)
+  private ensureCreator(folderName: string, displayName: string): void {
+    const existing = this.creatorRepo.findById(folderName)
     if (!existing) {
       const now = new Date().toISOString()
       const creator: Creator = {
-        id: creatorName,
-        folderName: creatorName,
-        name: creatorName,
+        id: folderName,
+        folderName,
+        name: displayName,
         profileImagePath: null,
         status: 'active',
         deletedAt: null,
@@ -156,7 +160,7 @@ export class DownloadVideo implements IDownloadVideo {
       }
       this.creatorRepo.upsert(creator)
     } else if (existing.status === 'missing') {
-      this.creatorRepo.updateStatus(creatorName, 'active', null)
+      this.creatorRepo.updateStatus(folderName, 'active', null)
     }
   }
 }

@@ -1,15 +1,7 @@
-/** Summary returned after reconciliation completes */
-export interface ReconcileResult {
-  creatorsAdded: number
-  creatorsMarkedMissing: number
-  creatorsRecovered: number
-  videosAdded: number
-  videosMarkedMissing: number
-  videosRecovered: number
-  cutsAdded: number
-  cutsMarkedMissing: number
-  cutsRecovered: number
-}
+import type { ReconcileResult } from '@shared/types'
+
+/** Re-exported from shared — canonical definition lives in @shared/types */
+export type { ReconcileResult } from '@shared/types'
 
 /**
  * Port for directory reconciliation.

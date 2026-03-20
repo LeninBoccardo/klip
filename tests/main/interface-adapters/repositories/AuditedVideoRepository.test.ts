@@ -166,5 +166,3 @@ describe('AuditedVideoRepository', () => {
     expect(repo.findById('video-1')).toBeNull()
   })
 })
-
-

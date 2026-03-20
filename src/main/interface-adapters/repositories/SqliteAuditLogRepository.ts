@@ -31,7 +31,7 @@ export class SqliteAuditLogRepository implements IAuditLogRepository {
       .select()
       .from(auditLog)
       .where(and(eq(auditLog.entityType, entityType), eq(auditLog.entityId, entityId)))
-      .orderBy(desc(auditLog.createdAt))
+      .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
       .all()
       .map(mapRow)
   }
@@ -40,7 +40,7 @@ export class SqliteAuditLogRepository implements IAuditLogRepository {
     return this.db
       .select()
       .from(auditLog)
-      .orderBy(desc(auditLog.createdAt))
+      .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
       .limit(limit)
       .all()
       .map(mapRow)

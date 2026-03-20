@@ -213,10 +213,11 @@ describe('DownloadVideo', () => {
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
 
-    expect(creatorRepo.findById).toHaveBeenCalledWith('TestCreator')
+    expect(creatorRepo.findById).toHaveBeenCalledWith('testcreator')
     expect(creatorRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'TestCreator',
+        id: 'testcreator',
+        folderName: 'testcreator',
         name: 'TestCreator',
         status: 'active'
       })
@@ -225,7 +226,8 @@ describe('DownloadVideo', () => {
 
   it('should recover a missing creator instead of creating a new one', async () => {
     const missingCreator: Creator = {
-      id: 'TestCreator',
+      id: 'testcreator',
+      folderName: 'testcreator',
       name: 'TestCreator',
       profileImagePath: null,
       status: 'missing',
@@ -238,14 +240,14 @@ describe('DownloadVideo', () => {
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
 
-    expect(creatorRepo.updateStatus).toHaveBeenCalledWith('TestCreator', 'active', null)
+    expect(creatorRepo.updateStatus).toHaveBeenCalledWith('testcreator', 'active', null)
     expect(creatorRepo.upsert).not.toHaveBeenCalled()
   })
 
   it('should create the output directory', async () => {
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
-    expect(fsWriter.ensureDirectory).toHaveBeenCalledWith('/root/TestCreator/downloads/abc123')
+    expect(fsWriter.ensureDirectory).toHaveBeenCalledWith('/root/testcreator/downloads/abc123')
   })
 
   it('should call downloader.download with correct options', async () => {
@@ -258,7 +260,7 @@ describe('DownloadVideo', () => {
     expect(downloader.download).toHaveBeenCalledWith(
       expect.objectContaining({
         url: 'https://youtube.com/watch?v=abc123',
-        outputDir: '/root/TestCreator/downloads/abc123',
+        outputDir: '/root/testcreator/downloads/abc123',
         videoId: 'abc123',
         downloadId: result.downloadId
       }),
@@ -288,7 +290,7 @@ describe('DownloadVideo', () => {
     expect(videoRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'abc123',
-        creatorId: 'TestCreator',
+        creatorId: 'testcreator',
         title: 'Test Video',
         url: 'https://youtube.com/watch?v=abc123',
         duration: 120,
@@ -353,7 +355,8 @@ describe('DownloadVideo', () => {
 
   it('should not upsert or updateStatus for an existing active creator', async () => {
     const activeCreator: Creator = {
-      id: 'TestCreator',
+      id: 'testcreator',
+      folderName: 'testcreator',
       name: 'TestCreator',
       profileImagePath: null,
       status: 'active',
@@ -374,7 +377,8 @@ describe('DownloadVideo', () => {
 
   it('should not recover a deleted creator', async () => {
     const deletedCreator: Creator = {
-      id: 'TestCreator',
+      id: 'testcreator',
+      folderName: 'testcreator',
       name: 'TestCreator',
       profileImagePath: null,
       status: 'deleted',
@@ -496,8 +500,8 @@ describe('DownloadVideo', () => {
   })
 
   it('should throw if URL is only whitespace', async () => {
-    await expect(
-      useCase.execute({ url: '   ', creatorName: 'TestCreator' })
-    ).rejects.toThrow('URL is required')
+    await expect(useCase.execute({ url: '   ', creatorName: 'TestCreator' })).rejects.toThrow(
+      'URL is required'
+    )
   })
 })

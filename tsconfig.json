@@ -25,6 +25,9 @@
       "@use-cases/*": [
         "src/main/use-cases/*"
       ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
       "@preload/*": [
         "src/preload/*"
       ]

@@ -187,9 +187,7 @@ describe('collapseEvents', () => {
 
     it('addDir → change = addDir (mixed, dir dominates as unlisted → latest wins)', () => {
       // addDir → change is not in the table → latest wins = change
-      expect(collapseEvents([ev('addDir', '/p'), ev('change', '/p')])).toEqual([
-        ev('change', '/p')
-      ])
+      expect(collapseEvents([ev('addDir', '/p'), ev('change', '/p')])).toEqual([ev('change', '/p')])
     })
 
     it('handles large input (1000 events) without error', () => {
