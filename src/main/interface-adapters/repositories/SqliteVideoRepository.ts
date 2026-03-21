@@ -1,11 +1,12 @@
-import { eq, and, like, inArray, asc, desc, sql } from 'drizzle-orm'
+import { eq, and, inArray, asc, desc, sql } from 'drizzle-orm'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { AppDatabase } from '@main/framework-drivers/database'
 import { videos } from '@main/framework-drivers/database/schema'
 import type { Video } from '@domain/entities'
 import type { IVideoRepository, VideoQueryParams } from '@domain/repositories'
-import type { PaginatedResult, EntityStatus } from '@domain/types'
+import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
 import { paginatedResult } from '@domain/types'
+import { escapeLike } from './escape-like'
 
 // ── sort-column allowlist (camelCase UI key → Drizzle column reference) ──
 
@@ -23,7 +24,7 @@ const DEFAULT_SORT_COLUMN = videos.createdAt
 type VideoRow = typeof videos.$inferSelect
 
 function mapRow(row: VideoRow): Video {
-  return { ...row, status: row.status as EntityStatus }
+  return { ...row, status: row.status as EntityStatus, probeStatus: row.probeStatus as ProbeStatus }
 }
 
 export class SqliteVideoRepository implements IVideoRepository {
@@ -58,6 +59,16 @@ export class SqliteVideoRepository implements IVideoRepository {
       .map(mapRow)
   }
 
+  findByProbeStatus(status: ProbeStatus): Video[] {
+    return this.db
+      .select()
+      .from(videos)
+      .where(eq(videos.probeStatus, status))
+      .orderBy(asc(videos.createdAt))
+      .all()
+      .map(mapRow)
+  }
+
   upsert(video: Video): void {
     this.db
       .insert(videos)
@@ -72,6 +83,7 @@ export class SqliteVideoRepository implements IVideoRepository {
         filePath: video.filePath,
         thumbnailPath: video.thumbnailPath,
         downloadDate: video.downloadDate,
+        probeStatus: video.probeStatus,
         status: video.status,
         deletedAt: video.deletedAt,
         createdAt: video.createdAt,
@@ -89,6 +101,7 @@ export class SqliteVideoRepository implements IVideoRepository {
           filePath: sql`excluded.file_path`,
           thumbnailPath: sql`excluded.thumbnail_path`,
           downloadDate: sql`excluded.download_date`,
+          probeStatus: sql`excluded.probe_status`,
           status: sql`excluded.status`,
           deletedAt: sql`excluded.deleted_at`,
           updatedAt: sql`excluded.updated_at`
@@ -101,6 +114,14 @@ export class SqliteVideoRepository implements IVideoRepository {
     this.db
       .update(videos)
       .set({ status, deletedAt, updatedAt: new Date().toISOString() })
+      .where(eq(videos.id, id))
+      .run()
+  }
+
+  updateProbeStatus(id: string, probeStatus: ProbeStatus): void {
+    this.db
+      .update(videos)
+      .set({ probeStatus, updatedAt: new Date().toISOString() })
       .where(eq(videos.id, id))
       .run()
   }
@@ -118,7 +139,9 @@ export class SqliteVideoRepository implements IVideoRepository {
     }
 
     if (params.search) {
-      conditions.push(like(videos.title, `%${params.search}%`))
+      conditions.push(
+        sql`${videos.title} LIKE ${'%' + escapeLike(params.search) + '%'} ESCAPE '\\'`
+      )
     }
 
     const where = and(...conditions)

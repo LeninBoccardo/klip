@@ -1,5 +1,10 @@
 /** Action type recorded in the audit log */
-export type AuditAction = 'created' | 'updated' | 'status_changed' | 'deleted'
+export type AuditAction =
+  | 'created'
+  | 'updated'
+  | 'status_changed'
+  | 'probe_status_changed'
+  | 'deleted'
 
 /**
  * Immutable record of a single entity mutation.

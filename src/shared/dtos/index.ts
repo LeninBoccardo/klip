@@ -1,3 +1,5 @@
 export type { CreatorDto } from './CreatorDto'
 export type { VideoDto } from './VideoDto'
 export type { CutDto } from './CutDto'
+export type { AuditEntryDto } from './AuditEntryDto'
+export type { OperationDto } from './OperationDto'

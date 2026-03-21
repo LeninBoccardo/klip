@@ -6,7 +6,8 @@ import type {
   IDownloadQueue,
   IPathResolver,
   IFileSystemWriter,
-  INotifier
+  INotifier,
+  IIdGenerator
 } from '@domain/ports'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
 import type { VideoInfo, DownloadProgress, DownloadResult } from '@domain/types'
@@ -70,8 +71,10 @@ function mockVideoRepo(overrides: Partial<IVideoRepository> = {}): IVideoReposit
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
     findByCreatorId: vi.fn().mockReturnValue([]),
+    findByProbeStatus: vi.fn().mockReturnValue([]),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
+    updateProbeStatus: vi.fn(),
     delete: vi.fn(),
     findPaginated: vi.fn(),
     ...overrides
@@ -95,6 +98,13 @@ function mockFsWriter(): IFileSystemWriter {
 function mockNotifier(): INotifier {
   return {
     notify: vi.fn()
+  }
+}
+
+function mockIdGenerator(): IIdGenerator {
+  let counter = 0
+  return {
+    generate: vi.fn(() => `test-download-id-${++counter}`)
   }
 }
 
@@ -130,6 +140,7 @@ describe('DownloadVideo', () => {
   let pathResolver: IPathResolver
   let fsWriter: IFileSystemWriter
   let notifier: INotifier
+  let idGenerator: IIdGenerator
   let useCase: DownloadVideo
 
   const ROOT = '/root'
@@ -148,6 +159,7 @@ describe('DownloadVideo', () => {
     pathResolver = mockPathResolver()
     fsWriter = mockFsWriter()
     notifier = mockNotifier()
+    idGenerator = mockIdGenerator()
 
     vi.mocked(fetchInfo.execute).mockResolvedValue(videoInfo)
     vi.mocked(downloader.download).mockImplementation(async (opts, onProgress) => {
@@ -171,6 +183,7 @@ describe('DownloadVideo', () => {
       pathResolver,
       fsWriter,
       notifier,
+      idGenerator,
       ROOT
     )
   })

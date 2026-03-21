@@ -1,7 +1,8 @@
 import type { Cut } from '@domain/entities'
 import type { ICutRepository, CutQueryParams } from '@domain/repositories'
 import type { IAuditLogRepository } from '@domain/repositories'
-import type { PaginatedResult, EntityStatus } from '@domain/types'
+import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
+import { diffObjects } from './diff-objects'
 
 /**
  * Decorator that wraps an ICutRepository and writes audit log entries
@@ -35,6 +36,10 @@ export class AuditedCutRepository implements ICutRepository {
 
   findByTags(tags: string[]): Cut[] {
     return this.inner.findByTags(tags)
+  }
+
+  findByProbeStatus(status: ProbeStatus): Cut[] {
+    return this.inner.findByProbeStatus(status)
   }
 
   upsert(cut: Cut): void {
@@ -83,6 +88,21 @@ export class AuditedCutRepository implements ICutRepository {
     })
   }
 
+  updateProbeStatus(id: string, probeStatus: ProbeStatus): void {
+    const existing = this.inner.findById(id)
+    this.inner.updateProbeStatus(id, probeStatus)
+
+    this.auditLog.append({
+      entityType: 'cut',
+      entityId: id,
+      action: 'probe_status_changed',
+      changes: JSON.stringify({
+        probeStatus: { old: existing?.probeStatus ?? null, new: probeStatus }
+      }),
+      createdAt: new Date().toISOString()
+    })
+  }
+
   delete(id: string): void {
     this.inner.delete(id)
 
@@ -98,20 +118,4 @@ export class AuditedCutRepository implements ICutRepository {
   findPaginated(params: CutQueryParams): PaginatedResult<Cut> {
     return this.inner.findPaginated(params)
   }
-}
-
-// ── Helpers ──
-
-function diffObjects(
-  oldObj: Record<string, unknown>,
-  newObj: Record<string, unknown>
-): string | null {
-  const changes: Record<string, { old: unknown; new: unknown }> = {}
-  for (const key of Object.keys(newObj)) {
-    if (key === 'updatedAt') continue
-    if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
-      changes[key] = { old: oldObj[key], new: newObj[key] }
-    }
-  }
-  return Object.keys(changes).length > 0 ? JSON.stringify(changes) : null
 }

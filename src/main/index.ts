@@ -8,7 +8,11 @@ import { registerCreatorController } from './interface-adapters/controllers/Crea
 import { registerVideoController } from './interface-adapters/controllers/VideoController'
 import { registerCutController } from './interface-adapters/controllers/CutController'
 import { registerSettingsController } from './interface-adapters/controllers/SettingsController'
+import { registerAuditLogController } from './interface-adapters/controllers/AuditLogController'
+import { registerOperationController } from './interface-adapters/controllers/OperationController'
 import { join } from 'path'
+import { initializeDatabase } from './framework-drivers/database'
+import { SqliteSettingsRepository } from './interface-adapters/repositories'
 
 // ── Application container (initialised in app.whenReady) ──
 let container: AppContainer
@@ -65,14 +69,18 @@ app.whenReady().then(() => {
   // ── Create DI container ──
   const defaultRootPath = join(app.getPath('documents'), 'klip')
   const dbPath = join(app.getPath('userData'), 'klip.db')
-  container = createAppContainer({ dbPath, rootPath: defaultRootPath })
 
-  // ── Resolve rootPath from settings (or persist default on first launch) ──
-  const storedRootPath = container.repositories.settings.get('rootPath')
+  // Phase 1: Open DB and resolve rootPath from settings
+  const database = initializeDatabase(dbPath)
+  const settingsRepo = new SqliteSettingsRepository(database.db)
+  const storedRootPath = settingsRepo.get('rootPath')
   const rootPath = storedRootPath ?? defaultRootPath
   if (!storedRootPath) {
-    container.repositories.settings.set('rootPath', rootPath)
+    settingsRepo.set('rootPath', rootPath)
   }
+
+  // Phase 2: Create container with resolved rootPath and pre-opened DB
+  container = createAppContainer({ database, rootPath })
   console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
 
   // ── Register IPC controllers ──
@@ -86,6 +94,8 @@ app.whenReady().then(() => {
   registerVideoController(container.repositories.video)
   registerCutController(container.repositories.cut)
   registerSettingsController(container.repositories.settings)
+  registerAuditLogController(container.repositories.auditLog)
+  registerOperationController(container.repositories.operation)
   console.log(`[klip] IPC controllers registered`)
 
   // ── Recover stale operations from previous crash ──
@@ -105,6 +115,16 @@ app.whenReady().then(() => {
   } catch (error) {
     console.error(`[klip] Initial reconciliation failed:`, error)
   }
+
+  // ── Enrich media metadata for newly discovered entities (async, non-blocking) ──
+  container.useCases.enrichMedia
+    .execute()
+    .then((enrichResult) => {
+      if (enrichResult.videosProbed > 0 || enrichResult.cutsProbed > 0) {
+        console.log(`[klip] Media enrichment complete:`, enrichResult)
+      }
+    })
+    .catch((error) => console.error(`[klip] Media enrichment failed:`, error))
 
   // ── Start file watcher (runtime changes only, ignoreInitial: true) ──
   container.services.fileWatcher.start()

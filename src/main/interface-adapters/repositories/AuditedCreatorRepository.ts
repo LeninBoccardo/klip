@@ -2,6 +2,7 @@ import type { Creator } from '@domain/entities'
 import type { ICreatorRepository } from '@domain/repositories'
 import type { IAuditLogRepository } from '@domain/repositories'
 import type { PaginationParams, PaginatedResult, EntityStatus } from '@domain/types'
+import { diffObjects } from './diff-objects'
 
 /**
  * Decorator that wraps an ICreatorRepository and writes audit log entries
@@ -90,20 +91,4 @@ export class AuditedCreatorRepository implements ICreatorRepository {
   findPaginated(params: PaginationParams): PaginatedResult<Creator> {
     return this.inner.findPaginated(params)
   }
-}
-
-// ── Helpers ──
-
-function diffObjects(
-  oldObj: Record<string, unknown>,
-  newObj: Record<string, unknown>
-): string | null {
-  const changes: Record<string, { old: unknown; new: unknown }> = {}
-  for (const key of Object.keys(newObj)) {
-    if (key === 'updatedAt') continue // always changes, not interesting
-    if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
-      changes[key] = { old: oldObj[key], new: newObj[key] }
-    }
-  }
-  return Object.keys(changes).length > 0 ? JSON.stringify(changes) : null
 }

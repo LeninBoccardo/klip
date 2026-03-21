@@ -37,6 +37,7 @@ export const videos = sqliteTable(
     filePath: text('file_path').notNull(),
     thumbnailPath: text('thumbnail_path'),
     downloadDate: text('download_date'),
+    probeStatus: text('probe_status').notNull().default('pending'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),
     createdAt: text('created_at')
@@ -70,6 +71,7 @@ export const cuts = sqliteTable(
     fileSize: integer('file_size'),
     filePath: text('file_path').notNull(),
     thumbnailPath: text('thumbnail_path'),
+    probeStatus: text('probe_status').notNull().default('pending'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),
     createdAt: text('created_at')

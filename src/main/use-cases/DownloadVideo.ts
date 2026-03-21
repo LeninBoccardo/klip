@@ -1,11 +1,11 @@
-import { randomUUID } from 'crypto'
 import type { ICreatorRepository, IVideoRepository } from '@domain/repositories'
 import type {
   IVideoDownloader,
   IDownloadQueue,
   IPathResolver,
   IFileSystemWriter,
-  INotifier
+  INotifier,
+  IIdGenerator
 } from '@domain/ports'
 import type { DownloadRequest, DownloadProgress } from '@domain/types'
 import { slugify } from '@domain/types'
@@ -35,6 +35,7 @@ export class DownloadVideo implements IDownloadVideo {
     private pathResolver: IPathResolver,
     private fsWriter: IFileSystemWriter,
     private notifier: INotifier,
+    private idGenerator: IIdGenerator,
     private rootPath: string
   ) {}
 
@@ -48,7 +49,7 @@ export class DownloadVideo implements IDownloadVideo {
       throw new Error('Creator name is required')
     }
 
-    const downloadId = randomUUID()
+    const downloadId = this.idGenerator.generate()
 
     // Notify UI that download is queued
     this.notifier.notify('download-progress', {
@@ -61,7 +62,9 @@ export class DownloadVideo implements IDownloadVideo {
     })
 
     // Enqueue — the task runs when a concurrency slot opens
-    this.downloadQueue.enqueue(() => this.performDownload(downloadId, url, creatorName.trim()))
+    this.downloadQueue
+      .enqueue(() => this.performDownload(downloadId, url, creatorName.trim()))
+      .catch((err) => console.error(`[klip] Download queue error (${downloadId}):`, err))
 
     return { downloadId }
   }
@@ -115,6 +118,7 @@ export class DownloadVideo implements IDownloadVideo {
         filePath: result.filePath,
         thumbnailPath: result.thumbnailPath,
         downloadDate: now,
+        probeStatus: 'pending',
         status: 'active',
         deletedAt: null,
         createdAt: now,

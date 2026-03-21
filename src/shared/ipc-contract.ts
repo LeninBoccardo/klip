@@ -9,7 +9,7 @@ import type {
   VideoQueryParams,
   CutQueryParams
 } from './types'
-import type { CreatorDto, VideoDto, CutDto } from './dtos'
+import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
 
 /**
  * Typed map of every IPC channel to its parameter tuple and return type.
@@ -60,10 +60,36 @@ export interface IpcContract {
   'get-setting': { params: [key: string]; result: string | null }
   'set-setting': { params: [key: string, value: string]; result: void }
 
+  // ── Audit Log ──
+  'get-audit-log-by-entity': {
+    params: [entityType: string, entityId: string]
+    result: AuditEntryDto[]
+  }
+  'get-audit-log-recent': {
+    params: [limit: number]
+    result: AuditEntryDto[]
+  }
+
+  // ── Operations ──
+  'get-operation-by-id': {
+    params: [id: string]
+    result: OperationDto | null
+  }
+  'get-operations-by-status': {
+    params: [status: string]
+    result: OperationDto[]
+  }
+
   // ── Push events (main → renderer) ──
   'db-updated': { params: []; result: void }
   'download-progress': { params: [data: DownloadProgress]; result: void }
 }
+
+/** Channels that use ipcMain.handle (request/response pattern) */
+export type InvokeChannel = Exclude<keyof IpcContract, 'db-updated' | 'download-progress'>
+
+/** Channels that use webContents.send (push pattern) */
+export type PushChannel = 'db-updated' | 'download-progress'
 
 /** Extract the result type for a given channel */
 export type IpcResult<C extends keyof IpcContract> = IpcContract[C]['result']

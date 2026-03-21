@@ -1,4 +1,4 @@
-import { eq, and, like, inArray, asc, desc, sql } from 'drizzle-orm'
+import { eq, and, inArray, asc, desc, sql } from 'drizzle-orm'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { AppDatabase } from '@main/framework-drivers/database'
 import { creators } from '@main/framework-drivers/database/schema'
@@ -6,6 +6,7 @@ import type { Creator } from '@domain/entities'
 import type { ICreatorRepository } from '@domain/repositories'
 import type { PaginationParams, PaginatedResult, EntityStatus } from '@domain/types'
 import { paginatedResult } from '@domain/types'
+import { escapeLike } from './escape-like'
 
 // ── sort-column allowlist (camelCase UI key → Drizzle column reference) ──
 
@@ -94,7 +95,9 @@ export class SqliteCreatorRepository implements ICreatorRepository {
     const conditions = [inArray(creators.status, statuses)]
 
     if (params.search) {
-      conditions.push(like(creators.name, `%${params.search}%`))
+      conditions.push(
+        sql`${creators.name} LIKE ${'%' + escapeLike(params.search) + '%'} ESCAPE '\\'`
+      )
     }
 
     const where = and(...conditions)

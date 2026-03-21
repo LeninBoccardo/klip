@@ -1,8 +1,5 @@
-import { ipcMain } from 'electron'
 import type { ICutRepository } from '@domain/repositories'
-import type { CutQueryParams, PaginatedResult } from '@shared/types'
-import type { CutDto } from '@shared/dtos'
-import { IpcChannels } from '@shared/ipc-channels'
+import { createTypedHandler } from './create-typed-handler'
 
 /**
  * IPC controller for cut CRUD operations.
@@ -15,26 +12,23 @@ import { IpcChannels } from '@shared/ipc-channels'
  *   - `restore-cut`        → restore (status → 'active')
  */
 export function registerCutController(cutRepo: ICutRepository): void {
-  ipcMain.handle(
-    IpcChannels.GetCutsPaginated,
-    async (_event, params: CutQueryParams): Promise<PaginatedResult<CutDto>> => {
-      return cutRepo.findPaginated(params)
-    }
-  )
+  createTypedHandler('get-cuts-paginated', async (_event, params) => {
+    return cutRepo.findPaginated(params)
+  })
 
-  ipcMain.handle(IpcChannels.GetCutById, async (_event, id: string): Promise<CutDto | null> => {
+  createTypedHandler('get-cut-by-id', async (_event, id) => {
     return cutRepo.findById(id)
   })
 
-  ipcMain.handle(IpcChannels.GetCutsByTags, async (_event, tags: string[]): Promise<CutDto[]> => {
+  createTypedHandler('get-cuts-by-tags', async (_event, tags) => {
     return cutRepo.findByTags(tags)
   })
 
-  ipcMain.handle(IpcChannels.DeleteCut, async (_event, id: string): Promise<void> => {
+  createTypedHandler('delete-cut', async (_event, id) => {
     cutRepo.updateStatus(id, 'deleted', new Date().toISOString())
   })
 
-  ipcMain.handle(IpcChannels.RestoreCut, async (_event, id: string): Promise<void> => {
+  createTypedHandler('restore-cut', async (_event, id) => {
     cutRepo.updateStatus(id, 'active', null)
   })
 }

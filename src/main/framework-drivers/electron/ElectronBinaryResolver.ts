@@ -1,8 +1,6 @@
+import { join } from 'path'
 import { app } from 'electron'
 import type { IBinaryResolver } from '@domain/ports'
-import { NodePathResolver } from '@main/interface-adapters/file-system'
-
-const nodePathResolver = new NodePathResolver()
 
 type SupportedPlatform = 'win32' | 'darwin' | 'linux'
 
@@ -24,10 +22,10 @@ export class ElectronBinaryResolver implements IBinaryResolver {
     const fileName = platformMap[platform] ?? platformMap['linux']
 
     if (app.isPackaged) {
-      return nodePathResolver.join(process.resourcesPath, 'bin', fileName)
+      return join(process.resourcesPath, 'bin', fileName)
     }
 
     // Dev: relative to project root (electron-vite sets __dirname to out/main/)
-    return nodePathResolver.join(app.getAppPath(), 'resources', 'bin', fileName)
+    return join(app.getAppPath(), 'resources', 'bin', fileName)
   }
 }

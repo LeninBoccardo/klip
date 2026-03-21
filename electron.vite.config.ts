@@ -2,6 +2,19 @@ import { resolve } from 'path'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import type { PluginOption } from 'vite'
+import { cpSync } from 'node:fs'
+
+function copyMigrations(): PluginOption {
+  return {
+    name: 'copy-drizzle-migrations',
+    closeBundle() {
+      const src = resolve('src/main/framework-drivers/database/migrations')
+      const dest = resolve('out/main/migrations')
+      cpSync(src, dest, { recursive: true })
+    }
+  }
+}
 
 export default defineConfig({
   main: {
@@ -13,12 +26,13 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
+    plugins: [copyMigrations()],
     build: {
-      // p-queue and yocto-queue are ESM-only packages.
-      // They must be bundled (not externalized) so Vite handles
-      // the ESM default-export interop in the CJS main process.
+      // p-queue, yocto-queue are ESM-only; drizzle-orm has a broken CJS
+      // build (illegal newline after throw in migrator.cjs). Bundling them
+      // lets Vite process the working ESM source instead.
       externalizeDeps: {
-        exclude: ['p-queue', 'yocto-queue']
+        exclude: ['p-queue', 'yocto-queue', 'drizzle-orm']
       }
     }
   },

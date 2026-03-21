@@ -1,4 +1,4 @@
-import type { EntityStatus } from '@domain/types'
+import type { EntityStatus, ProbeStatus } from '@domain/types'
 
 export interface Video {
   id: string
@@ -11,6 +11,7 @@ export interface Video {
   filePath: string
   thumbnailPath: string | null
   downloadDate: string | null
+  probeStatus: ProbeStatus
   status: EntityStatus
   deletedAt: string | null
   createdAt: string

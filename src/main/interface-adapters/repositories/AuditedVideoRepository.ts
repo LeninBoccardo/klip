@@ -1,7 +1,8 @@
 import type { Video } from '@domain/entities'
 import type { IVideoRepository, VideoQueryParams } from '@domain/repositories'
 import type { IAuditLogRepository } from '@domain/repositories'
-import type { PaginatedResult, EntityStatus } from '@domain/types'
+import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
+import { diffObjects } from './diff-objects'
 
 /**
  * Decorator that wraps an IVideoRepository and writes audit log entries
@@ -27,6 +28,10 @@ export class AuditedVideoRepository implements IVideoRepository {
 
   findByCreatorId(creatorId: string): Video[] {
     return this.inner.findByCreatorId(creatorId)
+  }
+
+  findByProbeStatus(status: ProbeStatus): Video[] {
+    return this.inner.findByProbeStatus(status)
   }
 
   upsert(video: Video): void {
@@ -75,6 +80,21 @@ export class AuditedVideoRepository implements IVideoRepository {
     })
   }
 
+  updateProbeStatus(id: string, probeStatus: ProbeStatus): void {
+    const existing = this.inner.findById(id)
+    this.inner.updateProbeStatus(id, probeStatus)
+
+    this.auditLog.append({
+      entityType: 'video',
+      entityId: id,
+      action: 'probe_status_changed',
+      changes: JSON.stringify({
+        probeStatus: { old: existing?.probeStatus ?? null, new: probeStatus }
+      }),
+      createdAt: new Date().toISOString()
+    })
+  }
+
   delete(id: string): void {
     this.inner.delete(id)
 
@@ -90,20 +110,4 @@ export class AuditedVideoRepository implements IVideoRepository {
   findPaginated(params: VideoQueryParams): PaginatedResult<Video> {
     return this.inner.findPaginated(params)
   }
-}
-
-// ── Helpers ──
-
-function diffObjects(
-  oldObj: Record<string, unknown>,
-  newObj: Record<string, unknown>
-): string | null {
-  const changes: Record<string, { old: unknown; new: unknown }> = {}
-  for (const key of Object.keys(newObj)) {
-    if (key === 'updatedAt') continue
-    if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
-      changes[key] = { old: oldObj[key], new: newObj[key] }
-    }
-  }
-  return Object.keys(changes).length > 0 ? JSON.stringify(changes) : null
 }

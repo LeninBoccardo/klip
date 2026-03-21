@@ -1,8 +1,5 @@
-import { ipcMain } from 'electron'
 import type { IVideoRepository } from '@domain/repositories'
-import type { VideoQueryParams, PaginatedResult } from '@shared/types'
-import type { VideoDto } from '@shared/dtos'
-import { IpcChannels } from '@shared/ipc-channels'
+import { createTypedHandler } from './create-typed-handler'
 
 /**
  * IPC controller for video CRUD operations.
@@ -14,22 +11,19 @@ import { IpcChannels } from '@shared/ipc-channels'
  *   - `restore-video`        → restore (status → 'active')
  */
 export function registerVideoController(videoRepo: IVideoRepository): void {
-  ipcMain.handle(
-    IpcChannels.GetVideosPaginated,
-    async (_event, params: VideoQueryParams): Promise<PaginatedResult<VideoDto>> => {
-      return videoRepo.findPaginated(params)
-    }
-  )
+  createTypedHandler('get-videos-paginated', async (_event, params) => {
+    return videoRepo.findPaginated(params)
+  })
 
-  ipcMain.handle(IpcChannels.GetVideoById, async (_event, id: string): Promise<VideoDto | null> => {
+  createTypedHandler('get-video-by-id', async (_event, id) => {
     return videoRepo.findById(id)
   })
 
-  ipcMain.handle(IpcChannels.DeleteVideo, async (_event, id: string): Promise<void> => {
+  createTypedHandler('delete-video', async (_event, id) => {
     videoRepo.updateStatus(id, 'deleted', new Date().toISOString())
   })
 
-  ipcMain.handle(IpcChannels.RestoreVideo, async (_event, id: string): Promise<void> => {
+  createTypedHandler('restore-video', async (_event, id) => {
     videoRepo.updateStatus(id, 'active', null)
   })
 }

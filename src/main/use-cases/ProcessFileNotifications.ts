@@ -2,6 +2,7 @@ import type { INotificationQueue, IDebouncer, INotifier } from '@domain/ports'
 import type { FileEvent } from '@domain/types'
 import { collapseEvents, classifyPath } from '@domain/types'
 import type { IReconcileDirectory, ReconcileResult } from './IReconcileDirectory'
+import type { IEnrichMediaMetadata } from './IEnrichMediaMetadata'
 
 /** Named constants — tune based on real-world profiling */
 export const RECONCILE_THRESHOLD = 50
@@ -53,7 +54,8 @@ export class ProcessFileNotifications {
     private config: FlushConfig = {
       debounceMs: DEBOUNCE_MS,
       reconcileThreshold: RECONCILE_THRESHOLD
-    }
+    },
+    private enrichMedia?: IEnrichMediaMetadata
   ) {}
 
   /**
@@ -112,6 +114,9 @@ export class ProcessFileNotifications {
       }
 
       this.notifier.notify('db-updated')
+
+      // Enrich metadata for newly discovered entities (non-blocking)
+      this.enrichMedia?.execute().catch((err) => console.error('[klip] Enrichment failed:', err))
     } catch (error) {
       console.error('[klip] Notification flush failed:', error)
     } finally {

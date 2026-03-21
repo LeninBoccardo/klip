@@ -17,11 +17,11 @@ export class PQueueDownloadQueue implements IDownloadQueue {
   }
 
   pending(): number {
-    return this.pQueue.pending
+    return this.pQueue.size
   }
 
   running(): number {
-    return this.pQueue.size
+    return this.pQueue.pending
   }
 
   async onIdle(): Promise<void> {

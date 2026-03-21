@@ -1,66 +1,51 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IpcChannels } from '@shared/ipc-channels'
-import type {
-  ReconcileResult,
-  VideoInfo,
-  DownloadVideoResult,
-  MediaProbeResult,
-  DownloadProgress,
-  PaginationParams,
-  PaginatedResult,
-  VideoQueryParams,
-  CutQueryParams
-} from '@shared/types'
-import type { CreatorDto, VideoDto, CutDto } from '@shared/dtos'
+import type { DownloadProgress } from '@shared/types'
+import { createTypedInvoker } from './create-typed-invoker'
 
 // Custom APIs for renderer
 const api = {
   // ── Reconciliation ──
-  reconcile: (): Promise<ReconcileResult> => ipcRenderer.invoke(IpcChannels.Reconcile),
+  reconcile: createTypedInvoker('reconcile'),
 
   // ── Download & Media ──
-  fetchVideoInfo: (url: string): Promise<VideoInfo> =>
-    ipcRenderer.invoke(IpcChannels.FetchVideoInfo, url),
-  downloadVideo: (url: string, creatorName: string): Promise<DownloadVideoResult> =>
-    ipcRenderer.invoke(IpcChannels.DownloadVideo, url, creatorName),
-  cancelDownload: (downloadId: string): Promise<void> =>
-    ipcRenderer.invoke(IpcChannels.CancelDownload, downloadId),
-  probeMediaFile: (filePath: string): Promise<MediaProbeResult> =>
-    ipcRenderer.invoke(IpcChannels.ProbeMediaFile, filePath),
+  fetchVideoInfo: createTypedInvoker('fetch-video-info'),
+  downloadVideo: createTypedInvoker('download-video'),
+  cancelDownload: createTypedInvoker('cancel-download'),
+  probeMediaFile: createTypedInvoker('probe-media-file'),
 
   // ── Creators ──
-  getCreatorsPaginated: (params: PaginationParams): Promise<PaginatedResult<CreatorDto>> =>
-    ipcRenderer.invoke(IpcChannels.GetCreatorsPaginated, params),
-  getCreatorById: (id: string): Promise<CreatorDto | null> =>
-    ipcRenderer.invoke(IpcChannels.GetCreatorById, id),
-  deleteCreator: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannels.DeleteCreator, id),
-  restoreCreator: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannels.RestoreCreator, id),
+  getCreatorsPaginated: createTypedInvoker('get-creators-paginated'),
+  getCreatorById: createTypedInvoker('get-creator-by-id'),
+  deleteCreator: createTypedInvoker('delete-creator'),
+  restoreCreator: createTypedInvoker('restore-creator'),
 
   // ── Videos ──
-  getVideosPaginated: (params: VideoQueryParams): Promise<PaginatedResult<VideoDto>> =>
-    ipcRenderer.invoke(IpcChannels.GetVideosPaginated, params),
-  getVideoById: (id: string): Promise<VideoDto | null> =>
-    ipcRenderer.invoke(IpcChannels.GetVideoById, id),
-  deleteVideo: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannels.DeleteVideo, id),
-  restoreVideo: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannels.RestoreVideo, id),
+  getVideosPaginated: createTypedInvoker('get-videos-paginated'),
+  getVideoById: createTypedInvoker('get-video-by-id'),
+  deleteVideo: createTypedInvoker('delete-video'),
+  restoreVideo: createTypedInvoker('restore-video'),
 
   // ── Cuts ──
-  getCutsPaginated: (params: CutQueryParams): Promise<PaginatedResult<CutDto>> =>
-    ipcRenderer.invoke(IpcChannels.GetCutsPaginated, params),
-  getCutById: (id: string): Promise<CutDto | null> =>
-    ipcRenderer.invoke(IpcChannels.GetCutById, id),
-  getCutsByTags: (tags: string[]): Promise<CutDto[]> =>
-    ipcRenderer.invoke(IpcChannels.GetCutsByTags, tags),
-  deleteCut: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannels.DeleteCut, id),
-  restoreCut: (id: string): Promise<void> => ipcRenderer.invoke(IpcChannels.RestoreCut, id),
+  getCutsPaginated: createTypedInvoker('get-cuts-paginated'),
+  getCutById: createTypedInvoker('get-cut-by-id'),
+  getCutsByTags: createTypedInvoker('get-cuts-by-tags'),
+  deleteCut: createTypedInvoker('delete-cut'),
+  restoreCut: createTypedInvoker('restore-cut'),
 
   // ── Settings ──
-  getSettings: (): Promise<Record<string, string>> => ipcRenderer.invoke(IpcChannels.GetSettings),
-  getSetting: (key: string): Promise<string | null> =>
-    ipcRenderer.invoke(IpcChannels.GetSetting, key),
-  setSetting: (key: string, value: string): Promise<void> =>
-    ipcRenderer.invoke(IpcChannels.SetSetting, key, value),
+  getSettings: createTypedInvoker('get-settings'),
+  getSetting: createTypedInvoker('get-setting'),
+  setSetting: createTypedInvoker('set-setting'),
+
+  // ── Audit Log ──
+  getAuditLogByEntity: createTypedInvoker('get-audit-log-by-entity'),
+  getAuditLogRecent: createTypedInvoker('get-audit-log-recent'),
+
+  // ── Operations ──
+  getOperationById: createTypedInvoker('get-operation-by-id'),
+  getOperationsByStatus: createTypedInvoker('get-operations-by-status'),
 
   // ── Push event listeners ──
   onDownloadProgress: (

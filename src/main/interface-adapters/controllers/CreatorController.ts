@@ -1,8 +1,5 @@
-import { ipcMain } from 'electron'
 import type { ICreatorRepository } from '@domain/repositories'
-import type { PaginationParams, PaginatedResult } from '@shared/types'
-import type { CreatorDto } from '@shared/dtos'
-import { IpcChannels } from '@shared/ipc-channels'
+import { createTypedHandler } from './create-typed-handler'
 
 /**
  * IPC controller for creator CRUD operations.
@@ -14,25 +11,19 @@ import { IpcChannels } from '@shared/ipc-channels'
  *   - `restore-creator`        → restore (status → 'active')
  */
 export function registerCreatorController(creatorRepo: ICreatorRepository): void {
-  ipcMain.handle(
-    IpcChannels.GetCreatorsPaginated,
-    async (_event, params: PaginationParams): Promise<PaginatedResult<CreatorDto>> => {
-      return creatorRepo.findPaginated(params)
-    }
-  )
+  createTypedHandler('get-creators-paginated', async (_event, params) => {
+    return creatorRepo.findPaginated(params)
+  })
 
-  ipcMain.handle(
-    IpcChannels.GetCreatorById,
-    async (_event, id: string): Promise<CreatorDto | null> => {
-      return creatorRepo.findById(id)
-    }
-  )
+  createTypedHandler('get-creator-by-id', async (_event, id) => {
+    return creatorRepo.findById(id)
+  })
 
-  ipcMain.handle(IpcChannels.DeleteCreator, async (_event, id: string): Promise<void> => {
+  createTypedHandler('delete-creator', async (_event, id) => {
     creatorRepo.updateStatus(id, 'deleted', new Date().toISOString())
   })
 
-  ipcMain.handle(IpcChannels.RestoreCreator, async (_event, id: string): Promise<void> => {
+  createTypedHandler('restore-creator', async (_event, id) => {
     creatorRepo.updateStatus(id, 'active', null)
   })
 }

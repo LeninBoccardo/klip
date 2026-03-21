@@ -8,3 +8,4 @@ out
 # External binaries (downloaded via `npm run setup`)
 resources/bin/
 
+.gitnexus

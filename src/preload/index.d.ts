@@ -10,7 +10,7 @@ import type {
   VideoQueryParams,
   CutQueryParams
 } from '@shared/types'
-import type { CreatorDto, VideoDto, CutDto } from '@shared/dtos'
+import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from '@shared/dtos'
 
 interface KlipAPI {
   // ── Reconciliation ──
@@ -45,6 +45,14 @@ interface KlipAPI {
   getSettings(): Promise<Record<string, string>>
   getSetting(key: string): Promise<string | null>
   setSetting(key: string, value: string): Promise<void>
+
+  // ── Audit Log ──
+  getAuditLogByEntity(entityType: string, entityId: string): Promise<AuditEntryDto[]>
+  getAuditLogRecent(limit: number): Promise<AuditEntryDto[]>
+
+  // ── Operations ──
+  getOperationById(id: string): Promise<OperationDto | null>
+  getOperationsByStatus(status: string): Promise<OperationDto[]>
 
   // ── Push event listeners ──
   /** Subscribe to download progress events; returns an unsubscribe function */

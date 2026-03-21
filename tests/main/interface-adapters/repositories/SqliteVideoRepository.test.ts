@@ -36,6 +36,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     filePath: '/videos/test.mp4',
     thumbnailPath: '/videos/thumb.jpg',
     downloadDate: '2025-01-02T00:00:00.000Z',
+    probeStatus: 'complete',
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-02T00:00:00.000Z',

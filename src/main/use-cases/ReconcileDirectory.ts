@@ -81,7 +81,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
     for (const creator of dbCreators) {
       if (creator.status === 'deleted') continue // respect user deletion
 
-      if (diskCreatorNames.has(creator.name)) {
+      if (diskCreatorNames.has(creator.folderName)) {
         // Creator folder exists
         if (creator.status === 'missing') {
           this.creatorRepo.updateStatus(creator.id, 'active', null)
@@ -185,7 +185,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
   // ── Video reconciliation ──
 
   private reconcileVideos(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const downloadsDir = this.path.join(rootPath, creator.name, 'downloads')
+    const downloadsDir = this.path.join(rootPath, creator.folderName, 'downloads')
     const diskVideoIds = new Set(this.fs.listDirectories(downloadsDir))
 
     // Use targeted query instead of findAll() + in-memory filter
@@ -215,7 +215,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
   }
 
   private discoverVideos(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const downloadsDir = this.path.join(rootPath, creator.name, 'downloads')
+    const downloadsDir = this.path.join(rootPath, creator.folderName, 'downloads')
     const videoIds = this.fs.listDirectories(downloadsDir)
 
     for (const videoId of videoIds) {
@@ -238,7 +238,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
     videoId: string,
     result: ReconcileResult
   ): void {
-    const videoDir = this.path.join(rootPath, creator.name, 'downloads', videoId)
+    const videoDir = this.path.join(rootPath, creator.folderName, 'downloads', videoId)
     const metaJson = this.fs.readJsonFile<MetaJson>(this.path.join(videoDir, 'meta.json'))
     const files = this.fs.listFiles(videoDir)
 
@@ -257,6 +257,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       filePath: mediaFile ? this.path.join(videoDir, mediaFile) : videoDir,
       thumbnailPath: thumbFile ? this.path.join(videoDir, thumbFile) : null,
       downloadDate: metaJson?.downloadDate ?? null,
+      probeStatus: 'pending',
       status: 'active',
       deletedAt: null,
       createdAt: now,
@@ -269,7 +270,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
   // ── Cut reconciliation ──
 
   private reconcileCuts(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const cutsDir = this.path.join(rootPath, creator.name, 'cuts')
+    const cutsDir = this.path.join(rootPath, creator.folderName, 'cuts')
     const diskCutIds = new Set(this.fs.listDirectories(cutsDir))
 
     // Use targeted query instead of findAll() + in-memory filter
@@ -298,7 +299,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
   }
 
   private discoverCuts(rootPath: string, creator: Creator, result: ReconcileResult): void {
-    const cutsDir = this.path.join(rootPath, creator.name, 'cuts')
+    const cutsDir = this.path.join(rootPath, creator.folderName, 'cuts')
     const cutIds = this.fs.listDirectories(cutsDir)
 
     for (const cutId of cutIds) {
@@ -321,7 +322,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
     cutId: string,
     result: ReconcileResult
   ): void {
-    const cutDir = this.path.join(rootPath, creator.name, 'cuts', cutId)
+    const cutDir = this.path.join(rootPath, creator.folderName, 'cuts', cutId)
     const cutData = this.fs.readJsonFile<CutDataJson>(this.path.join(cutDir, 'cut-data.json'))
     const files = this.fs.listFiles(cutDir)
 
@@ -342,6 +343,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       fileSize: null,
       filePath: mediaFile ? this.path.join(cutDir, mediaFile) : cutDir,
       thumbnailPath: thumbFile ? this.path.join(cutDir, thumbFile) : null,
+      probeStatus: 'pending',
       status: 'active',
       deletedAt: null,
       createdAt: now,

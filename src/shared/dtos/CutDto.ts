@@ -1,4 +1,5 @@
 import type { EntityStatus } from '../types/entity-status'
+import type { ProbeStatus } from '../types/probe-status'
 
 /** Renderer-facing representation of a cut */
 export interface CutDto {
@@ -14,6 +15,7 @@ export interface CutDto {
   fileSize: number | null
   filePath: string
   thumbnailPath: string | null
+  probeStatus: ProbeStatus
   status: EntityStatus
   deletedAt: string | null
   createdAt: string

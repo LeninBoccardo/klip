@@ -1,4 +1,4 @@
-import type { EntityStatus } from '@domain/types'
+import type { EntityStatus, ProbeStatus } from '@domain/types'
 
 export interface Cut {
   id: string
@@ -13,6 +13,7 @@ export interface Cut {
   fileSize: number | null
   filePath: string
   thumbnailPath: string | null
+  probeStatus: ProbeStatus
   status: EntityStatus
   deletedAt: string | null
   createdAt: string

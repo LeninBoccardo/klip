@@ -1,11 +1,12 @@
-import { eq, and, like, inArray, asc, desc, sql } from 'drizzle-orm'
+import { eq, and, inArray, asc, desc, sql } from 'drizzle-orm'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { AppDatabase } from '@main/framework-drivers/database'
 import { cuts } from '@main/framework-drivers/database/schema'
 import type { Cut } from '@domain/entities'
 import type { ICutRepository, CutQueryParams } from '@domain/repositories'
-import type { PaginatedResult, EntityStatus } from '@domain/types'
+import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
 import { paginatedResult } from '@domain/types'
+import { escapeLike } from './escape-like'
 
 // ── sort-column allowlist (camelCase UI key → Drizzle column reference) ──
 
@@ -47,6 +48,7 @@ function mapRowToCut(row: {
   fileSize: number | null
   filePath: string
   thumbnailPath: string | null
+  probeStatus: string
   status: string
   deletedAt: string | null
   createdAt: string
@@ -55,6 +57,7 @@ function mapRowToCut(row: {
   return {
     ...row,
     tags: parseTags(row.tags),
+    probeStatus: row.probeStatus as ProbeStatus,
     status: row.status as EntityStatus
   }
 }
@@ -101,6 +104,16 @@ export class SqliteCutRepository implements ICutRepository {
       .map(mapRowToCut)
   }
 
+  findByProbeStatus(status: ProbeStatus): Cut[] {
+    return this.db
+      .select()
+      .from(cuts)
+      .where(eq(cuts.probeStatus, status))
+      .orderBy(asc(cuts.createdAt))
+      .all()
+      .map(mapRowToCut)
+  }
+
   findByTags(tags: string[]): Cut[] {
     if (tags.length === 0) return []
 
@@ -115,6 +128,7 @@ export class SqliteCutRepository implements ICutRepository {
                 c.end_timestamp AS endTimestamp, c.duration, c.resolution,
                 c.file_size AS fileSize, c.file_path AS filePath,
                 c.thumbnail_path AS thumbnailPath,
+                c.probe_status AS probeStatus,
                 c.status, c.deleted_at AS deletedAt,
                 c.created_at AS createdAt, c.updated_at AS updatedAt
          FROM cuts c, json_each(c.tags) AS t
@@ -133,6 +147,7 @@ export class SqliteCutRepository implements ICutRepository {
       fileSize: number | null
       filePath: string
       thumbnailPath: string | null
+      probeStatus: string
       status: string
       deletedAt: string | null
       createdAt: string
@@ -158,6 +173,7 @@ export class SqliteCutRepository implements ICutRepository {
         fileSize: cut.fileSize,
         filePath: cut.filePath,
         thumbnailPath: cut.thumbnailPath,
+        probeStatus: cut.probeStatus,
         status: cut.status,
         deletedAt: cut.deletedAt,
         createdAt: cut.createdAt,
@@ -177,6 +193,7 @@ export class SqliteCutRepository implements ICutRepository {
           fileSize: sql`excluded.file_size`,
           filePath: sql`excluded.file_path`,
           thumbnailPath: sql`excluded.thumbnail_path`,
+          probeStatus: sql`excluded.probe_status`,
           status: sql`excluded.status`,
           deletedAt: sql`excluded.deleted_at`,
           updatedAt: sql`excluded.updated_at`
@@ -189,6 +206,14 @@ export class SqliteCutRepository implements ICutRepository {
     this.db
       .update(cuts)
       .set({ status, deletedAt, updatedAt: new Date().toISOString() })
+      .where(eq(cuts.id, id))
+      .run()
+  }
+
+  updateProbeStatus(id: string, probeStatus: ProbeStatus): void {
+    this.db
+      .update(cuts)
+      .set({ probeStatus, updatedAt: new Date().toISOString() })
       .where(eq(cuts.id, id))
       .run()
   }
@@ -210,7 +235,7 @@ export class SqliteCutRepository implements ICutRepository {
     }
 
     if (params.search) {
-      conditions.push(like(cuts.title, `%${params.search}%`))
+      conditions.push(sql`${cuts.title} LIKE ${'%' + escapeLike(params.search) + '%'} ESCAPE '\\'`)
     }
 
     // Tags filter uses a raw SQL EXISTS subquery

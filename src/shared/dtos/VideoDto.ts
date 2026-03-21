@@ -1,4 +1,5 @@
 import type { EntityStatus } from '../types/entity-status'
+import type { ProbeStatus } from '../types/probe-status'
 
 /** Renderer-facing representation of a video */
 export interface VideoDto {
@@ -12,6 +13,7 @@ export interface VideoDto {
   filePath: string
   thumbnailPath: string | null
   downloadDate: string | null
+  probeStatus: ProbeStatus
   status: EntityStatus
   deletedAt: string | null
   createdAt: string

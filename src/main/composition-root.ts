@@ -15,18 +15,16 @@ import type {
   IBinaryResolver,
   IVideoDownloader,
   IMediaProbe,
-  IDownloadQueue
+  IDownloadQueue,
+  IIdGenerator
 } from '@domain/ports'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
 import type { IDownloadVideo } from '@use-cases/IDownloadVideo'
 import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
 import type { IRecoverOperations } from '@use-cases/IRecoverOperations'
-import {
-  initializeDatabase,
-  type DatabaseInstance,
-  SqliteTransactionScope
-} from './framework-drivers/database'
+import type { IEnrichMediaMetadata } from '@use-cases/IEnrichMediaMetadata'
+import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
   SqliteVideoRepository,
@@ -44,6 +42,7 @@ import {
   NodePathResolver
 } from './interface-adapters/file-system'
 import { PQueueNotificationQueue, PQueueDownloadQueue } from './interface-adapters/queue'
+import { NodeIdGenerator } from './interface-adapters/crypto/NodeIdGenerator'
 import { NodeDebouncer } from './framework-drivers/timers'
 import { ElectronNotifier } from './framework-drivers/electron/ElectronNotifier'
 import { ElectronBinaryResolver } from './framework-drivers/electron/ElectronBinaryResolver'
@@ -56,6 +55,7 @@ import { FetchVideoInfo } from '@use-cases/FetchVideoInfo'
 import { DownloadVideo } from '@use-cases/DownloadVideo'
 import { ProbeMediaFile } from '@use-cases/ProbeMediaFile'
 import { RecoverOperations } from '@use-cases/RecoverOperations'
+import { EnrichMediaMetadata } from '@use-cases/EnrichMediaMetadata'
 
 /**
  * Application dependency container.
@@ -82,6 +82,7 @@ export interface AppContainer {
     videoDownloader: IVideoDownloader
     mediaProbe: IMediaProbe
     downloadQueue: IDownloadQueue
+    idGenerator: IIdGenerator
   }
   useCases: {
     reconcile: IReconcileDirectory
@@ -90,6 +91,7 @@ export interface AppContainer {
     downloadVideo: IDownloadVideo
     probeMediaFile: IProbeMediaFile
     recoverOperations: IRecoverOperations
+    enrichMedia: IEnrichMediaMetadata
   }
   services: {
     fileWatcher: IFileWatcher
@@ -99,7 +101,7 @@ export interface AppContainer {
 }
 
 export interface AppConfig {
-  dbPath: string
+  database: DatabaseInstance
   rootPath: string
 }
 
@@ -109,7 +111,7 @@ export interface AppConfig {
  */
 export function createAppContainer(config: AppConfig): AppContainer {
   // ── Framework drivers ──
-  const database = initializeDatabase(config.dbPath)
+  const database = config.database
 
   // ── Ports / adapters ──
   const fsReader = new NodeFileSystemReader()
@@ -122,6 +124,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const videoDownloader = new YtDlpDownloader(binaryResolver)
   const mediaProbe = new FfprobeMediaProbe(binaryResolver)
   const downloadQueue = new PQueueDownloadQueue(2)
+  const idGenerator = new NodeIdGenerator()
 
   // ── Repositories (raw Drizzle) ──
   const sqliteCreatorRepo = new SqliteCreatorRepository(database.db)
@@ -146,13 +149,17 @@ export function createAppContainer(config: AppConfig): AppContainer {
     transactionScope
   )
 
+  const enrichMedia = new EnrichMediaMetadata(videoRepo, cutRepo, mediaProbe, notifier)
+
   const notificationQueue = new PQueueNotificationQueue()
   const processNotifications = new ProcessFileNotifications(
     notificationQueue,
     debouncer,
     reconcile,
     notifier,
-    config.rootPath
+    config.rootPath,
+    undefined, // use default FlushConfig
+    enrichMedia
   )
 
   const fetchVideoInfo = new FetchVideoInfo(videoDownloader)
@@ -166,6 +173,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
     pathResolver,
     fsWriter,
     notifier,
+    idGenerator,
     config.rootPath
   )
 
@@ -197,7 +205,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       binaryResolver,
       videoDownloader,
       mediaProbe,
-      downloadQueue
+      downloadQueue,
+      idGenerator
     },
     useCases: {
       reconcile,
@@ -205,7 +214,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       fetchVideoInfo,
       downloadVideo,
       probeMediaFile,
-      recoverOperations
+      recoverOperations,
+      enrichMedia
     },
     services: {
       fileWatcher

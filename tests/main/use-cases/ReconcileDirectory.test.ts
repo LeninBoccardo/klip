@@ -32,6 +32,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     filePath: '/root/creator-1/downloads/video-1',
     thumbnailPath: null,
     downloadDate: null,
+    probeStatus: 'pending',
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -54,6 +55,7 @@ function makeCut(overrides: Partial<Cut> = {}): Cut {
     fileSize: null,
     filePath: '/root/creator-1/cuts/cut-1',
     thumbnailPath: null,
+    probeStatus: 'pending',
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -83,8 +85,10 @@ function mockVideoRepo(): IVideoRepository {
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
     findByCreatorId: vi.fn().mockReturnValue([]),
+    findByProbeStatus: vi.fn().mockReturnValue([]),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
+    updateProbeStatus: vi.fn(),
     delete: vi.fn(),
     findPaginated: vi.fn()
   }
@@ -98,8 +102,10 @@ function mockCutRepo(): ICutRepository {
     findByCreatorId: vi.fn().mockReturnValue([]),
     findByVideoId: vi.fn().mockReturnValue([]),
     findByTags: vi.fn().mockReturnValue([]),
+    findByProbeStatus: vi.fn().mockReturnValue([]),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
+    updateProbeStatus: vi.fn(),
     delete: vi.fn(),
     findPaginated: vi.fn()
   }
@@ -392,10 +398,16 @@ describe('ReconcileDirectory', () => {
 
   it('handles multiple creators with mixed statuses correctly', () => {
     creatorRepo.findAll = vi.fn().mockReturnValue([
-      makeCreator({ id: 'active-c', name: 'active-c', status: 'active' }),
-      makeCreator({ id: 'missing-c', name: 'missing-c', status: 'missing' }),
+      makeCreator({ id: 'active-c', folderName: 'active-c', name: 'active-c', status: 'active' }),
+      makeCreator({
+        id: 'missing-c',
+        folderName: 'missing-c',
+        name: 'missing-c',
+        status: 'missing'
+      }),
       makeCreator({
         id: 'deleted-c',
+        folderName: 'deleted-c',
         name: 'deleted-c',
         status: 'deleted',
         deletedAt: '2025-06-01'
@@ -776,18 +788,16 @@ describe('ReconcileDirectory', () => {
     it('does not mark already-missing/deleted children when cascading', () => {
       creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
       fs.directoryExists = vi.fn().mockReturnValue(false)
-      videoRepo.findByCreatorId = vi
-        .fn()
-        .mockReturnValue([
-          makeVideo({ id: 'v-active', creatorId: 'c1', status: 'active' }),
-          makeVideo({ id: 'v-missing', creatorId: 'c1', status: 'missing' }),
-          makeVideo({
-            id: 'v-deleted',
-            creatorId: 'c1',
-            status: 'deleted',
-            deletedAt: '2025-06-01'
-          })
-        ])
+      videoRepo.findByCreatorId = vi.fn().mockReturnValue([
+        makeVideo({ id: 'v-active', creatorId: 'c1', status: 'active' }),
+        makeVideo({ id: 'v-missing', creatorId: 'c1', status: 'missing' }),
+        makeVideo({
+          id: 'v-deleted',
+          creatorId: 'c1',
+          status: 'deleted',
+          deletedAt: '2025-06-01'
+        })
+      ])
       cutRepo.findByCreatorId = vi.fn().mockReturnValue([])
 
       const result = useCase.executeForCreator(ROOT, 'c1')
@@ -849,5 +859,71 @@ describe('ReconcileDirectory', () => {
 
     expect(result.cutsRecovered).toBe(1)
     expect(cutRepo.updateStatus).toHaveBeenCalledWith('cut-1', 'active', null)
+  })
+
+  // ── Bug fix #1: folderName vs name divergence ──
+
+  describe('folderName vs name divergence', () => {
+    it('uses folderName (not name) for disk existence check', () => {
+      // Creator with different folderName and display name
+      creatorRepo.findAll = vi
+        .fn()
+        .mockReturnValue([
+          makeCreator({ id: 'mr-beast', folderName: 'mr-beast', name: 'Mr Beast' })
+        ])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['mr-beast'] // disk folder matches folderName
+        return []
+      })
+
+      const result = useCase.execute(ROOT)
+
+      // Should NOT mark as missing — folder name matches folderName
+      expect(result.creatorsMarkedMissing).toBe(0)
+      expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
+    })
+
+    it('builds video/cut paths using folderName, not display name', () => {
+      creatorRepo.findAll = vi
+        .fn()
+        .mockReturnValue([
+          makeCreator({ id: 'mr-beast', folderName: 'mr-beast', name: 'Mr Beast' })
+        ])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['mr-beast']
+        if (p.endsWith('downloads')) return ['vid-1']
+        if (p.endsWith('cuts')) return ['cut-1']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['video.mp4'])
+      fs.readJsonFile = vi.fn().mockReturnValue(null)
+
+      useCase.execute(ROOT)
+
+      // Verify path.join was called with folderName ('mr-beast'), not name ('Mr Beast')
+      expect(path.join).toHaveBeenCalledWith(ROOT, 'mr-beast', 'downloads')
+      expect(path.join).toHaveBeenCalledWith(ROOT, 'mr-beast', 'cuts')
+    })
+
+    it('new creator from disk with creator.json uses dir name for id/folderName, JSON name for display', () => {
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['mr-beast']
+        return []
+      })
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('creator.json')) return { name: 'Mr Beast' }
+        return null
+      })
+
+      useCase.execute(ROOT)
+
+      expect(creatorRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'mr-beast',
+          folderName: 'mr-beast',
+          name: 'Mr Beast'
+        })
+      )
+    })
   })
 })

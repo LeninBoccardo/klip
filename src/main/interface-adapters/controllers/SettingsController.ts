@@ -1,6 +1,5 @@
-import { ipcMain } from 'electron'
 import type { ISettingsRepository } from '@domain/repositories'
-import { IpcChannels } from '@shared/ipc-channels'
+import { createTypedHandler } from './create-typed-handler'
 
 /**
  * IPC controller for application settings.
@@ -11,18 +10,15 @@ import { IpcChannels } from '@shared/ipc-channels'
  *   - `set-setting`  → set a single setting (upsert)
  */
 export function registerSettingsController(settingsRepo: ISettingsRepository): void {
-  ipcMain.handle(IpcChannels.GetSettings, async (): Promise<Record<string, string>> => {
+  createTypedHandler('get-settings', async () => {
     return settingsRepo.getAll()
   })
 
-  ipcMain.handle(IpcChannels.GetSetting, async (_event, key: string): Promise<string | null> => {
+  createTypedHandler('get-setting', async (_event, key) => {
     return settingsRepo.get(key)
   })
 
-  ipcMain.handle(
-    IpcChannels.SetSetting,
-    async (_event, key: string, value: string): Promise<void> => {
-      settingsRepo.set(key, value)
-    }
-  )
+  createTypedHandler('set-setting', async (_event, key, value) => {
+    settingsRepo.set(key, value)
+  })
 }

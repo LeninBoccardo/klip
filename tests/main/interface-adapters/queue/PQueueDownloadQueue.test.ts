@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { PQueueDownloadQueue } from '@main/interface-adapters/queue/PQueueDownloadQueue'
 
 describe('PQueueDownloadQueue', () => {
@@ -40,7 +40,7 @@ describe('PQueueDownloadQueue', () => {
     expect(maxConcurrent).toBeLessThanOrEqual(2)
   })
 
-  it('should report pending and running counts', async () => {
+  it('should report pending and running counts correctly', async () => {
     // With concurrency 1 for easier assertion
     const q = new PQueueDownloadQueue(1)
     let resolveFirst: () => void
@@ -57,15 +57,16 @@ describe('PQueueDownloadQueue', () => {
 
     const task2 = q.enqueue(async () => 'done')
 
-    // task1 is running, task2 is pending
-    // p-queue .size = pending count, .pending = running count
-    // But our adapter maps: running() -> pQueue.size, pending() -> pQueue.pending
-    // Actually let's just check they return numbers
-    expect(typeof q.running()).toBe('number')
-    expect(typeof q.pending()).toBe('number')
+    // task1 is running (1), task2 is pending/queued (1)
+    expect(q.running()).toBe(1)
+    expect(q.pending()).toBe(1)
 
     resolveFirst!()
     await Promise.all([task1, task2])
+
+    // After completion, both should be 0
+    expect(q.running()).toBe(0)
+    expect(q.pending()).toBe(0)
   })
 
   it('should resolve onIdle when all tasks complete', async () => {

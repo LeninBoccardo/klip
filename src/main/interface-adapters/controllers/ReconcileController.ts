@@ -1,7 +1,5 @@
-import { ipcMain } from 'electron'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
-import type { ReconcileResult } from '@shared/types'
-import { IpcChannels } from '@shared/ipc-channels'
+import { createTypedHandler } from './create-typed-handler'
 
 /**
  * IPC controller for the reconciliation feature.
@@ -11,7 +9,7 @@ export function registerReconcileController(
   reconcileDirectory: IReconcileDirectory,
   rootPath: string
 ): void {
-  ipcMain.handle(IpcChannels.Reconcile, async (): Promise<ReconcileResult> => {
+  createTypedHandler('reconcile', async () => {
     return reconcileDirectory.execute(rootPath)
   })
 }

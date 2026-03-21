@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
+import { join } from 'path'
 import type { IBinaryResolver, IVideoDownloader, DownloadOptions } from '@domain/ports'
 import type { DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
 
@@ -235,38 +237,35 @@ export class YtDlpDownloader implements IVideoDownloader {
     url: string
   ): DownloadResult {
     // yt-dlp writes <videoId>.info.json in the output directory
-    const fs = require('fs') as typeof import('fs')
-    const path = require('path') as typeof import('path')
-
-    const infoJsonPath = path.join(outputDir, `${videoId}.info.json`)
+    const infoJsonPath = join(outputDir, `${videoId}.info.json`)
     let title = videoId
     let duration: number | null = null
     let creatorName = ''
 
-    if (fs.existsSync(infoJsonPath)) {
+    if (existsSync(infoJsonPath)) {
       try {
-        const raw = fs.readFileSync(infoJsonPath, 'utf-8')
+        const raw = readFileSync(infoJsonPath, 'utf-8')
         const info = JSON.parse(raw)
         title = info.title ?? info.fulltitle ?? videoId
         duration = info.duration ?? null
         creatorName = info.channel ?? info.uploader ?? ''
 
         // Write meta.json for reconciliation compatibility
-        const metaPath = path.join(outputDir, 'meta.json')
+        const metaPath = join(outputDir, 'meta.json')
         const meta = {
           url,
           title,
           duration,
           downloadDate: new Date().toISOString()
         }
-        fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+        writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
       } catch {
         // Non-fatal — continue with defaults
       }
     }
 
     // Find the downloaded media file (exclude .json and .part files)
-    const files = fs.readdirSync(outputDir)
+    const files = readdirSync(outputDir)
     const mediaFile =
       files.find((f: string) => /\.(mp4|mkv|webm|m4a|mp3)$/i.test(f) && !f.endsWith('.part')) ??
       null
@@ -278,10 +277,10 @@ export class YtDlpDownloader implements IVideoDownloader {
       downloadId,
       videoId,
       creatorName,
-      filePath: mediaFile ? path.join(outputDir, mediaFile) : outputDir,
+      filePath: mediaFile ? join(outputDir, mediaFile) : outputDir,
       title,
       duration,
-      thumbnailPath: thumbnailFile ? path.join(outputDir, thumbnailFile) : null
+      thumbnailPath: thumbnailFile ? join(outputDir, thumbnailFile) : null
     }
   }
 }

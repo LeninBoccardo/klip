@@ -15,3 +15,4 @@ export type {
 } from './download'
 export type { MediaProbeResult } from './media-probe'
 export type { ReconcileResult, DownloadVideoResult } from './use-case-results'
+export type { ProbeStatus } from './probe-status'

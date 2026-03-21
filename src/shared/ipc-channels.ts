@@ -34,6 +34,14 @@ export const IpcChannels = {
   GetSetting: 'get-setting',
   SetSetting: 'set-setting',
 
+  // ── Audit Log ──
+  GetAuditLogByEntity: 'get-audit-log-by-entity',
+  GetAuditLogRecent: 'get-audit-log-recent',
+
+  // ── Operations ──
+  GetOperationById: 'get-operation-by-id',
+  GetOperationsByStatus: 'get-operations-by-status',
+
   // ── Push events (webContents.send → ipcRenderer.on) ──
   DbUpdated: 'db-updated',
   DownloadProgress: 'download-progress'
