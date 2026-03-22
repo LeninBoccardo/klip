@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { PluginOption } from 'vite'
 import { cpSync } from 'node:fs'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 
 function copyMigrations(): PluginOption {
   return {
@@ -54,6 +55,13 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [
+      tanstackRouter({
+        target: 'react',
+        autoCodeSplitting: true
+      }),
+      react(),
+      tailwindcss()
+    ]
   }
 })
