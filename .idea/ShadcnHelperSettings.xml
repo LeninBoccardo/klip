@@ -1878,6 +1878,126 @@
         <option name="homepage" value="https://sabraman.ru/components" />
         <option name="urlTemplate" value="https://sabraman.ru/r/{name}.json" />
       </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-ramonclaudio-coderabbit" />
+        <option name="name" value="Ramonclaudio-coderabbit" />
+        <option name="namespace" value="@ramonclaudio-coderabbit" />
+        <option name="baseUrl" value="https://coderabbit-shadcn-registry.vercel.app/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="A framework-agnostic API client, pluggable storage adapters (LocalStorage, Convex, Supabase, PostgreSQL, MySQL), and React components for generating developer activity reports." />
+        <option name="homepage" value="https://ramonclaudio.com/registries/coderabbit" />
+        <option name="urlTemplate" value="https://coderabbit-shadcn-registry.vercel.app/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-dsikeres1" />
+        <option name="name" value="Dsikeres1" />
+        <option name="namespace" value="@dsikeres1" />
+        <option name="baseUrl" value="https://dsikeres1.github.io/react-date-range-picker/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="A headless, composable date &amp; date range picker for React. 5 picker types, 15 locales, dark mode, accessible. Zero dependencies." />
+        <option name="homepage" value="https://dsikeres1.github.io/react-date-range-picker/" />
+        <option name="urlTemplate" value="https://dsikeres1.github.io/react-date-range-picker/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-gamifykit" />
+        <option name="name" value="Gamifykit" />
+        <option name="namespace" value="@gamifykit" />
+        <option name="baseUrl" value="https://gamifykit.com/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="A collection of fully composable components that extend shadcn/ui with a focus on common gamification UI patterns." />
+        <option name="homepage" value="https://gamifykit.com" />
+        <option name="urlTemplate" value="https://gamifykit.com/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-launchui" />
+        <option name="name" value="Launchui" />
+        <option name="namespace" value="@launchui" />
+        <option name="baseUrl" value="https://www.launchuicomponents.com/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Carefully crafted landing page components and templates built with React, Shadcn/ui and Tailwind." />
+        <option name="homepage" value="https://www.launchuicomponents.com/" />
+        <option name="urlTemplate" value="https://www.launchuicomponents.com/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-react-easy-modals" />
+        <option name="name" value="React-easy-modals" />
+        <option name="namespace" value="@react-easy-modals" />
+        <option name="baseUrl" value="https://react-easy-modals-docs.vercel.app/r/styles/{style}" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Modal component for react-easy-modals. Integrates with shadcn Dialog for a simple, powerful modal system with TypeScript support and promise-based API." />
+        <option name="homepage" value="https://react-easy-modals-docs.vercel.app" />
+        <option name="urlTemplate" value="https://react-easy-modals-docs.vercel.app/r/styles/{style}/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-react-slot" />
+        <option name="name" value="React-slot" />
+        <option name="namespace" value="@react-slot" />
+        <option name="baseUrl" value="https://react-slot.vercel.app/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Vue-style slot composition for React - Fine-grained control over component composition" />
+        <option name="homepage" value="https://react-slot.vercel.app/" />
+        <option name="urlTemplate" value="https://react-slot.vercel.app/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-w3-kit" />
+        <option name="name" value="W3-kit" />
+        <option name="namespace" value="@w3-kit" />
+        <option name="baseUrl" value="https://w3-kit.com/registry" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Web3 UI components for blockchain dApps. Includes wallet connection, token swaps, NFT cards, staking interfaces, and 20+ more crypto components." />
+        <option name="homepage" value="https://w3-kit.com" />
+        <option name="urlTemplate" value="https://w3-kit.com/registry/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-odysseyui" />
+        <option name="name" value="Odysseyui" />
+        <option name="namespace" value="@odysseyui" />
+        <option name="baseUrl" value="https://www.odysseyui.com/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="A design focused component library for Next.js, built for speed, flexibility and developer experience." />
+        <option name="homepage" value="https://www.odysseyui.com/docs" />
+        <option name="urlTemplate" value="https://www.odysseyui.com/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-pulkitxm" />
+        <option name="name" value="Pulkitxm" />
+        <option name="namespace" value="@pulkitxm" />
+        <option name="baseUrl" value="https://pulkitxm.com/components" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Animated shadcn components powered by GSAP and Framer Motion. Built for expressive UIs." />
+        <option name="homepage" value="https://pulkitxm.com" />
+        <option name="urlTemplate" value="https://pulkitxm.com/components/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-rescript-shadcn" />
+        <option name="name" value="Rescript-shadcn" />
+        <option name="namespace" value="@rescript-shadcn" />
+        <option name="baseUrl" value="https://rescript-shadcn.miriad.studio/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Shadcn components rewritten in Rescript, compatible with shadcn CLI." />
+        <option name="homepage" value="https://rescript-shadcn.miriad.studio" />
+        <option name="urlTemplate" value="https://rescript-shadcn.miriad.studio/r/{name}.json" />
+      </RegistryConfigState>
     </registryConfigs>
   </component>
 </project>
