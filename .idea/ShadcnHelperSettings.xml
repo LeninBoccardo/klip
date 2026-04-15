@@ -1998,6 +1998,114 @@
         <option name="homepage" value="https://rescript-shadcn.miriad.studio" />
         <option name="urlTemplate" value="https://rescript-shadcn.miriad.studio/r/{name}.json" />
       </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-flightcn" />
+        <option name="name" value="Flightcn" />
+        <option name="namespace" value="@flightcn" />
+        <option name="baseUrl" value="https://flightcn.yencheng.dev/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Flight routes on interactive maps with great-circle arcs, airport markers, multi-leg journeys, and optional animation, built for mapcn." />
+        <option name="homepage" value="https://flightcn.yencheng.dev" />
+        <option name="urlTemplate" value="https://flightcn.yencheng.dev/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-shadcncraft" />
+        <option name="name" value="Shadcncraft" />
+        <option name="namespace" value="@shadcncraft" />
+        <option name="baseUrl" value="https://shadcncraft.com/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="A starter collection of polished shadcn/ui components and blocks built to production standards. Part of a larger Figma + React system designed to scale with your product." />
+        <option name="homepage" value="https://shadcncraft.com" />
+        <option name="urlTemplate" value="https://shadcncraft.com/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-shark" />
+        <option name="name" value="Shark" />
+        <option name="namespace" value="@shark" />
+        <option name="baseUrl" value="https://shark.vini.one/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="shadcn/ui-style components built on Ark UI." />
+        <option name="homepage" value="https://shark.vini.one" />
+        <option name="urlTemplate" value="https://shark.vini.one/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-tailgrids" />
+        <option name="name" value="Tailgrids" />
+        <option name="namespace" value="@tailgrids" />
+        <option name="baseUrl" value="https://tailgrids.com/docs/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="React UI Components, Powered by Tailwind CSS" />
+        <option name="homepage" value="https://tailgrids.com" />
+        <option name="urlTemplate" value="https://tailgrids.com/docs/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-openpolicy" />
+        <option name="name" value="Openpolicy" />
+        <option name="namespace" value="@openpolicy" />
+        <option name="baseUrl" value="https://www.openpolicy.sh/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Open-source components for building terms, privacy policies and cookie banners." />
+        <option name="homepage" value="https://www.openpolicy.sh" />
+        <option name="urlTemplate" value="https://www.openpolicy.sh/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-mksingh" />
+        <option name="name" value="Mksingh" />
+        <option name="namespace" value="@mksingh" />
+        <option name="baseUrl" value="https://mksingh.dev/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="A personal registry of production-ready ShadCN components and utilities. Everything is built to drop into your existing ShadCN project with no extra setup." />
+        <option name="homepage" value="https://mksingh.dev/docs" />
+        <option name="urlTemplate" value="https://mksingh.dev/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-flowkit-ui" />
+        <option name="name" value="Flowkit-ui" />
+        <option name="namespace" value="@flowkit-ui" />
+        <option name="baseUrl" value="https://flowkit-ui.vzkiss.com/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Opinionated, accessible components on Base UI and shadcn-style primitives — starting with a Creatable Combobox." />
+        <option name="homepage" value="https://flowkit-ui.vzkiss.com" />
+        <option name="urlTemplate" value="https://flowkit-ui.vzkiss.com/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-termcn" />
+        <option name="name" value="Termcn" />
+        <option name="namespace" value="@termcn" />
+        <option name="baseUrl" value="https://termcn.vercel.app/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Beautiful terminal UIs, made simple. Ready to use, customizable terminal UI components for React." />
+        <option name="homepage" value="https://termcn.vercel.app" />
+        <option name="urlTemplate" value="https://termcn.vercel.app/r/{name}.json" />
+      </RegistryConfigState>
+      <RegistryConfigState>
+        <option name="id" value="central-remocn" />
+        <option name="name" value="Remocn" />
+        <option name="namespace" value="@remocn" />
+        <option name="baseUrl" value="https://www.remocn.dev/r" />
+        <option name="stylePath" value="/{name}.json" />
+        <option name="type" value="community" />
+        <option name="enabled" value="false" />
+        <option name="description" value="Production-ready components for Remotion - text animations, backgrounds, transitions, UI blocks, and full scene compositions" />
+        <option name="homepage" value="https://www.remocn.dev/" />
+        <option name="urlTemplate" value="https://www.remocn.dev/r/{name}.json" />
+      </RegistryConfigState>
     </registryConfigs>
   </component>
 </project>
