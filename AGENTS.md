@@ -385,11 +385,84 @@ All IPC channel names are defined once in `src/shared/ipc-channels.ts` as a `con
 
 ## UI Components & Styling
 
-- **shadcn/ui** (`radix-nova` style, non-RSC) generates components into `src/renderer/components/ui/`
-- Add new shadcn components via: `npx shadcn@latest add <component>`
-- Utility function `cn()` from `@/lib/utils` merges Tailwind classes—always use it for conditional class composition
-- **Tailwind CSS v4** configured as a Vite plugin; theme tokens and CSS variables defined in `src/renderer/src/assets/main.css`
+### Component Construction Hierarchy
+
+When building any UI element, follow this strict priority order:
+
+1. **Use an existing shadcn/ui component** — Check `src/renderer/components/ui/` first. If a component exists (e.g., `Card`, `Item`, `Field`, `InputGroup`, `Badge`, `Button`, `Tabs`, `Table`, `ScrollArea`, `ContextMenu`, `Combobox`, `Empty`, etc.), use it.
+2. **Compose shadcn components + Tailwind** — If no single shadcn component fits, compose multiple shadcn components and add Tailwind utility classes for layout (e.g., `CreatorCard` = `Card` + `Avatar` + `Badge` + Tailwind for spacing).
+3. **Pure Tailwind component** — Only if no shadcn component exists for the pattern. Must still use `cn()` from `@/lib/utils` for conditional classes.
+
+**Never** use raw HTML elements with inline styles or arbitrary CSS classes when a shadcn component exists for that purpose.
+
+### App Shell & Viewport Foundation
+
+The Electron viewport is locked with a CSS-level flex chain in `main.css`:
+
+```
+html(h-full overflow-hidden)
+  → body(h-full overflow-hidden bg-background)
+    → #root(flex h-full flex-col overflow-hidden)
+      → SidebarProvider(min-h-svh flex)
+        → Sidebar (fixed/collapsible)
+        → SidebarInset(flex h-full flex-col overflow-hidden)
+          → header(shrink-0 h-12 border-b) — SidebarTrigger + Breadcrumb
+          → div(flex-1 overflow-hidden) — <Outlet /> renders here
+            → **PageContainer**(h-full → ScrollArea → constrained content)
+```
+
+**Critical:** `overflow-hidden` propagates down the chain. Only `PageContainer`'s `ScrollArea` scrolls. This prevents double scrollbars.
+
+### Shared Layout Components
+
+All shared components live in `src/renderer/components/shared/` and are re-exported from `shared/index.ts`.
+
+| Component            | Built With                    | Purpose                                                                |
+| -------------------- | ----------------------------- | ---------------------------------------------------------------------- |
+| `PageContainer`      | shadcn `ScrollArea` + tw      | Wraps every route. Provides scroll, max-width (6xl), padding, spacing. |
+| `PageHeader`         | Tailwind                      | Title + optional description + action slot. Used at top of every page. |
+| `ResponsiveGrid`     | CVA + Tailwind                | Single grid with `columns` variants: `media`, `wide`, `two`.           |
+| `StatusBadge`        | shadcn `Badge`                | Entity status indicator (active/deleted/missing).                      |
+| `MediaCard`          | shadcn `Card` + `AspectRatio` | Video/cut thumbnail card with duration overlay and metadata.           |
+| `PaginationControls` | shadcn `Pagination`           | Paginated navigation with ellipsis and prev/next.                      |
+| `EntityContextMenu`  | shadcn `ContextMenu`          | Right-click delete/restore for any entity.                             |
+
+### Feature Components
+
+Grouped by domain under `src/renderer/components/features/`:
+
+- `features/layout/` — `AppSidebar` (shadcn `Sidebar` + `SidebarMenu`)
+- `features/creators/` — `CreatorCard` (shadcn `Card` + `Avatar`), `CreatorHeader` (shadcn `Item`), `CreatorFilters` (shadcn `InputGroup` + `Select`)
+- `features/downloads/` — `UrlInput` (shadcn `InputGroup` + `Field` + `FieldError`), `VideoInfoPreview` (shadcn `Card` + `Item`), `CreatorSelector` (shadcn `Field`), `DownloadProgressCard` (shadcn `Item` + `Progress` + `Badge`), `ActiveDownloadsList` (shadcn `ItemGroup` + `Empty`)
+- `features/settings/` — `RootPathDisplay` (shadcn `Field` + `InputGroup`), `ReconcileButton` (shadcn `Button` + `Card` + `ResponsiveGrid`)
+
+### shadcn Component Mapping Reference
+
+When you need a UI pattern, use this mapping:
+
+| Pattern                    | shadcn Component                                         |
+| -------------------------- | -------------------------------------------------------- |
+| Flex row with icon + text  | `Item` + `ItemMedia(variant="icon")` + `ItemContent`     |
+| List of items              | `ItemGroup` + `Item`                                     |
+| Form field + label + error | `Field` + `FieldLabel` + `FieldError`                    |
+| Input with icon prefix     | `InputGroup` + `InputGroupAddon` + `InputGroupInput`     |
+| Thumbnail with ratio       | `AspectRatio` inside `Card`                              |
+| Empty state                | `Empty` + `EmptyHeader` + `EmptyMedia` + `EmptyTitle`    |
+| Scrollable region          | `ScrollArea`                                             |
+| Dropdown selection         | `Select` + `SelectTrigger` + `SelectContent`             |
+| Data table                 | `Table` + `TableHeader` + `TableBody` + `TableRow`       |
+| Grouped settings sections  | `Card` + `CardHeader` + `CardTitle` + `CardContent`      |
+| Breadcrumb navigation      | `Breadcrumb` + `BreadcrumbList` + `BreadcrumbItem`       |
+| Right-click actions        | `ContextMenu` + `ContextMenuTrigger` + `ContextMenuItem` |
+
+### CSS & Theme
+
+- **Tailwind CSS v4** configured as a Vite plugin
+- Theme tokens (oklch colors, radius) defined in `src/renderer/src/assets/main.css`
+- Light and dark themes via CSS variables (`.dark` class toggled by `ThemeProvider`)
+- `cn()` from `@/lib/utils` for conditional class composition — always use it
 - Icons: `lucide-react`
+- Add new shadcn components via: `npx shadcn@latest add <component>`
 
 ## Testing
 
@@ -470,84 +543,3 @@ npm run db:studio     # Drizzle Kit — open visual DB browser
 - The renderer HTML (`src/renderer/index.html`) enforces a strict CSP—when adding external resources, update the `Content-Security-Policy` meta tag
 - electron-builder config is in `electron-builder.yml` (not `package.json`)—app ID is `com.electron.app`, product name is `klip`
 - Auto-update support via `electron-updater` is present in dependencies; publish URL is in `electron-builder.yml`
-
-<!-- gitnexus:start -->
-
-# GitNexus — Code Intelligence
-
-This project is indexed by GitNexus as **klip** (661 symbols, 1614 relationships, 31 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
-
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## When Debugging
-
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/klip/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
-
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool             | When to use                   | Command                                                                 |
-| ---------------- | ----------------------------- | ----------------------------------------------------------------------- |
-| `query`          | Find code by concept          | `gitnexus_query({query: "auth validation"})`                            |
-| `context`        | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})`                              |
-| `impact`         | Blast radius before editing   | `gitnexus_impact({target: "X", direction: "upstream"})`                 |
-| `detect_changes` | Pre-commit scope check        | `gitnexus_detect_changes({scope: "staged"})`                            |
-| `rename`         | Safe multi-file rename        | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher`         | Custom graph queries          | `gitnexus_cypher({query: "MATCH ..."})`                                 |
-
-## Impact Risk Levels
-
-| Depth | Meaning                               | Action                |
-| ----- | ------------------------------------- | --------------------- |
-| d=1   | WILL BREAK — direct callers/importers | MUST update these     |
-| d=2   | LIKELY AFFECTED — indirect deps       | Should test           |
-| d=3   | MAY NEED TESTING — transitive         | Test if critical path |
-
-## Resources
-
-| Resource                              | Use for                                  |
-| ------------------------------------- | ---------------------------------------- |
-| `gitnexus://repo/klip/context`        | Codebase overview, check index freshness |
-| `gitnexus://repo/klip/clusters`       | All functional areas                     |
-| `gitnexus://repo/klip/processes`      | All execution flows                      |
-| `gitnexus://repo/klip/process/{name}` | Step-by-step execution trace             |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## CLI
-
-- Re-index: `npx gitnexus analyze`
-- Check freshness: `npx gitnexus status`
-- Generate docs: `npx gitnexus wiki`
-
-<!-- gitnexus:end -->

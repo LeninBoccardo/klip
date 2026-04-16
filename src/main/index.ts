@@ -1,5 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol, net } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { pathToFileURL } from 'url'
 import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
@@ -13,6 +14,11 @@ import { registerOperationController } from './interface-adapters/controllers/Op
 import { join } from 'path'
 import { initializeDatabase } from './framework-drivers/database'
 import { SqliteSettingsRepository } from './interface-adapters/repositories'
+
+// ── Register custom protocol for serving local media files ──
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'klip-media', privileges: { standard: false, secure: true, supportFetchAPI: true } }
+])
 
 // ── Application container (initialised in app.whenReady) ──
 let container: AppContainer
@@ -65,6 +71,12 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // ── Custom protocol: klip-media:// serves local files for thumbnails ──
+  protocol.handle('klip-media', (request) => {
+    const filePath = decodeURIComponent(request.url.replace('klip-media://', ''))
+    return net.fetch(pathToFileURL(filePath).href)
+  })
 
   // ── Create DI container ──
   const defaultRootPath = join(app.getPath('documents'), 'klip')

@@ -9,48 +9,92 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CreatorsCreatorIdRouteImport } from './routes/creators/$creatorId'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport
+} as any)
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
+  getParentRoute: () => rootRouteImport
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
+} as any)
+const CreatorsCreatorIdRoute = CreatorsCreatorIdRouteImport.update({
+  id: '/creators/$creatorId',
+  path: '/creators/$creatorId',
+  getParentRoute: () => rootRouteImport
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/downloads': typeof DownloadsRoute
+  '/settings': typeof SettingsRoute
+  '/creators/$creatorId': typeof CreatorsCreatorIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/downloads': typeof DownloadsRoute
+  '/settings': typeof SettingsRoute
+  '/creators/$creatorId': typeof CreatorsCreatorIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/downloads': typeof DownloadsRoute
+  '/settings': typeof SettingsRoute
+  '/creators/$creatorId': typeof CreatorsCreatorIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths: '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about'
-  id: '__root__' | '/' | '/about'
+  to: '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
+  id: '__root__' | '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  DownloadsRoute: typeof DownloadsRoute
+  SettingsRoute: typeof SettingsRoute
+  CreatorsCreatorIdRoute: typeof CreatorsCreatorIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -65,12 +109,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creators/$creatorId': {
+      id: '/creators/$creatorId'
+      path: '/creators/$creatorId'
+      fullPath: '/creators/$creatorId'
+      preLoaderRoute: typeof CreatorsCreatorIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  DownloadsRoute: DownloadsRoute,
+  SettingsRoute: SettingsRoute,
+  CreatorsCreatorIdRoute: CreatorsCreatorIdRoute
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

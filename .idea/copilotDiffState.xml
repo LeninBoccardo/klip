@@ -12,6 +12,15 @@
             </PendingDiffInfo>
           </value>
         </entry>
+        <entry key="/RootPathDisplay (snapshot).tsx">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="/RootPathDisplay (snapshot).tsx" />
+              <option name="originalContent" value="import { Input } from '@/components/ui/input'&#10;import {&#10;  InputGroup,&#10;  InputGroupAddon,&#10;  InputGroupInput,&#10;  InputGroupText&#10;} from '@/components/ui/input-group'&#10;import { Field, FieldLabel } from '@/components/ui/field'&#10;import { FolderOpen } from 'lucide-react'&#10;&#10;interface RootPathDisplayProps {&#10;  rootPath: string | null | undefined&#10;}&#10;&#10;export function RootPathDisplay({ rootPath }: RootPathDisplayProps) {&#10;  return (&#10;    &lt;Field&gt;&#10;      &lt;FieldLabel&gt;Root directory&lt;/FieldLabel&gt;&#10;      &lt;InputGroup&gt;&#10;        &lt;InputGroupAddon&gt;&#10;          &lt;InputGroupText&gt;&#10;            &lt;FolderOpen /&gt;&#10;          &lt;/InputGroupText&gt;&#10;        &lt;/InputGroupAddon&gt;&#10;        &lt;InputGroupInput value={rootPath ?? 'Not set'} readOnly className=&quot;bg-muted&quot; /&gt;&#10;      &lt;/InputGroup&gt;&#10;    &lt;/Field&gt;&#10;  )&#10;}&#10;" />
+              <option name="updatedContent" value="import {&#10;  InputGroup,&#10;  InputGroupAddon,&#10;  InputGroupInput,&#10;  InputGroupText&#10;} from '@/components/ui/input-group'&#10;import { Field, FieldLabel } from '@/components/ui/field'&#10;import { FolderOpen } from 'lucide-react'&#10;&#10;interface RootPathDisplayProps {&#10;  rootPath: string | null | undefined&#10;}&#10;&#10;export function RootPathDisplay({ rootPath }: RootPathDisplayProps) {&#10;  return (&#10;    &lt;Field&gt;&#10;      &lt;FieldLabel&gt;Root directory&lt;/FieldLabel&gt;&#10;      &lt;InputGroup&gt;&#10;        &lt;InputGroupAddon&gt;&#10;          &lt;InputGroupText&gt;&#10;            &lt;FolderOpen /&gt;&#10;          &lt;/InputGroupText&gt;&#10;        &lt;/InputGroupAddon&gt;&#10;        &lt;InputGroupInput value={rootPath ?? 'Not set'} readOnly className=&quot;bg-muted&quot; /&gt;&#10;      &lt;/InputGroup&gt;&#10;    &lt;/Field&gt;&#10;  )&#10;}&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
         <entry key="/vitest.config (snapshot).ts">
           <value>
             <PendingDiffInfo>

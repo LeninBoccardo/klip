@@ -60,8 +60,8 @@ export default defineConfig({
         target: 'react',
         autoCodeSplitting: true
       }),
-      react(),
-      tailwindcss()
+      tailwindcss(),
+      react()
     ]
   }
 })

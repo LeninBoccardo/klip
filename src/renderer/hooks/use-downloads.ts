@@ -1,0 +1,45 @@
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { useEffect, useCallback } from 'react'
+import { useAppStore } from '@/hooks/use-app-store'
+import type { DownloadProgress, VideoInfo } from '@shared/types'
+
+export function useFetchVideoInfo() {
+  return useMutation({
+    mutationFn: (url: string) => window.api.fetchVideoInfo(url)
+  })
+}
+
+export function useDownloadVideo() {
+  return useMutation({
+    mutationFn: ({ url, creatorName }: { url: string; creatorName: string }) =>
+      window.api.downloadVideo(url, creatorName)
+  })
+}
+
+export function useCancelDownload() {
+  return useMutation({
+    mutationFn: (downloadId: string) => window.api.cancelDownload(downloadId)
+  })
+}
+
+/**
+ * Subscribes to real-time download progress events and syncs them into zustand.
+ * Mount once near the root or on the downloads page.
+ */
+export function useDownloadProgressListener(): void {
+  const upsertDownload = useAppStore((s) => s.upsertDownload)
+  const removeDownload = useAppStore((s) => s.removeDownload)
+
+  useEffect(() => {
+    const unsubscribe = window.api.onDownloadProgress((_event, data: DownloadProgress) => {
+      if (data.status === 'complete' || data.status === 'error' || data.status === 'cancelled') {
+        // Keep it briefly for the UI to show final state, then remove
+        upsertDownload(data)
+        setTimeout(() => removeDownload(data.downloadId), 3000)
+      } else {
+        upsertDownload(data)
+      }
+    })
+    return unsubscribe
+  }, [upsertDownload, removeDownload])
+}
