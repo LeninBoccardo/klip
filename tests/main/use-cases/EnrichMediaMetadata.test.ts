@@ -20,6 +20,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     thumbnailPath: null,
     downloadDate: null,
     probeStatus: 'pending',
+    viewCount: null,
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',

@@ -1,6 +1,7 @@
 import type {
   ReconcileResult,
   DownloadVideoResult,
+  FetchChannelInfoResult,
   VideoInfo,
   MediaProbeResult,
   DownloadProgress,
@@ -26,6 +27,7 @@ export interface IpcContract {
   }
   'cancel-download': { params: [downloadId: string]; result: void }
   'probe-media-file': { params: [filePath: string]; result: MediaProbeResult }
+  'fetch-channel-info': { params: [url: string]; result: FetchChannelInfoResult }
 
   // ── Creators ──
   'get-creators-paginated': {

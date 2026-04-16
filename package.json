@@ -1,9 +1,9 @@
 {
   "name": "klip",
   "version": "0.0.1",
-  "description": "An Electron application with React and TypeScript",
+  "description": "A local, offline-first desktop asset manager designed to organize downloaded source videos and manually created video cuts",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "github.com/LeninBoccardo",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",

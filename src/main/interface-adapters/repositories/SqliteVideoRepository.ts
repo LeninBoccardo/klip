@@ -14,6 +14,7 @@ const SORT_COLUMNS: Record<string, SQLiteColumn> = {
   title: videos.title,
   duration: videos.duration,
   fileSize: videos.fileSize,
+  viewCount: videos.viewCount,
   downloadDate: videos.downloadDate,
   status: videos.status,
   createdAt: videos.createdAt,
@@ -84,6 +85,7 @@ export class SqliteVideoRepository implements IVideoRepository {
         thumbnailPath: video.thumbnailPath,
         downloadDate: video.downloadDate,
         probeStatus: video.probeStatus,
+        viewCount: video.viewCount,
         status: video.status,
         deletedAt: video.deletedAt,
         createdAt: video.createdAt,
@@ -102,6 +104,7 @@ export class SqliteVideoRepository implements IVideoRepository {
           thumbnailPath: sql`excluded.thumbnail_path`,
           downloadDate: sql`excluded.download_date`,
           probeStatus: sql`excluded.probe_status`,
+          viewCount: sql`excluded.view_count`,
           status: sql`excluded.status`,
           deletedAt: sql`excluded.deleted_at`,
           updatedAt: sql`excluded.updated_at`

@@ -32,6 +32,11 @@ export interface DownloadResult {
   title: string
   duration: number | null
   thumbnailPath: string | null
+  // ── YouTube channel metadata (from .info.json) ──
+  channelId: string | null
+  channelUrl: string | null
+  subscriberCount: number | null
+  viewCount: number | null
 }
 
 /** Pre-flight video metadata fetched without downloading */
@@ -42,4 +47,10 @@ export interface VideoInfo {
   duration: number | null
   thumbnailUrl: string | null
   description: string | null
+  // ── YouTube channel metadata (already in yt-dlp JSON) ──
+  channelId: string | null
+  channelUrl: string | null
+  uploaderUrl: string | null
+  subscriberCount: number | null
+  viewCount: number | null
 }

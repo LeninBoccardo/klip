@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'child_process'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { IBinaryResolver, IVideoDownloader, DownloadOptions } from '@domain/ports'
-import type { DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
+import type { ChannelInfo, DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
 
 /**
  * yt-dlp–backed implementation of IVideoDownloader.
@@ -48,7 +48,13 @@ export class YtDlpDownloader implements IVideoDownloader {
             channel: json.channel ?? json.uploader ?? null,
             duration: json.duration ?? null,
             thumbnailUrl: json.thumbnail ?? null,
-            description: json.description ?? null
+            description: json.description ?? null,
+            // ── Channel metadata ──
+            channelId: json.channel_id ?? null,
+            channelUrl: json.channel_url ?? null,
+            uploaderUrl: json.uploader_url ?? null,
+            subscriberCount: json.channel_follower_count ?? null,
+            viewCount: json.view_count ?? null
           })
         } catch (e) {
           reject(new Error(`yt-dlp fetchInfo: failed to parse JSON output: ${e}`))
@@ -57,6 +63,59 @@ export class YtDlpDownloader implements IVideoDownloader {
 
       proc.on('error', (err) => {
         reject(new Error(`yt-dlp fetchInfo: failed to spawn process: ${err.message}`))
+      })
+    })
+  }
+
+  // ── fetchChannelInfo ──
+
+  async fetchChannelInfo(channelUrl: string): Promise<ChannelInfo> {
+    const bin = this.binaryResolver.resolve('yt-dlp')
+
+    return new Promise<ChannelInfo>((resolve, reject) => {
+      const args = [
+        '--dump-json',
+        '--playlist-items',
+        '1',
+        '--no-download',
+        '--no-warnings',
+        channelUrl
+      ]
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+
+      let stdout = ''
+      let stderr = ''
+
+      proc.stdout.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString()
+      })
+      proc.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString()
+      })
+
+      proc.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`yt-dlp fetchChannelInfo failed (code ${code}): ${stderr.trim()}`))
+          return
+        }
+
+        try {
+          const json = JSON.parse(stdout)
+          resolve({
+            channelId: json.channel_id ?? '',
+            channelName: json.channel ?? json.uploader ?? '',
+            channelUrl: json.channel_url ?? null,
+            uploaderUrl: json.uploader_url ?? null,
+            subscriberCount: json.channel_follower_count ?? null,
+            avatarUrl: null
+          })
+        } catch (e) {
+          reject(new Error(`yt-dlp fetchChannelInfo: failed to parse JSON: ${e}`))
+        }
+      })
+
+      proc.on('error', (err) => {
+        reject(new Error(`yt-dlp fetchChannelInfo: failed to spawn: ${err.message}`))
       })
     })
   }
@@ -241,6 +300,10 @@ export class YtDlpDownloader implements IVideoDownloader {
     let title = videoId
     let duration: number | null = null
     let creatorName = ''
+    let channelId: string | null = null
+    let channelUrl: string | null = null
+    let subscriberCount: number | null = null
+    let viewCount: number | null = null
 
     if (existsSync(infoJsonPath)) {
       try {
@@ -249,6 +312,10 @@ export class YtDlpDownloader implements IVideoDownloader {
         title = info.title ?? info.fulltitle ?? videoId
         duration = info.duration ?? null
         creatorName = info.channel ?? info.uploader ?? ''
+        channelId = info.channel_id ?? null
+        channelUrl = info.channel_url ?? null
+        subscriberCount = info.channel_follower_count ?? null
+        viewCount = info.view_count ?? null
 
         // Write meta.json for reconciliation compatibility
         const metaPath = join(outputDir, 'meta.json')
@@ -280,7 +347,11 @@ export class YtDlpDownloader implements IVideoDownloader {
       filePath: mediaFile ? join(outputDir, mediaFile) : outputDir,
       title,
       duration,
-      thumbnailPath: thumbnailFile ? join(outputDir, thumbnailFile) : null
+      thumbnailPath: thumbnailFile ? join(outputDir, thumbnailFile) : null,
+      channelId,
+      channelUrl,
+      subscriberCount,
+      viewCount
     }
   }
 }

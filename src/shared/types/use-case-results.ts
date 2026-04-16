@@ -1,3 +1,5 @@
+import type { ChannelInfo } from './channel-info'
+
 /** Summary returned after reconciliation completes */
 export interface ReconcileResult {
   creatorsAdded: number
@@ -14,4 +16,11 @@ export interface ReconcileResult {
 /** Result returned to the caller when a download is enqueued */
 export interface DownloadVideoResult {
   downloadId: string
+}
+
+/** Result returned by the FetchChannelInfo use case */
+export interface FetchChannelInfoResult {
+  channelInfo: ChannelInfo
+  creatorId: string | null
+  updated: boolean
 }

@@ -6,6 +6,10 @@ export interface CreatorDto {
   folderName: string
   name: string
   profileImagePath: string | null
+  youtubeChannelId: string | null
+  youtubeChannelUrl: string | null
+  subscriberCount: number | null
+  avatarUrl: string | null
   status: EntityStatus
   deletedAt: string | null
   createdAt: string

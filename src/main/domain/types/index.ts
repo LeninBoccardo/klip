@@ -15,4 +15,6 @@ export type {
 } from './download'
 export type { MediaProbeResult } from './media-probe'
 export type { ProbeStatus } from '@shared/types/probe-status'
+export type { ChannelInfo } from '@shared/types/channel-info'
+export type { FetchChannelInfoResult } from '@shared/types/use-case-results'
 export { slugify } from './slugify'

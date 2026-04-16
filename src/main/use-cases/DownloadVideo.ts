@@ -7,7 +7,7 @@ import type {
   INotifier,
   IIdGenerator
 } from '@domain/ports'
-import type { DownloadRequest, DownloadProgress } from '@domain/types'
+import type { DownloadRequest, DownloadProgress, VideoInfo } from '@domain/types'
 import { slugify } from '@domain/types'
 import type { Video, Creator } from '@domain/entities'
 import type { IDownloadVideo, DownloadVideoResult } from './IDownloadVideo'
@@ -89,7 +89,7 @@ export class DownloadVideo implements IDownloadVideo {
       const folderName = slugify(creatorName)
 
       // 3. Ensure creator exists in DB
-      this.ensureCreator(folderName, creatorName)
+      this.ensureCreator(folderName, creatorName, info)
 
       // 4. Prepare output directory
       const outputDir = this.pathResolver.join(this.rootPath, folderName, 'downloads', videoId)
@@ -119,6 +119,7 @@ export class DownloadVideo implements IDownloadVideo {
         thumbnailPath: result.thumbnailPath,
         downloadDate: now,
         probeStatus: 'pending',
+        viewCount: result.viewCount ?? info.viewCount ?? null,
         status: 'active',
         deletedAt: null,
         createdAt: now,
@@ -148,7 +149,7 @@ export class DownloadVideo implements IDownloadVideo {
     }
   }
 
-  private ensureCreator(folderName: string, displayName: string): void {
+  private ensureCreator(folderName: string, displayName: string, info: VideoInfo): void {
     const existing = this.creatorRepo.findById(folderName)
     if (!existing) {
       const now = new Date().toISOString()
@@ -157,6 +158,10 @@ export class DownloadVideo implements IDownloadVideo {
         folderName,
         name: displayName,
         profileImagePath: null,
+        youtubeChannelId: info.channelId ?? null,
+        youtubeChannelUrl: info.channelUrl ?? null,
+        subscriberCount: info.subscriberCount ?? null,
+        avatarUrl: null,
         status: 'active',
         deletedAt: null,
         createdAt: now,
@@ -165,6 +170,15 @@ export class DownloadVideo implements IDownloadVideo {
       this.creatorRepo.upsert(creator)
     } else if (existing.status === 'missing') {
       this.creatorRepo.updateStatus(folderName, 'active', null)
+    } else if (!existing.youtubeChannelId && info.channelId) {
+      // Backfill YouTube metadata on existing creator that lacks it
+      this.creatorRepo.upsert({
+        ...existing,
+        youtubeChannelId: info.channelId,
+        youtubeChannelUrl: info.channelUrl ?? existing.youtubeChannelUrl,
+        subscriberCount: info.subscriberCount ?? existing.subscriberCount,
+        updatedAt: new Date().toISOString()
+      })
     }
   }
 }

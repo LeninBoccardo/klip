@@ -17,7 +17,9 @@ export type {
   VideoInfo,
   MediaProbeResult,
   ReconcileResult,
-  DownloadVideoResult
+  DownloadVideoResult,
+  FetchChannelInfoResult,
+  ChannelInfo
 } from './types'
 
 // Re-export DTOs

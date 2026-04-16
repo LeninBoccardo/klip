@@ -6,6 +6,7 @@ export interface ICreatorRepository {
   findAllActive(): Creator[]
   findById(id: string): Creator | null
   findByFolderName(folderName: string): Creator | null
+  findByYoutubeChannelId(channelId: string): Creator | null
   upsert(creator: Creator): void
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   delete(id: string): void

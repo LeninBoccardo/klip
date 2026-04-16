@@ -23,6 +23,8 @@ interface CutDataJson {
 interface CreatorJson {
   name?: string
   profileImagePath?: string
+  youtubeChannelId?: string
+  youtubeChannelUrl?: string
 }
 
 function emptyResult(): ReconcileResult {
@@ -114,6 +116,10 @@ export class ReconcileDirectory implements IReconcileDirectory {
         folderName: dirName,
         name: creatorJson?.name ?? dirName,
         profileImagePath: creatorJson?.profileImagePath ?? null,
+        youtubeChannelId: creatorJson?.youtubeChannelId ?? null,
+        youtubeChannelUrl: creatorJson?.youtubeChannelUrl ?? null,
+        subscriberCount: null,
+        avatarUrl: null,
         status: 'active',
         deletedAt: null,
         createdAt: now,
@@ -167,6 +173,10 @@ export class ReconcileDirectory implements IReconcileDirectory {
         folderName: creatorName,
         name: creatorJson?.name ?? creatorName,
         profileImagePath: creatorJson?.profileImagePath ?? null,
+        youtubeChannelId: creatorJson?.youtubeChannelId ?? null,
+        youtubeChannelUrl: creatorJson?.youtubeChannelUrl ?? null,
+        subscriberCount: null,
+        avatarUrl: null,
         status: 'active',
         deletedAt: null,
         createdAt: now,
@@ -258,6 +268,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       thumbnailPath: thumbFile ? this.path.join(videoDir, thumbFile) : null,
       downloadDate: metaJson?.downloadDate ?? null,
       probeStatus: 'pending',
+      viewCount: null,
       status: 'active',
       deletedAt: null,
       createdAt: now,

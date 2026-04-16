@@ -13,7 +13,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '@ui/breadcrumb'
-import { Button } from '@ui/button'
 import { Separator } from '@ui/separator'
 import { queryClient } from '@/lib/query-client'
 import { useDbListener } from '@/hooks/use-db-listener'
@@ -89,8 +88,6 @@ const RootLayout = () => (
             </header>
             <div className="flex-1 overflow-hidden">
               <Outlet />
-
-              <Button>Test Button</Button>
             </div>
           </SidebarInset>
         </SidebarProvider>

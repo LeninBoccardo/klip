@@ -100,7 +100,8 @@ app.whenReady().then(() => {
   registerDownloadController(
     container.useCases.fetchVideoInfo,
     container.useCases.downloadVideo,
-    container.useCases.probeMediaFile
+    container.useCases.probeMediaFile,
+    container.useCases.fetchChannelInfo
   )
   registerCreatorController(container.repositories.creator)
   registerVideoController(container.repositories.video)

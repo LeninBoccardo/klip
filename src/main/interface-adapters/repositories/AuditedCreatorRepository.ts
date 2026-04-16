@@ -30,6 +30,10 @@ export class AuditedCreatorRepository implements ICreatorRepository {
     return this.inner.findByFolderName(folderName)
   }
 
+  findByYoutubeChannelId(channelId: string): Creator | null {
+    return this.inner.findByYoutubeChannelId(channelId)
+  }
+
   upsert(creator: Creator): void {
     const existing = this.inner.findById(creator.id)
     this.inner.upsert(creator)

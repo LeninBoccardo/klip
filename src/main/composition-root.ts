@@ -24,6 +24,7 @@ import type { IDownloadVideo } from '@use-cases/IDownloadVideo'
 import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
 import type { IRecoverOperations } from '@use-cases/IRecoverOperations'
 import type { IEnrichMediaMetadata } from '@use-cases/IEnrichMediaMetadata'
+import type { IFetchChannelInfo } from '@use-cases/IFetchChannelInfo'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -56,6 +57,7 @@ import { DownloadVideo } from '@use-cases/DownloadVideo'
 import { ProbeMediaFile } from '@use-cases/ProbeMediaFile'
 import { RecoverOperations } from '@use-cases/RecoverOperations'
 import { EnrichMediaMetadata } from '@use-cases/EnrichMediaMetadata'
+import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
 
 /**
  * Application dependency container.
@@ -92,6 +94,7 @@ export interface AppContainer {
     probeMediaFile: IProbeMediaFile
     recoverOperations: IRecoverOperations
     enrichMedia: IEnrichMediaMetadata
+    fetchChannelInfo: IFetchChannelInfo
   }
   services: {
     fileWatcher: IFileWatcher
@@ -163,6 +166,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
   )
 
   const fetchVideoInfo = new FetchVideoInfo(videoDownloader)
+  const fetchChannelInfo = new FetchChannelInfo(videoDownloader, creatorRepo)
 
   const downloadVideo = new DownloadVideo(
     videoDownloader,
@@ -215,7 +219,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       downloadVideo,
       probeMediaFile,
       recoverOperations,
-      enrichMedia
+      enrichMedia,
+      fetchChannelInfo
     },
     services: {
       fileWatcher

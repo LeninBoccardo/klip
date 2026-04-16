@@ -18,6 +18,7 @@ import type { Creator } from '@domain/entities'
 function mockDownloader(overrides: Partial<IVideoDownloader> = {}): IVideoDownloader {
   return {
     fetchInfo: vi.fn(),
+    fetchChannelInfo: vi.fn(),
     download: vi.fn(),
     cancel: vi.fn(),
     ...overrides
@@ -57,6 +58,7 @@ function mockCreatorRepo(overrides: Partial<ICreatorRepository> = {}): ICreatorR
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
     findByFolderName: vi.fn().mockReturnValue(null),
+    findByYoutubeChannelId: vi.fn().mockReturnValue(null),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     delete: vi.fn(),
@@ -116,7 +118,12 @@ const videoInfo: VideoInfo = {
   channel: 'TestChannel',
   duration: 120,
   thumbnailUrl: 'https://example.com/thumb.jpg',
-  description: 'A test video'
+  description: 'A test video',
+  channelId: null,
+  channelUrl: null,
+  uploaderUrl: null,
+  subscriberCount: null,
+  viewCount: null
 }
 
 const downloadResult: DownloadResult = {
@@ -126,7 +133,11 @@ const downloadResult: DownloadResult = {
   filePath: '/root/TestCreator/downloads/abc123/abc123.mp4',
   title: 'Test Video',
   duration: 120,
-  thumbnailPath: '/root/TestCreator/downloads/abc123/abc123.jpg'
+  thumbnailPath: '/root/TestCreator/downloads/abc123/abc123.jpg',
+  channelId: null,
+  channelUrl: null,
+  subscriberCount: null,
+  viewCount: null
 }
 
 // ── Tests ──
@@ -243,6 +254,10 @@ describe('DownloadVideo', () => {
       folderName: 'testcreator',
       name: 'TestCreator',
       profileImagePath: null,
+      youtubeChannelId: null,
+      youtubeChannelUrl: null,
+      subscriberCount: null,
+      avatarUrl: null,
       status: 'missing',
       deletedAt: null,
       createdAt: '2025-01-01T00:00:00.000Z',
@@ -372,6 +387,10 @@ describe('DownloadVideo', () => {
       folderName: 'testcreator',
       name: 'TestCreator',
       profileImagePath: null,
+      youtubeChannelId: null,
+      youtubeChannelUrl: null,
+      subscriberCount: null,
+      avatarUrl: null,
       status: 'active',
       deletedAt: null,
       createdAt: '2025-01-01T00:00:00.000Z',
@@ -394,6 +413,10 @@ describe('DownloadVideo', () => {
       folderName: 'testcreator',
       name: 'TestCreator',
       profileImagePath: null,
+      youtubeChannelId: null,
+      youtubeChannelUrl: null,
+      subscriberCount: null,
+      avatarUrl: null,
       status: 'deleted',
       deletedAt: '2025-06-01T00:00:00.000Z',
       createdAt: '2025-01-01T00:00:00.000Z',
@@ -451,7 +474,11 @@ describe('DownloadVideo', () => {
       filePath: '/root/TestCreator/downloads/abc123/abc123.mp4',
       title: '', // empty
       duration: null,
-      thumbnailPath: null
+      thumbnailPath: null,
+      channelId: null,
+      channelUrl: null,
+      subscriberCount: null,
+      viewCount: null
     }))
 
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
@@ -476,7 +503,11 @@ describe('DownloadVideo', () => {
       filePath: '/root/TestCreator/downloads/abc123/abc123.mp4',
       title: '', // empty
       duration: null,
-      thumbnailPath: null
+      thumbnailPath: null,
+      channelId: null,
+      channelUrl: null,
+      subscriberCount: null,
+      viewCount: null
     }))
 
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
@@ -516,5 +547,98 @@ describe('DownloadVideo', () => {
     await expect(useCase.execute({ url: '   ', creatorName: 'TestCreator' })).rejects.toThrow(
       'URL is required'
     )
+  })
+
+  // ── YouTube metadata enrichment on ensureCreator ──
+
+  it('should set YouTube metadata on a new Creator when info.channelId is provided', async () => {
+    const infoWithChannel: VideoInfo = {
+      ...videoInfo,
+      channelId: 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
+      channelUrl: 'https://youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw',
+      subscriberCount: 50000
+    }
+    vi.mocked(fetchInfo.execute).mockResolvedValue(infoWithChannel)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(creatorRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        youtubeChannelId: 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
+        youtubeChannelUrl: 'https://youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw',
+        subscriberCount: 50000
+      })
+    )
+  })
+
+  it('should backfill YouTube metadata on existing active creator that lacks youtubeChannelId', async () => {
+    const activeCreator: Creator = {
+      id: 'testcreator',
+      folderName: 'testcreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      youtubeChannelId: null,
+      youtubeChannelUrl: null,
+      subscriberCount: null,
+      avatarUrl: null,
+      status: 'active',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findById).mockReturnValue(activeCreator)
+
+    const infoWithChannel: VideoInfo = {
+      ...videoInfo,
+      channelId: 'UC_backfill',
+      channelUrl: 'https://youtube.com/channel/UC_backfill',
+      subscriberCount: 1000
+    }
+    vi.mocked(fetchInfo.execute).mockResolvedValue(infoWithChannel)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(creatorRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        youtubeChannelId: 'UC_backfill',
+        youtubeChannelUrl: 'https://youtube.com/channel/UC_backfill',
+        subscriberCount: 1000
+      })
+    )
+  })
+
+  it('should NOT overwrite existing youtubeChannelId on a Creator', async () => {
+    const linkedCreator: Creator = {
+      id: 'testcreator',
+      folderName: 'testcreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      youtubeChannelId: 'UC_already_linked',
+      youtubeChannelUrl: 'https://youtube.com/channel/UC_already_linked',
+      subscriberCount: 9999,
+      avatarUrl: null,
+      status: 'active',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findById).mockReturnValue(linkedCreator)
+
+    const infoWithDifferentChannel: VideoInfo = {
+      ...videoInfo,
+      channelId: 'UC_different',
+      channelUrl: 'https://youtube.com/channel/UC_different',
+      subscriberCount: 500
+    }
+    vi.mocked(fetchInfo.execute).mockResolvedValue(infoWithDifferentChannel)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    // Should NOT upsert because existing.youtubeChannelId is already set
+    expect(creatorRepo.upsert).not.toHaveBeenCalled()
+    expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
   })
 })

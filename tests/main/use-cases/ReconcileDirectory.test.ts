@@ -12,6 +12,10 @@ function makeCreator(overrides: Partial<Creator> = {}): Creator {
     folderName: 'creator-1',
     name: 'creator-1',
     profileImagePath: null,
+    youtubeChannelId: null,
+    youtubeChannelUrl: null,
+    subscriberCount: null,
+    avatarUrl: null,
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -33,6 +37,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     thumbnailPath: null,
     downloadDate: null,
     probeStatus: 'pending',
+    viewCount: null,
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -72,6 +77,7 @@ function mockCreatorRepo(): ICreatorRepository {
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
     findByFolderName: vi.fn().mockReturnValue(null),
+    findByYoutubeChannelId: vi.fn().mockReturnValue(null),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     delete: vi.fn(),
@@ -587,6 +593,33 @@ describe('ReconcileDirectory', () => {
         expect.objectContaining({
           name: 'The Creator',
           profileImagePath: '/img/avatar.jpg'
+        })
+      )
+    })
+
+    it('reads youtubeChannelId from creator.json', () => {
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['yt-creator']
+        return []
+      })
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('creator.json'))
+          return {
+            name: 'YT Creator',
+            youtubeChannelId: 'UC_from_json',
+            youtubeChannelUrl: 'https://youtube.com/channel/UC_from_json'
+          }
+        return null
+      })
+
+      useCase.execute(ROOT)
+
+      expect(creatorRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'yt-creator',
+          name: 'YT Creator',
+          youtubeChannelId: 'UC_from_json',
+          youtubeChannelUrl: 'https://youtube.com/channel/UC_from_json'
         })
       )
     })

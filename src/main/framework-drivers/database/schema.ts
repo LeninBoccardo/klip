@@ -10,6 +10,10 @@ export const creators = sqliteTable(
     folderName: text('folder_name').notNull().unique(),
     name: text('name').notNull(),
     profileImagePath: text('profile_image_path'),
+    youtubeChannelId: text('youtube_channel_id'),
+    youtubeChannelUrl: text('youtube_channel_url'),
+    subscriberCount: integer('subscriber_count'),
+    avatarUrl: text('avatar_url'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),
     createdAt: text('created_at')
@@ -19,7 +23,10 @@ export const creators = sqliteTable(
       .notNull()
       .default(sql`(datetime('now'))`)
   },
-  (table) => [index('idx_creators_status').on(table.status)]
+  (table) => [
+    index('idx_creators_status').on(table.status),
+    index('idx_creators_yt_channel_id').on(table.youtubeChannelId)
+  ]
 )
 
 export const videos = sqliteTable(
@@ -38,6 +45,7 @@ export const videos = sqliteTable(
     thumbnailPath: text('thumbnail_path'),
     downloadDate: text('download_date'),
     probeStatus: text('probe_status').notNull().default('pending'),
+    viewCount: integer('view_count'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),
     createdAt: text('created_at')

@@ -10,6 +10,9 @@ export const IpcChannels = {
   CancelDownload: 'cancel-download',
   ProbeMediaFile: 'probe-media-file',
 
+  // ── Channel ──
+  FetchChannelInfo: 'fetch-channel-info',
+
   // ── Creators ──
   GetCreatorsPaginated: 'get-creators-paginated',
   GetCreatorById: 'get-creator-by-id',

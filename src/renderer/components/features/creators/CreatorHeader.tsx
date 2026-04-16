@@ -20,7 +20,10 @@ export function CreatorHeader({ creator }: CreatorHeaderProps) {
     <Item size="sm">
       <ItemMedia>
         <Avatar className="size-14">
-          <AvatarImage src={toMediaSrc(creator.profileImagePath)} alt={creator.name} />
+          <AvatarImage
+            src={toMediaSrc(creator.profileImagePath) ?? creator.avatarUrl ?? undefined}
+            alt={creator.name}
+          />
           <AvatarFallback className="text-lg">{initials}</AvatarFallback>
         </Avatar>
       </ItemMedia>

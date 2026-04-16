@@ -14,6 +14,7 @@ export interface VideoDto {
   thumbnailPath: string | null
   downloadDate: string | null
   probeStatus: ProbeStatus
+  viewCount: number | null
   status: EntityStatus
   deletedAt: string | null
   createdAt: string

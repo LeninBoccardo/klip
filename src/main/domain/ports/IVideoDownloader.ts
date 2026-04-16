@@ -1,4 +1,4 @@
-import type { DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
+import type { DownloadProgress, DownloadResult, VideoInfo, ChannelInfo } from '@domain/types'
 
 /** Options passed to the download method */
 export interface DownloadOptions {
@@ -17,6 +17,9 @@ export interface DownloadOptions {
 export interface IVideoDownloader {
   /** Fetch metadata for a URL without downloading */
   fetchInfo(url: string): Promise<VideoInfo>
+
+  /** Fetch channel-level metadata from a channel/handle URL */
+  fetchChannelInfo(channelUrl: string): Promise<ChannelInfo>
 
   /** Download a video to the given output directory, streaming progress */
   download(

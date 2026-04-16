@@ -2,6 +2,7 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 import type {
   ReconcileResult,
   DownloadVideoResult,
+  FetchChannelInfoResult,
   VideoInfo,
   DownloadProgress,
   MediaProbeResult,
@@ -21,6 +22,7 @@ interface KlipAPI {
   downloadVideo(url: string, creatorName: string): Promise<DownloadVideoResult>
   cancelDownload(downloadId: string): Promise<void>
   probeMediaFile(filePath: string): Promise<MediaProbeResult>
+  fetchChannelInfo(url: string): Promise<FetchChannelInfoResult>
 
   // ── Creators ──
   getCreatorsPaginated(params: PaginationParams): Promise<PaginatedResult<CreatorDto>>

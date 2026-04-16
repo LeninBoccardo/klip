@@ -13,6 +13,7 @@ import { escapeLike } from './escape-like'
 const SORT_COLUMNS: Record<string, SQLiteColumn> = {
   name: creators.name,
   status: creators.status,
+  subscriberCount: creators.subscriberCount,
   createdAt: creators.createdAt,
   updatedAt: creators.updatedAt
 }
@@ -51,6 +52,15 @@ export class SqliteCreatorRepository implements ICreatorRepository {
     return row ? mapRow(row) : null
   }
 
+  findByYoutubeChannelId(channelId: string): Creator | null {
+    const row = this.db
+      .select()
+      .from(creators)
+      .where(eq(creators.youtubeChannelId, channelId))
+      .get()
+    return row ? mapRow(row) : null
+  }
+
   upsert(creator: Creator): void {
     this.db
       .insert(creators)
@@ -59,6 +69,10 @@ export class SqliteCreatorRepository implements ICreatorRepository {
         folderName: creator.folderName,
         name: creator.name,
         profileImagePath: creator.profileImagePath,
+        youtubeChannelId: creator.youtubeChannelId,
+        youtubeChannelUrl: creator.youtubeChannelUrl,
+        subscriberCount: creator.subscriberCount,
+        avatarUrl: creator.avatarUrl,
         status: creator.status,
         deletedAt: creator.deletedAt,
         createdAt: creator.createdAt,
@@ -70,6 +84,10 @@ export class SqliteCreatorRepository implements ICreatorRepository {
           folderName: sql`excluded.folder_name`,
           name: sql`excluded.name`,
           profileImagePath: sql`excluded.profile_image_path`,
+          youtubeChannelId: sql`excluded.youtube_channel_id`,
+          youtubeChannelUrl: sql`excluded.youtube_channel_url`,
+          subscriberCount: sql`excluded.subscriber_count`,
+          avatarUrl: sql`excluded.avatar_url`,
           status: sql`excluded.status`,
           deletedAt: sql`excluded.deleted_at`,
           updatedAt: sql`excluded.updated_at`

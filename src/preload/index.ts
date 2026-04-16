@@ -14,6 +14,7 @@ const api = {
   downloadVideo: createTypedInvoker('download-video'),
   cancelDownload: createTypedInvoker('cancel-download'),
   probeMediaFile: createTypedInvoker('probe-media-file'),
+  fetchChannelInfo: createTypedInvoker('fetch-channel-info'),
 
   // ── Creators ──
   getCreatorsPaginated: createTypedInvoker('get-creators-paginated'),

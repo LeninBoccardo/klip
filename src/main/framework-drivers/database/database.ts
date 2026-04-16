@@ -50,6 +50,10 @@ function pushSchema(db: AppDatabase): void {
       folder_name TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       profile_image_path TEXT,
+      youtube_channel_id TEXT,
+      youtube_channel_url TEXT,
+      subscriber_count INTEGER,
+      avatar_url TEXT,
       status TEXT NOT NULL DEFAULT 'active',
       deleted_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -70,6 +74,7 @@ function pushSchema(db: AppDatabase): void {
       thumbnail_path TEXT,
       download_date TEXT,
       probe_status TEXT NOT NULL DEFAULT 'pending',
+      view_count INTEGER,
       status TEXT NOT NULL DEFAULT 'active',
       deleted_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -133,6 +138,7 @@ function pushSchema(db: AppDatabase): void {
 
   // Indexes
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_yt_channel_id ON creators(youtube_channel_id)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_creator_id ON videos(creator_id)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status_created ON videos(status, created_at)`)
