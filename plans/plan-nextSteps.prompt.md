@@ -242,9 +242,284 @@ The remaining work falls into 4 steps ordered by priority. Each step lists the k
 - `tests/main/use-cases/ProcessFileNotifications.test.ts`
 - `tests/main/interface-adapters/repositories/SqliteOperationRepository.test.ts`
 
-**Original plan reference:**
+**Original design references:**
 
 - `plans/plan-drizzleFreshSchema-entityIds-operations.prompt.md` - Phase 5 step 32, Watcher Suspension Design section
+
+---
+
+## Step 5: YouTube Video Metadata Enrichment & Transcriptions
+
+**Priority:** MEDIUM - enriches the library with searchable metadata; depends on Step 2 (channel metadata) for channel fields.
+
+**Goal:** For every indexed video with a YouTube URL, fetch extended metadata (like count, dislike estimate, category, tags, upload date, description, shorts flag, view count) and the auto-generated transcript (subtitles). Store metadata in the DB and transcript as a sidecar file on disk. Expose a Video Detail page in the UI.
+
+**What yt-dlp can provide (via `--dump-json` / `--write-auto-subs`):**
+
+| Field | yt-dlp JSON key | Feasibility |
+|---|---|---|
+| View count | `view_count` | ✅ Reliable |
+| Like count | `like_count` | ✅ Reliable |
+| Dislike count | `dislike_count` | ⚠️ yt-dlp returns it when available (Return YouTube Dislike API), may be null |
+| Comment count | `comment_count` | ✅ Available in JSON (count only, not the comments themselves — comments are Step 6) |
+| Category | `categories` | ✅ Array of strings |
+| Tags | `tags` | ✅ Author-provided tags |
+| Upload date | `upload_date` | ✅ `YYYYMMDD` string |
+| Description | `description` | ✅ Full text |
+| Duration | `duration` | ✅ Already used |
+| Is Short | `duration` ≤ 60 + vertical aspect | ✅ Derivable |
+| Auto-transcript | `--write-auto-subs --sub-lang en --skip-download` | ✅ Writes `.vtt`/`.srt` file |
+
+**Ban risk:** Minimal for metadata-only calls (`--dump-json`, `--write-subs --skip-download`). These are lightweight GET requests, no actual video download. Rate-limit with a concurrency of 1 and a 1–2 s delay between calls. yt-dlp also rotates request patterns. Avoid hammering hundreds of videos in a tight loop — batch with a queue (reuse `PQueueDownloadQueue` with low concurrency).
+
+### Backend Changes
+
+**1. New shared types (`src/shared/types/video-detail.ts`):**
+
+```ts
+export interface VideoDetail {
+  videoId: string
+  likeCount: number | null
+  dislikeCount: number | null
+  commentCount: number | null
+  category: string | null
+  tags: string[]
+  uploadDate: string | null
+  description: string | null
+  isShort: boolean
+  hasTranscript: boolean
+}
+```
+
+**2. Extend Video entity and schema:**
+
+Add columns to `videos` table: `likeCount`, `dislikeCount`, `commentCount`, `category`, `uploadDate`, `description`, `isShort` (`integer` boolean), `transcriptPath` (path to `.vtt` sidecar file).
+
+Run `npm run db:generate` after schema change. Update `pushSchema()`.
+
+**3. New port method on `IVideoDownloader`:**
+
+```ts
+fetchVideoDetail(url: string): Promise<VideoDetail>
+fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string | null> // returns path to .vtt or null
+```
+
+`fetchVideoDetail` → `yt-dlp --dump-json <url>` then parse the extended fields.
+`fetchTranscript` → `yt-dlp --write-auto-subs --sub-lang <lang> --skip-download -o <outputDir>/transcript <url>` → returns path to generated `.vtt` file or null if no auto-subs available.
+
+**4. New use case: `FetchVideoDetail`**
+
+- Input: `videoId` (DB id)
+- Reads video from repo, extracts URL
+- Calls `videoDownloader.fetchVideoDetail(url)`
+- Calls `videoDownloader.fetchTranscript(url, videoDir, 'en')`
+- Updates video entity with new fields + `transcriptPath`
+- Returns `VideoDetail` + transcript text (read from `.vtt` and stripped of VTT timing headers)
+
+**5. New use case: `EnrichAllVideos` (batch)**
+
+- Queries all active videos with a YouTube URL that have `likeCount IS NULL` (never enriched)
+- Queues them through `PQueueDownloadQueue` (concurrency 1, 1.5 s delay)
+- Calls `FetchVideoDetail` per video
+- Returns summary: `{ total, enriched, failed, skipped }`
+
+**6. IPC endpoints:**
+
+| Channel | Params | Result |
+|---|---|---|
+| `fetch-video-detail` | `[videoId: string]` | `VideoDetail & { transcriptText: string \| null }` |
+| `enrich-all-videos` | `[]` | `{ total, enriched, failed, skipped }` |
+| `get-transcript` | `[videoId: string]` | `string \| null` (parsed VTT text) |
+
+**7. Extend `VideoDto`** with the new fields so the renderer can display them.
+
+### Renderer UI Changes
+
+**Video Detail Page (`/creators/$creatorId/videos/$videoId`):**
+
+- **Header:** Thumbnail (large), title, creator name, upload date, duration, isShort badge
+- **Stats row:** `Item` + `ItemMedia(variant="icon")` for each: views, likes, dislikes, comment count
+- **Description:** Collapsible `Card` with full description text
+- **Tags:** Row of `Badge` components for category + author tags
+- **Transcript tab:** `Tabs` component with "Info" and "Transcript" tabs. Transcript tab shows the full auto-transcript in a `ScrollArea` with monospace text. A "Copy" button copies the full transcript to clipboard.
+- **Actions:** "Refresh Metadata" button calls `fetch-video-detail` to re-fetch. Loading state with spinner.
+
+**Video List Enhancements:**
+
+- `MediaCard` shows a small "Short" badge overlay when `isShort` is true
+- Sort options: by views, likes, upload date (add to `VideoQueryParams.sortBy` allowlist)
+- Filter: shorts vs long-form toggle
+
+**Settings Page:**
+
+- "Enrich All Videos" button in a `Card` section, similar to "Reconcile". Shows progress summary toast on completion.
+
+### Key Files for Context
+
+**Entities/Schema:**
+- `src/main/domain/entities/Video.ts`
+- `src/main/framework-drivers/database/schema.ts`
+- `src/main/framework-drivers/database/database.ts`
+
+**Ports/Drivers:**
+- `src/main/domain/ports/IVideoDownloader.ts`
+- `src/main/framework-drivers/yt-dlp/YtDlpDownloader.ts`
+
+**Existing use cases for reference:**
+- `src/main/use-cases/FetchVideoInfo.ts`
+- `src/main/use-cases/EnrichMediaMetadata.ts`
+- `src/main/use-cases/DownloadVideo.ts`
+
+**IPC layer:**
+- `src/shared/ipc-channels.ts`
+- `src/shared/ipc-contract.ts`
+- `src/shared/dtos/VideoDto.ts`
+- `src/preload/index.ts`
+- `src/preload/index.d.ts`
+
+**Renderer (video cards/grids):**
+- `src/renderer/components/features/` — video-related feature components
+- `src/renderer/components/shared/MediaCard.tsx` (if exists from Step 1)
+
+**Queue (reuse for rate-limited enrichment):**
+- `src/main/interface-adapters/queue/PQueueDownloadQueue.ts`
+- `src/main/domain/ports/IDownloadQueue.ts`
+
+---
+
+## Step 6: YouTube Comments Viewer (On-Demand, No Persistence)
+
+**Priority:** LOW - exploratory / analysis feature, depends on Step 5 for Video Detail page.
+
+**Goal:** Allow users to load YouTube comments for any video on-demand from the Video Detail page. Comments are **not stored in the database** — they are fetched live, displayed in the UI, and discarded when the user navigates away. This avoids DB bloat, keeps the schema simple, and reduces YouTube ban risk (comments are only fetched when explicitly requested).
+
+**What yt-dlp can provide:**
+
+`yt-dlp --dump-json --write-comments <url>` adds a `comments` array to the JSON output:
+
+```json
+{
+  "comments": [
+    {
+      "id": "abc123",
+      "text": "Great video!",
+      "author": "UserName",
+      "author_id": "UC...",
+      "like_count": 42,
+      "is_pinned": false,
+      "parent": "root",        // "root" for top-level, parent comment id for replies
+      "timestamp": 1700000000
+    }
+  ]
+}
+```
+
+**Limitations:**
+- Fetching comments is **slow** (can take 10–60+ seconds for popular videos with thousands of comments). yt-dlp scrapes them page by page.
+- YouTube is most aggressive about rate-limiting comment scraping. Mitigation: only fetch on explicit user action, never in batch, show clear "Loading comments…" state.
+- `--write-comments` fetches ALL comments including replies. For videos with 50k+ comments this can be very slow. Consider `--extractor-args "youtube:max_comments=500"` to cap.
+
+**Ban risk mitigation:**
+- Comments are **never** fetched automatically or in batch — only on explicit button click from the Video Detail page.
+- A configurable max comment count (default 500) limits scraping depth.
+- A cooldown period (minimum 30 s between comment fetches for different videos) prevents rapid-fire requests.
+
+### Backend Changes
+
+**1. New shared type (`src/shared/types/video-comments.ts`):**
+
+```ts
+export interface VideoComment {
+  id: string
+  text: string
+  author: string
+  authorId: string | null
+  likeCount: number
+  isPinned: boolean
+  parentId: string | null  // null = top-level, string = reply to this comment id
+  timestamp: number | null // unix epoch
+}
+
+export interface VideoCommentsResult {
+  videoId: string
+  comments: VideoComment[]
+  totalFetched: number
+  wasTruncated: boolean  // true if max_comments cap was hit
+}
+```
+
+**2. New port method on `IVideoDownloader`:**
+
+```ts
+fetchComments(url: string, maxComments?: number): Promise<VideoComment[]>
+```
+
+Implementation in `YtDlpDownloader`: runs `yt-dlp --dump-json --write-comments --extractor-args "youtube:max_comments=<max>" --skip-download <url>`, parses the `comments` array from the JSON output.
+
+**3. New use case: `FetchVideoComments`**
+
+- Input: `videoId` (DB id), `maxComments?` (default 500)
+- Reads video from repo to get URL
+- Validates video has a YouTube URL
+- Calls `videoDownloader.fetchComments(url, maxComments)`
+- Structures into threaded format (top-level + replies grouped by parentId)
+- Returns `VideoCommentsResult`
+- **No DB writes** — result is returned directly to renderer and not persisted
+
+**4. IPC endpoint:**
+
+| Channel | Params | Result |
+|---|---|---|
+| `fetch-video-comments` | `[videoId: string, maxComments?: number]` | `VideoCommentsResult` |
+
+### Renderer UI Changes
+
+**Video Detail Page — Comments Tab:**
+
+Add a third tab "Comments" to the `Tabs` component on the Video Detail page (alongside "Info" and "Transcript").
+
+- **Initial state:** `Empty` component with message "Click Load Comments to fetch comments from YouTube" + "Load Comments" `Button`.
+- **Loading state:** Spinner with "Fetching comments from YouTube… This may take a while for popular videos." message. Disable the button.
+- **Loaded state:**
+  - Summary bar: `Item` showing total comment count, top-level vs replies breakdown.
+  - Comment list in `ScrollArea` (virtualized with TanStack Virtual for performance):
+    - Each top-level comment: `Card`-like row with author name (bold), timestamp (relative via `date-fns`), like count (`Badge`), pinned indicator, comment text.
+    - Replies: indented under parent with a left border, slightly muted styling.
+    - Pinned comment always shown first.
+  - "Copy All Comments" button — copies all comment text (author + text) to clipboard as plain text, formatted for pasting into an AI chat. Format:
+    ```
+    [Author]: Comment text
+      ↳ [ReplyAuthor]: Reply text
+    ```
+  - "Export Comments" button — saves the formatted text to a `.txt` file in the video's folder via a save dialog.
+  - If `wasTruncated`, show an info `Badge`: "Showing first 500 comments (capped for performance)."
+- **Error state:** `Empty` with error message and "Retry" button.
+
+**Comment count on Video Detail header:**
+
+The comment count from Step 5's `commentCount` field (fetched via `--dump-json` metadata, already in DB) shows on the stats row. The Comments tab fetches the actual comment text only when the user clicks "Load Comments".
+
+### Key Files for Context
+
+**Ports/Drivers:**
+- `src/main/domain/ports/IVideoDownloader.ts`
+- `src/main/framework-drivers/yt-dlp/YtDlpDownloader.ts`
+
+**Video Detail (from Step 5):**
+- Video Detail page component (created in Step 5)
+- `src/shared/types/video-detail.ts` (from Step 5)
+
+**IPC layer:**
+- `src/shared/ipc-channels.ts`
+- `src/shared/ipc-contract.ts`
+- `src/preload/index.ts`
+- `src/preload/index.d.ts`
+
+**Virtualization (for large comment lists):**
+- TanStack React Virtual (already installed, see Step 1 dependencies)
+
+**Wiring:**
+- `src/main/composition-root.ts`
 
 ---
 
