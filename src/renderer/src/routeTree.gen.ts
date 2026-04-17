@@ -18,27 +18,27 @@ import { Route as CreatorsCreatorIdRouteImport } from './routes/creators/$creato
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const DownloadsRoute = DownloadsRouteImport.update({
   id: '/downloads',
   path: '/downloads',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const CreatorsCreatorIdRoute = CreatorsCreatorIdRouteImport.update({
   id: '/creators/$creatorId',
   path: '/creators/$creatorId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -65,21 +65,10 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/about'
-    | '/downloads'
-    | '/settings'
-    | '/creators/$creatorId'
+  fullPaths: '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
-  id:
-    | '__root__'
-    | '/'
-    | '/about'
-    | '/downloads'
-    | '/settings'
-    | '/creators/$creatorId'
+  id: '__root__' | '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,7 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   DownloadsRoute: DownloadsRoute,
   SettingsRoute: SettingsRoute,
-  CreatorsCreatorIdRoute: CreatorsCreatorIdRoute,
+  CreatorsCreatorIdRoute: CreatorsCreatorIdRoute
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

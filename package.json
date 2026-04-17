@@ -26,7 +26,7 @@
     "test:main": "npm rebuild better-sqlite3 && vitest run --project main",
     "test:renderer": "vitest run --project renderer",
     "test:coverage": "npm rebuild better-sqlite3 && vitest run --coverage",
-    "setup": "tsx scripts/download-binaries.ts",
+    "setup": "npm install && tsx scripts/download-binaries.ts && npm run rebuild",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"

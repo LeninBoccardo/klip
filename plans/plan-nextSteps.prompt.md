@@ -256,19 +256,19 @@ The remaining work falls into 4 steps ordered by priority. Each step lists the k
 
 **What yt-dlp can provide (via `--dump-json` / `--write-auto-subs`):**
 
-| Field | yt-dlp JSON key | Feasibility |
-|---|---|---|
-| View count | `view_count` | ✅ Reliable |
-| Like count | `like_count` | ✅ Reliable |
-| Dislike count | `dislike_count` | ⚠️ yt-dlp returns it when available (Return YouTube Dislike API), may be null |
-| Comment count | `comment_count` | ✅ Available in JSON (count only, not the comments themselves — comments are Step 6) |
-| Category | `categories` | ✅ Array of strings |
-| Tags | `tags` | ✅ Author-provided tags |
-| Upload date | `upload_date` | ✅ `YYYYMMDD` string |
-| Description | `description` | ✅ Full text |
-| Duration | `duration` | ✅ Already used |
-| Is Short | `duration` ≤ 60 + vertical aspect | ✅ Derivable |
-| Auto-transcript | `--write-auto-subs --sub-lang en --skip-download` | ✅ Writes `.vtt`/`.srt` file |
+| Field           | yt-dlp JSON key                                   | Feasibility                                                                          |
+| --------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| View count      | `view_count`                                      | ✅ Reliable                                                                          |
+| Like count      | `like_count`                                      | ✅ Reliable                                                                          |
+| Dislike count   | `dislike_count`                                   | ⚠️ yt-dlp returns it when available (Return YouTube Dislike API), may be null        |
+| Comment count   | `comment_count`                                   | ✅ Available in JSON (count only, not the comments themselves — comments are Step 6) |
+| Category        | `categories`                                      | ✅ Array of strings                                                                  |
+| Tags            | `tags`                                            | ✅ Author-provided tags                                                              |
+| Upload date     | `upload_date`                                     | ✅ `YYYYMMDD` string                                                                 |
+| Description     | `description`                                     | ✅ Full text                                                                         |
+| Duration        | `duration`                                        | ✅ Already used                                                                      |
+| Is Short        | `duration` ≤ 60 + vertical aspect                 | ✅ Derivable                                                                         |
+| Auto-transcript | `--write-auto-subs --sub-lang en --skip-download` | ✅ Writes `.vtt`/`.srt` file                                                         |
 
 **Ban risk:** Minimal for metadata-only calls (`--dump-json`, `--write-subs --skip-download`). These are lightweight GET requests, no actual video download. Rate-limit with a concurrency of 1 and a 1–2 s delay between calls. yt-dlp also rotates request patterns. Avoid hammering hundreds of videos in a tight loop — batch with a queue (reuse `PQueueDownloadQueue` with low concurrency).
 
@@ -325,11 +325,11 @@ fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string |
 
 **6. IPC endpoints:**
 
-| Channel | Params | Result |
-|---|---|---|
+| Channel              | Params              | Result                                             |
+| -------------------- | ------------------- | -------------------------------------------------- |
 | `fetch-video-detail` | `[videoId: string]` | `VideoDetail & { transcriptText: string \| null }` |
-| `enrich-all-videos` | `[]` | `{ total, enriched, failed, skipped }` |
-| `get-transcript` | `[videoId: string]` | `string \| null` (parsed VTT text) |
+| `enrich-all-videos`  | `[]`                | `{ total, enriched, failed, skipped }`             |
+| `get-transcript`     | `[videoId: string]` | `string \| null` (parsed VTT text)                 |
 
 **7. Extend `VideoDto`** with the new fields so the renderer can display them.
 
@@ -357,20 +357,24 @@ fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string |
 ### Key Files for Context
 
 **Entities/Schema:**
+
 - `src/main/domain/entities/Video.ts`
 - `src/main/framework-drivers/database/schema.ts`
 - `src/main/framework-drivers/database/database.ts`
 
 **Ports/Drivers:**
+
 - `src/main/domain/ports/IVideoDownloader.ts`
 - `src/main/framework-drivers/yt-dlp/YtDlpDownloader.ts`
 
 **Existing use cases for reference:**
+
 - `src/main/use-cases/FetchVideoInfo.ts`
 - `src/main/use-cases/EnrichMediaMetadata.ts`
 - `src/main/use-cases/DownloadVideo.ts`
 
 **IPC layer:**
+
 - `src/shared/ipc-channels.ts`
 - `src/shared/ipc-contract.ts`
 - `src/shared/dtos/VideoDto.ts`
@@ -378,10 +382,12 @@ fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string |
 - `src/preload/index.d.ts`
 
 **Renderer (video cards/grids):**
+
 - `src/renderer/components/features/` — video-related feature components
 - `src/renderer/components/shared/MediaCard.tsx` (if exists from Step 1)
 
 **Queue (reuse for rate-limited enrichment):**
+
 - `src/main/interface-adapters/queue/PQueueDownloadQueue.ts`
 - `src/main/domain/ports/IDownloadQueue.ts`
 
@@ -407,7 +413,7 @@ fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string |
       "author_id": "UC...",
       "like_count": 42,
       "is_pinned": false,
-      "parent": "root",        // "root" for top-level, parent comment id for replies
+      "parent": "root", // "root" for top-level, parent comment id for replies
       "timestamp": 1700000000
     }
   ]
@@ -415,11 +421,13 @@ fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string |
 ```
 
 **Limitations:**
+
 - Fetching comments is **slow** (can take 10–60+ seconds for popular videos with thousands of comments). yt-dlp scrapes them page by page.
 - YouTube is most aggressive about rate-limiting comment scraping. Mitigation: only fetch on explicit user action, never in batch, show clear "Loading comments…" state.
 - `--write-comments` fetches ALL comments including replies. For videos with 50k+ comments this can be very slow. Consider `--extractor-args "youtube:max_comments=500"` to cap.
 
 **Ban risk mitigation:**
+
 - Comments are **never** fetched automatically or in batch — only on explicit button click from the Video Detail page.
 - A configurable max comment count (default 500) limits scraping depth.
 - A cooldown period (minimum 30 s between comment fetches for different videos) prevents rapid-fire requests.
@@ -436,7 +444,7 @@ export interface VideoComment {
   authorId: string | null
   likeCount: number
   isPinned: boolean
-  parentId: string | null  // null = top-level, string = reply to this comment id
+  parentId: string | null // null = top-level, string = reply to this comment id
   timestamp: number | null // unix epoch
 }
 
@@ -444,7 +452,7 @@ export interface VideoCommentsResult {
   videoId: string
   comments: VideoComment[]
   totalFetched: number
-  wasTruncated: boolean  // true if max_comments cap was hit
+  wasTruncated: boolean // true if max_comments cap was hit
 }
 ```
 
@@ -468,8 +476,8 @@ Implementation in `YtDlpDownloader`: runs `yt-dlp --dump-json --write-comments -
 
 **4. IPC endpoint:**
 
-| Channel | Params | Result |
-|---|---|---|
+| Channel                | Params                                    | Result                |
+| ---------------------- | ----------------------------------------- | --------------------- |
 | `fetch-video-comments` | `[videoId: string, maxComments?: number]` | `VideoCommentsResult` |
 
 ### Renderer UI Changes
@@ -502,23 +510,28 @@ The comment count from Step 5's `commentCount` field (fetched via `--dump-json` 
 ### Key Files for Context
 
 **Ports/Drivers:**
+
 - `src/main/domain/ports/IVideoDownloader.ts`
 - `src/main/framework-drivers/yt-dlp/YtDlpDownloader.ts`
 
 **Video Detail (from Step 5):**
+
 - Video Detail page component (created in Step 5)
 - `src/shared/types/video-detail.ts` (from Step 5)
 
 **IPC layer:**
+
 - `src/shared/ipc-channels.ts`
 - `src/shared/ipc-contract.ts`
 - `src/preload/index.ts`
 - `src/preload/index.d.ts`
 
 **Virtualization (for large comment lists):**
+
 - TanStack React Virtual (already installed, see Step 1 dependencies)
 
 **Wiring:**
+
 - `src/main/composition-root.ts`
 
 ---
