@@ -106,7 +106,7 @@ app.whenReady().then(() => {
   registerCreatorController(container.repositories.creator)
   registerVideoController(container.repositories.video)
   registerCutController(container.repositories.cut)
-  registerSettingsController(container.repositories.settings)
+  registerSettingsController(container.repositories.settings, container.useCases.migrateRootFolder)
   registerAuditLogController(container.repositories.auditLog)
   registerOperationController(container.repositories.operation)
   console.log(`[klip] IPC controllers registered`)

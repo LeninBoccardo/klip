@@ -36,6 +36,8 @@ export const IpcChannels = {
   GetSettings: 'get-settings',
   GetSetting: 'get-setting',
   SetSetting: 'set-setting',
+  MigrateRoot: 'migrate-root',
+  SelectFolder: 'select-folder',
 
   // ── Audit Log ──
   GetAuditLogByEntity: 'get-audit-log-by-entity',
@@ -47,7 +49,8 @@ export const IpcChannels = {
 
   // ── Push events (webContents.send → ipcRenderer.on) ──
   DbUpdated: 'db-updated',
-  DownloadProgress: 'download-progress'
+  DownloadProgress: 'download-progress',
+  MigrateRootProgress: 'migrate-root-progress'
 } as const
 
 /** Union of all IPC channel name values */

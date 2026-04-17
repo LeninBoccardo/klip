@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IpcChannels } from '@shared/ipc-channels'
-import type { DownloadProgress } from '@shared/types'
+import type { DownloadProgress, MigrateRootProgress } from '@shared/types'
 import { createTypedInvoker } from './create-typed-invoker'
 
 // Custom APIs for renderer
@@ -39,6 +39,8 @@ const api = {
   getSettings: createTypedInvoker('get-settings'),
   getSetting: createTypedInvoker('get-setting'),
   setSetting: createTypedInvoker('set-setting'),
+  migrateRoot: createTypedInvoker('migrate-root'),
+  selectFolder: createTypedInvoker('select-folder'),
 
   // ── Audit Log ──
   getAuditLogByEntity: createTypedInvoker('get-audit-log-by-entity'),
@@ -62,6 +64,14 @@ const api = {
     ipcRenderer.on(IpcChannels.DbUpdated, handler)
     return (): void => {
       ipcRenderer.removeListener(IpcChannels.DbUpdated, handler)
+    }
+  },
+  onMigrateRootProgress: (
+    callback: (_event: unknown, data: MigrateRootProgress) => void
+  ): (() => void) => {
+    ipcRenderer.on(IpcChannels.MigrateRootProgress, callback)
+    return (): void => {
+      ipcRenderer.removeListener(IpcChannels.MigrateRootProgress, callback)
     }
   }
 }

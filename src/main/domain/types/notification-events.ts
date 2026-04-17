@@ -1,4 +1,4 @@
-import type { DownloadProgress } from '@shared/types'
+import type { DownloadProgress, MigrateRootProgress } from '@shared/types'
 
 /**
  * Typed event map for renderer notifications.
@@ -13,6 +13,7 @@ import type { DownloadProgress } from '@shared/types'
 export interface NotificationEventMap {
   'db-updated': void
   'download-progress': DownloadProgress
+  'migrate-root-progress': MigrateRootProgress
 }
 
 /** Union of all valid notification channel names */

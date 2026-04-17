@@ -503,4 +503,47 @@ describe('SqliteCutRepository', () => {
     })
     expect(result.total).toBe(2)
   })
+
+  // ── updateFilePathPrefix ──
+
+  describe('updateFilePathPrefix', () => {
+    it('replaces path prefix in filePath and thumbnailPath for all cuts', () => {
+      cutRepo.upsert(
+        makeCut({
+          id: 'c1',
+          filePath: '/old/root/creator-1/cuts/c1/cut.mp4',
+          thumbnailPath: '/old/root/creator-1/cuts/c1/thumb.png'
+        })
+      )
+      cutRepo.upsert(
+        makeCut({
+          id: 'c2',
+          filePath: '/old/root/creator-1/cuts/c2/cut.mp4',
+          thumbnailPath: '/old/root/creator-1/cuts/c2/thumb.png'
+        })
+      )
+
+      cutRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const c1 = cutRepo.findById('c1')!
+      expect(c1.filePath).toBe('/new/root/creator-1/cuts/c1/cut.mp4')
+      expect(c1.thumbnailPath).toBe('/new/root/creator-1/cuts/c1/thumb.png')
+
+      const c2 = cutRepo.findById('c2')!
+      expect(c2.filePath).toBe('/new/root/creator-1/cuts/c2/cut.mp4')
+      expect(c2.thumbnailPath).toBe('/new/root/creator-1/cuts/c2/thumb.png')
+    })
+
+    it('leaves null thumbnailPath as null', () => {
+      cutRepo.upsert(
+        makeCut({ id: 'c-null', filePath: '/old/root/test.mp4', thumbnailPath: null })
+      )
+
+      cutRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const c = cutRepo.findById('c-null')!
+      expect(c.filePath).toBe('/new/root/test.mp4')
+      expect(c.thumbnailPath).toBeNull()
+    })
+  })
 })

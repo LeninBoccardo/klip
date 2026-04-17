@@ -15,4 +15,6 @@ export interface IVideoRepository {
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void
   delete(id: string): void
   findPaginated(params: VideoQueryParams): PaginatedResult<Video>
+  /** Bulk-replace a path prefix in filePath and thumbnailPath columns */
+  updateFilePathPrefix(oldPrefix: string, newPrefix: string): void
 }

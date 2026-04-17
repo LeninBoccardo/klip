@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, renameSync } from 'fs'
+import { mkdirSync, writeFileSync, renameSync, cpSync, rmSync, readdirSync } from 'fs'
 import { dirname } from 'path'
 import type { IFileSystemWriter } from '@domain/ports'
 
@@ -17,5 +17,21 @@ export class NodeFileSystemWriter implements IFileSystemWriter {
 
   renameDirectory(oldPath: string, newPath: string): void {
     renameSync(oldPath, newPath)
+  }
+
+  moveDirectory(srcPath: string, destPath: string): void {
+    try {
+      // Fast path: same filesystem
+      renameSync(srcPath, destPath)
+    } catch {
+      // Cross-device fallback: recursive copy then delete
+      cpSync(srcPath, destPath, { recursive: true })
+      rmSync(srcPath, { recursive: true, force: true })
+    }
+  }
+
+  isDirectoryEmpty(dirPath: string): boolean {
+    const entries = readdirSync(dirPath)
+    return entries.length === 0
   }
 }

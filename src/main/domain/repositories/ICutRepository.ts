@@ -17,4 +17,6 @@ export interface ICutRepository {
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void
   delete(id: string): void
   findPaginated(params: CutQueryParams): PaginatedResult<Cut>
+  /** Bulk-replace a path prefix in filePath and thumbnailPath columns */
+  updateFilePathPrefix(oldPrefix: string, newPrefix: string): void
 }

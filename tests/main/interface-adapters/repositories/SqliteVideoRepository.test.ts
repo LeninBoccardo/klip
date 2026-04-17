@@ -366,4 +366,49 @@ describe('SqliteVideoRepository', () => {
     expect(result!.thumbnailPath).toBeNull()
     expect(result!.downloadDate).toBeNull()
   })
+
+  // ── updateFilePathPrefix ──
+
+  describe('updateFilePathPrefix', () => {
+    it('replaces path prefix in filePath and thumbnailPath for all videos', () => {
+      creatorRepo.upsert(makeCreator())
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v1',
+          filePath: '/old/root/creator-1/downloads/v1/video.mp4',
+          thumbnailPath: '/old/root/creator-1/downloads/v1/thumb.jpg'
+        })
+      )
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v2',
+          filePath: '/old/root/creator-1/downloads/v2/video.mp4',
+          thumbnailPath: '/old/root/creator-1/downloads/v2/thumb.jpg'
+        })
+      )
+
+      videoRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const v1 = videoRepo.findById('v1')!
+      expect(v1.filePath).toBe('/new/root/creator-1/downloads/v1/video.mp4')
+      expect(v1.thumbnailPath).toBe('/new/root/creator-1/downloads/v1/thumb.jpg')
+
+      const v2 = videoRepo.findById('v2')!
+      expect(v2.filePath).toBe('/new/root/creator-1/downloads/v2/video.mp4')
+      expect(v2.thumbnailPath).toBe('/new/root/creator-1/downloads/v2/thumb.jpg')
+    })
+
+    it('leaves null thumbnailPath as null', () => {
+      creatorRepo.upsert(makeCreator())
+      videoRepo.upsert(
+        makeVideo({ id: 'v-null', filePath: '/old/root/test.mp4', thumbnailPath: null })
+      )
+
+      videoRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const v = videoRepo.findById('v-null')!
+      expect(v.filePath).toBe('/new/root/test.mp4')
+      expect(v.thumbnailPath).toBeNull()
+    })
+  })
 })

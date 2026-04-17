@@ -21,3 +21,4 @@ export type {
 } from './use-case-results'
 export type { ProbeStatus } from './probe-status'
 export type { ChannelInfo } from './channel-info'
+export type { MigrateRootProgress, MigrateRootResult } from './migrate-root'

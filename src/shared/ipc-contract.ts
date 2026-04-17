@@ -5,6 +5,8 @@ import type {
   VideoInfo,
   MediaProbeResult,
   DownloadProgress,
+  MigrateRootProgress,
+  MigrateRootResult,
   PaginationParams,
   PaginatedResult,
   VideoQueryParams,
@@ -61,6 +63,8 @@ export interface IpcContract {
   'get-settings': { params: []; result: Record<string, string> }
   'get-setting': { params: [key: string]; result: string | null }
   'set-setting': { params: [key: string, value: string]; result: void }
+  'migrate-root': { params: [newRootPath: string]; result: MigrateRootResult }
+  'select-folder': { params: []; result: string | null }
 
   // ── Audit Log ──
   'get-audit-log-by-entity': {
@@ -85,13 +89,17 @@ export interface IpcContract {
   // ── Push events (main → renderer) ──
   'db-updated': { params: []; result: void }
   'download-progress': { params: [data: DownloadProgress]; result: void }
+  'migrate-root-progress': { params: [data: MigrateRootProgress]; result: void }
 }
 
 /** Channels that use ipcMain.handle (request/response pattern) */
-export type InvokeChannel = Exclude<keyof IpcContract, 'db-updated' | 'download-progress'>
+export type InvokeChannel = Exclude<
+  keyof IpcContract,
+  'db-updated' | 'download-progress' | 'migrate-root-progress'
+>
 
 /** Channels that use webContents.send (push pattern) */
-export type PushChannel = 'db-updated' | 'download-progress'
+export type PushChannel = 'db-updated' | 'download-progress' | 'migrate-root-progress'
 
 /** Extract the result type for a given channel */
 export type IpcResult<C extends keyof IpcContract> = IpcContract[C]['result']

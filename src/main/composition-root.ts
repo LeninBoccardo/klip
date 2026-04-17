@@ -25,6 +25,7 @@ import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
 import type { IRecoverOperations } from '@use-cases/IRecoverOperations'
 import type { IEnrichMediaMetadata } from '@use-cases/IEnrichMediaMetadata'
 import type { IFetchChannelInfo } from '@use-cases/IFetchChannelInfo'
+import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -58,6 +59,7 @@ import { ProbeMediaFile } from '@use-cases/ProbeMediaFile'
 import { RecoverOperations } from '@use-cases/RecoverOperations'
 import { EnrichMediaMetadata } from '@use-cases/EnrichMediaMetadata'
 import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
+import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
 
 /**
  * Application dependency container.
@@ -95,6 +97,7 @@ export interface AppContainer {
     recoverOperations: IRecoverOperations
     enrichMedia: IEnrichMediaMetadata
     fetchChannelInfo: IFetchChannelInfo
+    migrateRootFolder: IMigrateRootFolder
   }
   services: {
     fileWatcher: IFileWatcher
@@ -189,6 +192,21 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const fileWatcher = new ChokidarWatcher(config.rootPath)
   fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
 
+  const migrateRootFolder = new MigrateRootFolder(
+    operationRepo,
+    settingsRepo,
+    videoRepo,
+    cutRepo,
+    fsReader,
+    fsWriter,
+    pathResolver,
+    fileWatcher,
+    processNotifications,
+    reconcile,
+    idGenerator,
+    notifier
+  )
+
   return {
     database,
     repositories: {
@@ -220,7 +238,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       probeMediaFile,
       recoverOperations,
       enrichMedia,
-      fetchChannelInfo
+      fetchChannelInfo,
+      migrateRootFolder
     },
     services: {
       fileWatcher

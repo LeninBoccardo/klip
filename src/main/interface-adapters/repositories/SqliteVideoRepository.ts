@@ -133,6 +133,17 @@ export class SqliteVideoRepository implements IVideoRepository {
     this.db.delete(videos).where(eq(videos.id, id)).run()
   }
 
+  updateFilePathPrefix(oldPrefix: string, newPrefix: string): void {
+    this.db
+      .update(videos)
+      .set({
+        filePath: sql`replace(${videos.filePath}, ${oldPrefix}, ${newPrefix})`,
+        thumbnailPath: sql`replace(${videos.thumbnailPath}, ${oldPrefix}, ${newPrefix})`,
+        updatedAt: new Date().toISOString()
+      })
+      .run()
+  }
+
   findPaginated(params: VideoQueryParams): PaginatedResult<Video> {
     const statuses = params.status && params.status.length > 0 ? params.status : ['active']
     const conditions = [inArray(videos.status, statuses)]

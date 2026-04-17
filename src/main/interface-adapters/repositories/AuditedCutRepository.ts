@@ -118,4 +118,16 @@ export class AuditedCutRepository implements ICutRepository {
   findPaginated(params: CutQueryParams): PaginatedResult<Cut> {
     return this.inner.findPaginated(params)
   }
+
+  updateFilePathPrefix(oldPrefix: string, newPrefix: string): void {
+    this.inner.updateFilePathPrefix(oldPrefix, newPrefix)
+
+    this.auditLog.append({
+      entityType: 'cut',
+      entityId: '*',
+      action: 'bulk_path_update',
+      changes: JSON.stringify({ oldPrefix, newPrefix }),
+      createdAt: new Date().toISOString()
+    })
+  }
 }

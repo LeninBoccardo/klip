@@ -11,4 +11,10 @@ export interface IFileSystemWriter {
 
   /** Rename/move a directory from oldPath to newPath */
   renameDirectory(oldPath: string, newPath: string): void
+
+  /** Move a directory from src to dest, working across drives (recursive copy + delete fallback) */
+  moveDirectory(srcPath: string, destPath: string): void
+
+  /** Check if a directory is empty (no files, no subdirectories) */
+  isDirectoryEmpty(dirPath: string): boolean
 }

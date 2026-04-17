@@ -5,6 +5,8 @@ import type {
   FetchChannelInfoResult,
   VideoInfo,
   DownloadProgress,
+  MigrateRootProgress,
+  MigrateRootResult,
   MediaProbeResult,
   PaginationParams,
   PaginatedResult,
@@ -47,6 +49,8 @@ interface KlipAPI {
   getSettings(): Promise<Record<string, string>>
   getSetting(key: string): Promise<string | null>
   setSetting(key: string, value: string): Promise<void>
+  migrateRoot(newRootPath: string): Promise<MigrateRootResult>
+  selectFolder(): Promise<string | null>
 
   // ── Audit Log ──
   getAuditLogByEntity(entityType: string, entityId: string): Promise<AuditEntryDto[]>
@@ -61,6 +65,8 @@ interface KlipAPI {
   onDownloadProgress(callback: (event: unknown, data: DownloadProgress) => void): () => void
   /** Subscribe to db-updated events; returns an unsubscribe function */
   onDbUpdated(callback: () => void): () => void
+  /** Subscribe to migrate-root progress events; returns an unsubscribe function */
+  onMigrateRootProgress(callback: (event: unknown, data: MigrateRootProgress) => void): () => void
 }
 
 declare global {

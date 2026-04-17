@@ -110,4 +110,16 @@ export class AuditedVideoRepository implements IVideoRepository {
   findPaginated(params: VideoQueryParams): PaginatedResult<Video> {
     return this.inner.findPaginated(params)
   }
+
+  updateFilePathPrefix(oldPrefix: string, newPrefix: string): void {
+    this.inner.updateFilePathPrefix(oldPrefix, newPrefix)
+
+    this.auditLog.append({
+      entityType: 'video',
+      entityId: '*',
+      action: 'bulk_path_update',
+      changes: JSON.stringify({ oldPrefix, newPrefix }),
+      createdAt: new Date().toISOString()
+    })
+  }
 }

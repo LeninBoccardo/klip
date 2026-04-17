@@ -222,6 +222,17 @@ export class SqliteCutRepository implements ICutRepository {
     this.db.delete(cuts).where(eq(cuts.id, id)).run()
   }
 
+  updateFilePathPrefix(oldPrefix: string, newPrefix: string): void {
+    this.db
+      .update(cuts)
+      .set({
+        filePath: sql`replace(${cuts.filePath}, ${oldPrefix}, ${newPrefix})`,
+        thumbnailPath: sql`replace(${cuts.thumbnailPath}, ${oldPrefix}, ${newPrefix})`,
+        updatedAt: new Date().toISOString()
+      })
+      .run()
+  }
+
   findPaginated(params: CutQueryParams): PaginatedResult<Cut> {
     const statuses = params.status && params.status.length > 0 ? params.status : ['active']
     const conditions = [inArray(cuts.status, statuses)]
