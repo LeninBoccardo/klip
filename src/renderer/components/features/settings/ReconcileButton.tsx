@@ -8,7 +8,7 @@ import type { ReconcileResult } from '@shared/types'
 import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
-export function ReconcileButton() {
+export function ReconcileButton({ disabled }: { disabled?: boolean }) {
   const reconcile = useReconcile()
   const [result, setResult] = useState<ReconcileResult | null>(null)
 
@@ -25,7 +25,7 @@ export function ReconcileButton() {
 
   return (
     <div className="space-y-3">
-      <Button onClick={handleReconcile} disabled={reconcile.isPending}>
+      <Button onClick={handleReconcile} disabled={disabled || reconcile.isPending}>
         {reconcile.isPending ? (
           <Spinner className="mr-2 size-4" />
         ) : (

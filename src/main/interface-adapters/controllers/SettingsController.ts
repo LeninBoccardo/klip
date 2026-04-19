@@ -35,6 +35,9 @@ export function registerSettingsController(
 
   createTypedHandler('select-folder', async () => {
     const win = BrowserWindow.getFocusedWindow()
+    if (!win) {
+      return null
+    }
     const result = await dialog.showOpenDialog(win!, {
       properties: ['openDirectory', 'createDirectory'],
       title: 'Select new root folder'

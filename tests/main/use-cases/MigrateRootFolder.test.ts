@@ -1,7 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
-import type { IOperationRepository, ISettingsRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
-import type { IFileSystemReader, IFileSystemWriter, IPathResolver, IFileWatcher, INotifier, IIdGenerator } from '@domain/ports'
+import type {
+  IOperationRepository,
+  ISettingsRepository,
+  IVideoRepository,
+  ICutRepository
+} from '@domain/repositories'
+import type {
+  IFileSystemReader,
+  IFileSystemWriter,
+  IPathResolver,
+  IFileWatcher,
+  INotifier,
+  IIdGenerator
+} from '@domain/ports'
 import type { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
 import { join } from 'path'
@@ -77,9 +89,15 @@ function createMocks() {
   } as unknown as ProcessFileNotifications
   const reconcile: IReconcileDirectory = {
     execute: vi.fn().mockReturnValue({
-      creatorsAdded: 0, creatorsMarkedMissing: 0, creatorsRecovered: 0,
-      videosAdded: 0, videosMarkedMissing: 0, videosRecovered: 0,
-      cutsAdded: 0, cutsMarkedMissing: 0, cutsRecovered: 0
+      creatorsAdded: 0,
+      creatorsMarkedMissing: 0,
+      creatorsRecovered: 0,
+      videosAdded: 0,
+      videosMarkedMissing: 0,
+      videosRecovered: 0,
+      cutsAdded: 0,
+      cutsMarkedMissing: 0,
+      cutsRecovered: 0
     })
   }
   const idGenerator: IIdGenerator = {
@@ -90,9 +108,18 @@ function createMocks() {
   }
 
   return {
-    operationRepo, settingsRepo, videoRepo, cutRepo,
-    fsReader, fsWriter, pathResolver, fileWatcher,
-    processNotifications, reconcile, idGenerator, notifier
+    operationRepo,
+    settingsRepo,
+    videoRepo,
+    cutRepo,
+    fsReader,
+    fsWriter,
+    pathResolver,
+    fileWatcher,
+    processNotifications,
+    reconcile,
+    idGenerator,
+    notifier
   }
 }
 
@@ -213,9 +240,7 @@ describe('MigrateRootFolder', () => {
 
     expect(mocks.operationRepo.updatePayload).toHaveBeenCalledTimes(3)
     // After third call, movedSoFar should have all 3
-    const lastPayload = JSON.parse(
-      vi.mocked(mocks.operationRepo.updatePayload).mock.calls[2][1]
-    )
+    const lastPayload = JSON.parse(vi.mocked(mocks.operationRepo.updatePayload).mock.calls[2][1])
     expect(lastPayload.movedSoFar).toEqual(['creator-a', 'creator-b', 'creator-c'])
   })
 
@@ -275,4 +300,3 @@ describe('MigrateRootFolder', () => {
     expect(mocks.fsWriter.moveDirectory).not.toHaveBeenCalled()
   })
 })
-

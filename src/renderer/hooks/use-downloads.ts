@@ -1,7 +1,7 @@
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { useEffect, useCallback } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
-import type { DownloadProgress, VideoInfo } from '@shared/types'
+import type { DownloadProgress } from '@shared/types'
 
 export function useFetchVideoInfo() {
   return useMutation({

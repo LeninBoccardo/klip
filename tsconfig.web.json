@@ -1,44 +1,43 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
   "include": [
-    "src/renderer/src/env.d.ts",
-    "src/renderer/src/**/*",
-    "src/renderer/src/**/*.tsx",
-    "src/renderer/components/**/*.ts",
-    "src/preload/*.d.ts",
-    "src/shared/**/*",
+    "./src/renderer/src/env.d.ts",
+    "./src/renderer/src/**/*",
+    "./src/renderer/src/**/*.tsx",
+    "./src/renderer/components/**/*.ts",
+    "./src/preload/*.d.ts",
+    "./src/shared/**/*",
   ],
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/renderer/*"
+        "./src/renderer/*"
       ],
       "@renderer/*": [
-        "src/renderer/src/*"
+        "./src/renderer/src/*"
       ],
       "@components/*": [
-        "src/renderer/components/*"
+        "./src/renderer/components/*"
       ],
       "@ui/*": [
-        "src/renderer/components/ui/*"
+        "./src/renderer/components/ui/*"
       ],
       "@main/*": [
-        "src/main/*"
+        "./src/main/*"
       ],
       "@domain/*": [
-        "src/main/domain/*"
+        "./src/main/domain/*"
       ],
       "@use-cases/*": [
-        "src/main/use-cases/*"
+        "./src/main/use-cases/*"
       ],
       "@shared/*": [
-        "src/shared/*"
+        "./src/shared/*"
       ],
       "@preload/*": [
-        "src/preload/*"
+        "./src/preload/*"
       ]
     }
   }

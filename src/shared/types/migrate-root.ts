@@ -12,4 +12,3 @@ export interface MigrateRootResult {
   movedCount: number
   error?: string
 }
-

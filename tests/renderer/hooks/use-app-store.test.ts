@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useAppStore } from '@/hooks/use-app-store'
-import type { DownloadProgress } from '@shared/types'
+import type { DownloadProgress, MigrateRootProgress } from '@shared/types'
 
 const makeProgress = (overrides: Partial<DownloadProgress> = {}): DownloadProgress => ({
   downloadId: 'dl-1',
@@ -15,7 +15,7 @@ const makeProgress = (overrides: Partial<DownloadProgress> = {}): DownloadProgre
 describe('useAppStore', () => {
   beforeEach(() => {
     // Reset store between tests
-    useAppStore.setState({ activeDownloads: {} })
+    useAppStore.setState({ activeDownloads: {}, blockingOperation: null })
   })
 
   it('starts with empty active downloads', () => {
@@ -71,5 +71,46 @@ describe('useAppStore', () => {
     useAppStore.getState().clearDownloads()
 
     expect(useAppStore.getState().activeDownloads).toEqual({})
+  })
+
+  // ── Blocking operation ──
+
+  it('starts with no blocking operation', () => {
+    expect(useAppStore.getState().blockingOperation).toBeNull()
+  })
+
+  it('startBlockingOperation sets the blocking state', () => {
+    useAppStore.getState().startBlockingOperation('Migrating', 'Moving files…')
+
+    const op = useAppStore.getState().blockingOperation
+    expect(op).toEqual({ title: 'Migrating', description: 'Moving files…' })
+  })
+
+  it('updateBlockingProgress updates progress on the current operation', () => {
+    useAppStore.getState().startBlockingOperation('Migrating')
+
+    const progress: MigrateRootProgress = {
+      phase: 'moving',
+      current: 2,
+      total: 5,
+      currentFolder: 'creator-a'
+    }
+    useAppStore.getState().updateBlockingProgress(progress)
+
+    expect(useAppStore.getState().blockingOperation?.progress).toEqual(progress)
+  })
+
+  it('updateBlockingProgress is a no-op when no operation is active', () => {
+    const progress: MigrateRootProgress = { phase: 'moving', current: 1, total: 1 }
+    useAppStore.getState().updateBlockingProgress(progress)
+
+    expect(useAppStore.getState().blockingOperation).toBeNull()
+  })
+
+  it('endBlockingOperation clears the blocking state', () => {
+    useAppStore.getState().startBlockingOperation('Migrating')
+    useAppStore.getState().endBlockingOperation()
+
+    expect(useAppStore.getState().blockingOperation).toBeNull()
   })
 })

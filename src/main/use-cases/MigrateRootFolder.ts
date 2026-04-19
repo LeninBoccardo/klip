@@ -146,8 +146,7 @@ export class MigrateRootFolder implements IMigrateRootFolder {
     } catch (dbError) {
       // DB update failed after all folders moved — this is a critical state.
       // Mark operation failed but don't roll back files (they're already moved).
-      const errorMsg =
-        dbError instanceof Error ? dbError.message : 'Unknown error during DB update'
+      const errorMsg = dbError instanceof Error ? dbError.message : 'Unknown error during DB update'
       this.operationRepo.updateStatus(operationId, 'failed', errorMsg)
       this.fileWatcher.restart(newRootPath)
       this.processNotifications.resume()
@@ -202,6 +201,3 @@ export class MigrateRootFolder implements IMigrateRootFolder {
     this.processNotifications.resume()
   }
 }
-
-
-

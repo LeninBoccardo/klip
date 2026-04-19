@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useSetting } from '@/hooks/use-settings'
 import { useAuditLogRecent } from '@/hooks/use-audit-log'
+import { useAppStore } from '@/hooks/use-app-store'
 import { RootPathDisplay } from '@components/features/settings/RootPathDisplay'
+import { MigrateRootButton } from '@components/features/settings/MigrateRootButton'
 import { ReconcileButton } from '@components/features/settings/ReconcileButton'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
@@ -17,6 +19,7 @@ export const Route = createFileRoute('/settings')({
 function SettingsPage() {
   const { data: rootPath, isLoading: rootLoading } = useSetting('rootPath')
   const { data: auditEntries, isLoading: auditLoading } = useAuditLogRecent(30)
+  const isBlocking = useAppStore((s) => s.blockingOperation !== null)
 
   return (
     <PageContainer>
@@ -27,11 +30,14 @@ function SettingsPage() {
           <CardTitle>Storage</CardTitle>
           <CardDescription>Where Klip stores your media files on disk.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           {rootLoading ? (
             <Skeleton className="h-10 w-full" />
           ) : (
-            <RootPathDisplay rootPath={rootPath} />
+            <>
+              <RootPathDisplay rootPath={rootPath} />
+              <MigrateRootButton currentRootPath={rootPath} />
+            </>
           )}
         </CardContent>
       </Card>
@@ -42,7 +48,7 @@ function SettingsPage() {
           <CardDescription>Reconcile the database index with files on disk.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ReconcileButton />
+          <ReconcileButton disabled={isBlocking} />
         </CardContent>
       </Card>
 

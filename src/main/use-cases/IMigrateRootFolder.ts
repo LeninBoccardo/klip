@@ -8,4 +8,3 @@ import type { MigrateRootResult } from '@shared/types'
 export interface IMigrateRootFolder {
   execute(newRootPath: string): Promise<MigrateRootResult>
 }
-

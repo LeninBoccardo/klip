@@ -5,6 +5,7 @@ export type AuditAction =
   | 'status_changed'
   | 'probe_status_changed'
   | 'deleted'
+  | 'bulk_path_update'
 
 /**
  * Immutable record of a single entity mutation.

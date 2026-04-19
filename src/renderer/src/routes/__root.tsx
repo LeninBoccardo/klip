@@ -18,6 +18,7 @@ import { queryClient } from '@/lib/query-client'
 import { useDbListener } from '@/hooks/use-db-listener'
 import { useDownloadProgressListener } from '@/hooks/use-downloads'
 import { AppSidebar } from '@components/features/layout/AppSidebar'
+import { BlockingOperationDialog } from '@/components/shared'
 
 function GlobalListeners() {
   useDbListener()
@@ -92,6 +93,7 @@ const RootLayout = () => (
           </SidebarInset>
         </SidebarProvider>
         <Toaster richColors closeButton />
+        <BlockingOperationDialog />
         <GlobalListeners />
         <TanStackRouterDevtools />
       </TooltipProvider>

@@ -535,9 +535,7 @@ describe('SqliteCutRepository', () => {
     })
 
     it('leaves null thumbnailPath as null', () => {
-      cutRepo.upsert(
-        makeCut({ id: 'c-null', filePath: '/old/root/test.mp4', thumbnailPath: null })
-      )
+      cutRepo.upsert(makeCut({ id: 'c-null', filePath: '/old/root/test.mp4', thumbnailPath: null }))
 
       cutRepo.updateFilePathPrefix('/old/root', '/new/root')
 
