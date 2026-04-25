@@ -16,7 +16,8 @@ import type {
   IVideoDownloader,
   IMediaProbe,
   IDownloadQueue,
-  IIdGenerator
+  IIdGenerator,
+  RootPathRef
 } from '@domain/ports'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
@@ -102,6 +103,7 @@ export interface AppContainer {
   services: {
     fileWatcher: IFileWatcher
   }
+  rootPathRef: RootPathRef
   /** Stop watcher, cancel timers, close DB */
   shutdown(): void
 }
@@ -118,6 +120,7 @@ export interface AppConfig {
 export function createAppContainer(config: AppConfig): AppContainer {
   // ── Framework drivers ──
   const database = config.database
+  const rootPathRef: RootPathRef = { value: config.rootPath }
 
   // ── Ports / adapters ──
   const fsReader = new NodeFileSystemReader()
@@ -163,7 +166,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
     debouncer,
     reconcile,
     notifier,
-    config.rootPath,
+    rootPathRef,
     undefined, // use default FlushConfig
     enrichMedia
   )
@@ -181,7 +184,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
     fsWriter,
     notifier,
     idGenerator,
-    config.rootPath
+    rootPathRef
   )
 
   const probeMediaFile = new ProbeMediaFile(mediaProbe)
@@ -204,7 +207,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
     processNotifications,
     reconcile,
     idGenerator,
-    notifier
+    notifier,
+    rootPathRef
   )
 
   return {
@@ -244,6 +248,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
     services: {
       fileWatcher
     },
+    rootPathRef,
     shutdown(): void {
       fileWatcher.stop()
       debouncer.cancel()

@@ -5,7 +5,8 @@ import type {
   IPathResolver,
   IFileSystemWriter,
   INotifier,
-  IIdGenerator
+  IIdGenerator,
+  RootPathRef
 } from '@domain/ports'
 import type { DownloadRequest, DownloadProgress, VideoInfo } from '@domain/types'
 import { slugify } from '@domain/types'
@@ -36,7 +37,7 @@ export class DownloadVideo implements IDownloadVideo {
     private fsWriter: IFileSystemWriter,
     private notifier: INotifier,
     private idGenerator: IIdGenerator,
-    private rootPath: string
+    private rootPath: RootPathRef
   ) {}
 
   async execute(request: DownloadRequest): Promise<DownloadVideoResult> {
@@ -92,7 +93,7 @@ export class DownloadVideo implements IDownloadVideo {
       this.ensureCreator(folderName, creatorName, info)
 
       // 4. Prepare output directory
-      const outputDir = this.pathResolver.join(this.rootPath, folderName, 'downloads', videoId)
+      const outputDir = this.pathResolver.join(this.rootPath.value, folderName, 'downloads', videoId)
       this.fsWriter.ensureDirectory(outputDir)
 
       // 5. Download with progress relay

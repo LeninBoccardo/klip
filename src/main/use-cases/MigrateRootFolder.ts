@@ -10,7 +10,8 @@ import type {
   IPathResolver,
   IFileWatcher,
   INotifier,
-  IIdGenerator
+  IIdGenerator,
+  RootPathRef
 } from '@domain/ports'
 import type { IReconcileDirectory } from './IReconcileDirectory'
 import type { ProcessFileNotifications } from './ProcessFileNotifications'
@@ -44,7 +45,8 @@ export class MigrateRootFolder implements IMigrateRootFolder {
     private processNotifications: ProcessFileNotifications,
     private reconcile: IReconcileDirectory,
     private idGenerator: IIdGenerator,
-    private notifier: INotifier
+    private notifier: INotifier,
+    private rootPathRef: RootPathRef
   ) {}
 
   async execute(newRootPath: string): Promise<MigrateRootResult> {
@@ -143,13 +145,14 @@ export class MigrateRootFolder implements IMigrateRootFolder {
       this.videoRepo.updateFilePathPrefix(oldRootPath, newRootPath)
       this.cutRepo.updateFilePathPrefix(oldRootPath, newRootPath)
       this.settingsRepo.set('rootPath', newRootPath)
+      this.rootPathRef.value = newRootPath
     } catch (dbError) {
       // DB update failed after all folders moved — this is a critical state.
       // Mark operation failed but don't roll back files (they're already moved).
       const errorMsg = dbError instanceof Error ? dbError.message : 'Unknown error during DB update'
       this.operationRepo.updateStatus(operationId, 'failed', errorMsg)
       this.fileWatcher.restart(newRootPath)
-      this.processNotifications.resume()
+      await this.processNotifications.resume()
       return {
         success: false,
         movedCount: folders.length,
@@ -162,7 +165,7 @@ export class MigrateRootFolder implements IMigrateRootFolder {
 
     // ── Restart watcher on new root ──
     this.fileWatcher.restart(newRootPath)
-    this.processNotifications.resume()
+    await this.processNotifications.resume()
 
     // ── Reconcile ──
     this.notifier.notify('migrate-root-progress', {
@@ -198,6 +201,6 @@ export class MigrateRootFolder implements IMigrateRootFolder {
 
     this.operationRepo.updateStatus(operationId, 'failed', error)
     this.fileWatcher.restart(payload.oldRoot)
-    this.processNotifications.resume()
+    await this.processNotifications.resume()
   }
 }

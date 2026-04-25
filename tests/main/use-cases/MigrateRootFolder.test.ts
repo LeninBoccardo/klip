@@ -84,7 +84,7 @@ function createMocks() {
   }
   const processNotifications = {
     suspend: vi.fn(),
-    resume: vi.fn(),
+    resume: vi.fn().mockResolvedValue(undefined),
     handleEvent: vi.fn()
   } as unknown as ProcessFileNotifications
   const reconcile: IReconcileDirectory = {
@@ -119,7 +119,8 @@ function createMocks() {
     processNotifications,
     reconcile,
     idGenerator,
-    notifier
+    notifier,
+    rootPathRef: { value: '/old/root' }
   }
 }
 
@@ -136,7 +137,8 @@ function createUseCase(mocks: ReturnType<typeof createMocks>) {
     mocks.processNotifications,
     mocks.reconcile,
     mocks.idGenerator,
-    mocks.notifier
+    mocks.notifier,
+    mocks.rootPathRef
   )
 }
 

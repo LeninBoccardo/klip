@@ -1,4 +1,4 @@
-import type { INotificationQueue, IDebouncer, INotifier } from '@domain/ports'
+import type { INotificationQueue, IDebouncer, INotifier, RootPathRef } from '@domain/ports'
 import type { FileEvent } from '@domain/types'
 import { collapseEvents, classifyPath } from '@domain/types'
 import type { IReconcileDirectory, ReconcileResult } from './IReconcileDirectory'
@@ -50,7 +50,7 @@ export class ProcessFileNotifications {
     private debouncer: IDebouncer,
     private reconcile: IReconcileDirectory,
     private notifier: INotifier,
-    private rootPath: string,
+    private rootPath: RootPathRef,
     private config: FlushConfig = {
       debounceMs: DEBOUNCE_MS,
       reconcileThreshold: RECONCILE_THRESHOLD
@@ -108,7 +108,7 @@ export class ProcessFileNotifications {
       if (collapsed.length === 0) return
 
       if (collapsed.length >= this.config.reconcileThreshold) {
-        this.reconcile.execute(this.rootPath)
+        this.reconcile.execute(this.rootPath.value)
       } else {
         this.processGranular(collapsed)
       }
@@ -133,11 +133,11 @@ export class ProcessFileNotifications {
    * Granular processing: classify events by creator and reconcile only affected creators.
    * Unknown paths are silently skipped (filtered by ChokidarWatcher anyway).
    */
-  private processGranular(events: FileEvent[]): void {
+  private processGranular(events: FileEvent[]): ReconcileResult {
     const affectedCreators = new Set<string>()
 
     for (const event of events) {
-      const classification = classifyPath(this.rootPath, event.path)
+      const classification = classifyPath(this.rootPath.value, event.path)
       if (classification.kind !== 'unknown') {
         affectedCreators.add(classification.creatorName)
       }
@@ -156,8 +156,10 @@ export class ProcessFileNotifications {
     }
 
     for (const creatorName of affectedCreators) {
-      const result = this.reconcile.executeForCreator(this.rootPath, creatorName)
+      const result = this.reconcile.executeForCreator(this.rootPath.value, creatorName)
       combined = mergeResults(combined, result)
     }
+
+    return combined
   }
 }

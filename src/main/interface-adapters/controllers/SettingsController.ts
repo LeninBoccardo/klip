@@ -38,7 +38,7 @@ export function registerSettingsController(
     if (!win) {
       return null
     }
-    const result = await dialog.showOpenDialog(win!, {
+    const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory', 'createDirectory'],
       title: 'Select new root folder'
     })

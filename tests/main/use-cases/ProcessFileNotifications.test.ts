@@ -58,7 +58,7 @@ describe('ProcessFileNotifications', () => {
       mockDebouncer,
       mockReconcile,
       mockNotifier,
-      '/root',
+      { value: '/root' },
       { debounceMs: 1000, reconcileThreshold: RECONCILE_THRESHOLD }
     )
   })

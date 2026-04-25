@@ -1,4 +1,5 @@
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
+import type { RootPathRef } from '@domain/ports'
 import { createTypedHandler } from './create-typed-handler'
 
 /**
@@ -7,9 +8,9 @@ import { createTypedHandler } from './create-typed-handler'
  */
 export function registerReconcileController(
   reconcileDirectory: IReconcileDirectory,
-  rootPath: string
+  rootPath: RootPathRef
 ): void {
   createTypedHandler('reconcile', async () => {
-    return reconcileDirectory.execute(rootPath)
+    return reconcileDirectory.execute(rootPath.value)
   })
 }

@@ -138,9 +138,10 @@ export class SqliteVideoRepository implements IVideoRepository {
       .update(videos)
       .set({
         filePath: sql`replace(${videos.filePath}, ${oldPrefix}, ${newPrefix})`,
-        thumbnailPath: sql`replace(${videos.thumbnailPath}, ${oldPrefix}, ${newPrefix})`,
+        thumbnailPath: sql`CASE WHEN ${videos.thumbnailPath} IS NOT NULL THEN replace(${videos.thumbnailPath}, ${oldPrefix}, ${newPrefix}) ELSE NULL END`,
         updatedAt: new Date().toISOString()
       })
+      .where(sql`${videos.filePath} LIKE ${oldPrefix + '%'}`)
       .run()
   }
 

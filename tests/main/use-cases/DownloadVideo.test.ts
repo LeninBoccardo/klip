@@ -195,7 +195,7 @@ describe('DownloadVideo', () => {
       fsWriter,
       notifier,
       idGenerator,
-      ROOT
+      { value: ROOT }
     )
   })
 

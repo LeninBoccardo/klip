@@ -96,7 +96,7 @@ app.whenReady().then(() => {
   console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
 
   // ── Register IPC controllers ──
-  registerReconcileController(container.useCases.reconcile, rootPath)
+  registerReconcileController(container.useCases.reconcile, container.rootPathRef)
   registerDownloadController(
     container.useCases.fetchVideoInfo,
     container.useCases.downloadVideo,

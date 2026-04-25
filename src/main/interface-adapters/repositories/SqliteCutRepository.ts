@@ -227,9 +227,10 @@ export class SqliteCutRepository implements ICutRepository {
       .update(cuts)
       .set({
         filePath: sql`replace(${cuts.filePath}, ${oldPrefix}, ${newPrefix})`,
-        thumbnailPath: sql`replace(${cuts.thumbnailPath}, ${oldPrefix}, ${newPrefix})`,
+        thumbnailPath: sql`CASE WHEN ${cuts.thumbnailPath} IS NOT NULL THEN replace(${cuts.thumbnailPath}, ${oldPrefix}, ${newPrefix}) ELSE NULL END`,
         updatedAt: new Date().toISOString()
       })
+      .where(sql`${cuts.filePath} LIKE ${oldPrefix + '%'}`)
       .run()
   }
 
