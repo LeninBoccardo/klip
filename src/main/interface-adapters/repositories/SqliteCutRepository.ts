@@ -223,11 +223,13 @@ export class SqliteCutRepository implements ICutRepository {
   }
 
   updateFilePathPrefix(oldPrefix: string, newPrefix: string): void {
+    // Anchored prefix replacement via substr() — `replace()` is global and would
+    // rewrite mid-path occurrences of oldPrefix as well.
     this.db
       .update(cuts)
       .set({
-        filePath: sql`replace(${cuts.filePath}, ${oldPrefix}, ${newPrefix})`,
-        thumbnailPath: sql`CASE WHEN ${cuts.thumbnailPath} IS NOT NULL THEN replace(${cuts.thumbnailPath}, ${oldPrefix}, ${newPrefix}) ELSE NULL END`,
+        filePath: sql`${newPrefix} || substr(${cuts.filePath}, length(${oldPrefix}) + 1)`,
+        thumbnailPath: sql`CASE WHEN ${cuts.thumbnailPath} IS NOT NULL AND substr(${cuts.thumbnailPath}, 1, length(${oldPrefix})) = ${oldPrefix} THEN ${newPrefix} || substr(${cuts.thumbnailPath}, length(${oldPrefix}) + 1) ELSE ${cuts.thumbnailPath} END`,
         updatedAt: new Date().toISOString()
       })
       .where(sql`${cuts.filePath} LIKE ${oldPrefix + '%'}`)

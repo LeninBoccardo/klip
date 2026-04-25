@@ -543,5 +543,48 @@ describe('SqliteCutRepository', () => {
       expect(c.filePath).toBe('/new/root/test.mp4')
       expect(c.thumbnailPath).toBeNull()
     })
+
+    it('only replaces the leading prefix when oldPrefix appears mid-path', () => {
+      cutRepo.upsert(
+        makeCut({
+          id: 'c-collide',
+          filePath: '/old/root/creator-1/old/root-thing/cut.mp4',
+          thumbnailPath: '/old/root/creator-1/old/root-thing/thumb.png'
+        })
+      )
+
+      cutRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const c = cutRepo.findById('c-collide')!
+      expect(c.filePath).toBe('/new/root/creator-1/old/root-thing/cut.mp4')
+      expect(c.thumbnailPath).toBe('/new/root/creator-1/old/root-thing/thumb.png')
+    })
+
+    it('leaves rows whose filePath does not start with oldPrefix untouched', () => {
+      cutRepo.upsert(
+        makeCut({
+          id: 'c-match',
+          filePath: '/old/root/creator-1/cuts/c-match/cut.mp4',
+          thumbnailPath: '/old/root/creator-1/cuts/c-match/thumb.png'
+        })
+      )
+      cutRepo.upsert(
+        makeCut({
+          id: 'c-other',
+          filePath: '/some/other/path/cut.mp4',
+          thumbnailPath: '/some/other/path/thumb.png'
+        })
+      )
+
+      cutRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const matched = cutRepo.findById('c-match')!
+      expect(matched.filePath).toBe('/new/root/creator-1/cuts/c-match/cut.mp4')
+      expect(matched.thumbnailPath).toBe('/new/root/creator-1/cuts/c-match/thumb.png')
+
+      const other = cutRepo.findById('c-other')!
+      expect(other.filePath).toBe('/some/other/path/cut.mp4')
+      expect(other.thumbnailPath).toBe('/some/other/path/thumb.png')
+    })
   })
 })

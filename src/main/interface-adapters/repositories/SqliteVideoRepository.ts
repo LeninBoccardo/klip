@@ -134,11 +134,13 @@ export class SqliteVideoRepository implements IVideoRepository {
   }
 
   updateFilePathPrefix(oldPrefix: string, newPrefix: string): void {
+    // Anchored prefix replacement via substr() — `replace()` is global and would
+    // rewrite mid-path occurrences of oldPrefix as well.
     this.db
       .update(videos)
       .set({
-        filePath: sql`replace(${videos.filePath}, ${oldPrefix}, ${newPrefix})`,
-        thumbnailPath: sql`CASE WHEN ${videos.thumbnailPath} IS NOT NULL THEN replace(${videos.thumbnailPath}, ${oldPrefix}, ${newPrefix}) ELSE NULL END`,
+        filePath: sql`${newPrefix} || substr(${videos.filePath}, length(${oldPrefix}) + 1)`,
+        thumbnailPath: sql`CASE WHEN ${videos.thumbnailPath} IS NOT NULL AND substr(${videos.thumbnailPath}, 1, length(${oldPrefix})) = ${oldPrefix} THEN ${newPrefix} || substr(${videos.thumbnailPath}, length(${oldPrefix}) + 1) ELSE ${videos.thumbnailPath} END`,
         updatedAt: new Date().toISOString()
       })
       .where(sql`${videos.filePath} LIKE ${oldPrefix + '%'}`)

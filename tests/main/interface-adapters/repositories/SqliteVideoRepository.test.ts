@@ -410,5 +410,51 @@ describe('SqliteVideoRepository', () => {
       expect(v.filePath).toBe('/new/root/test.mp4')
       expect(v.thumbnailPath).toBeNull()
     })
+
+    it('only replaces the leading prefix when oldPrefix appears mid-path', () => {
+      creatorRepo.upsert(makeCreator())
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v-collide',
+          filePath: '/old/root/creator-1/old/root-thing/video.mp4',
+          thumbnailPath: '/old/root/creator-1/old/root-thing/thumb.jpg'
+        })
+      )
+
+      videoRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const v = videoRepo.findById('v-collide')!
+      // Only the leading "/old/root" is rewritten; the second occurrence stays.
+      expect(v.filePath).toBe('/new/root/creator-1/old/root-thing/video.mp4')
+      expect(v.thumbnailPath).toBe('/new/root/creator-1/old/root-thing/thumb.jpg')
+    })
+
+    it('leaves rows whose filePath does not start with oldPrefix untouched', () => {
+      creatorRepo.upsert(makeCreator())
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v-match',
+          filePath: '/old/root/creator-1/downloads/v-match/video.mp4',
+          thumbnailPath: '/old/root/creator-1/downloads/v-match/thumb.jpg'
+        })
+      )
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v-other',
+          filePath: '/some/other/path/video.mp4',
+          thumbnailPath: '/some/other/path/thumb.jpg'
+        })
+      )
+
+      videoRepo.updateFilePathPrefix('/old/root', '/new/root')
+
+      const matched = videoRepo.findById('v-match')!
+      expect(matched.filePath).toBe('/new/root/creator-1/downloads/v-match/video.mp4')
+      expect(matched.thumbnailPath).toBe('/new/root/creator-1/downloads/v-match/thumb.jpg')
+
+      const other = videoRepo.findById('v-other')!
+      expect(other.filePath).toBe('/some/other/path/video.mp4')
+      expect(other.thumbnailPath).toBe('/some/other/path/thumb.jpg')
+    })
   })
 })
