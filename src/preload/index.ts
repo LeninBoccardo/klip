@@ -27,6 +27,9 @@ const api = {
   getVideoById: createTypedInvoker('get-video-by-id'),
   deleteVideo: createTypedInvoker('delete-video'),
   restoreVideo: createTypedInvoker('restore-video'),
+  fetchVideoDetail: createTypedInvoker('fetch-video-detail'),
+  enrichAllVideos: createTypedInvoker('enrich-all-videos'),
+  getTranscript: createTypedInvoker('get-transcript'),
 
   // ── Cuts ──
   getCutsPaginated: createTypedInvoker('get-cuts-paginated'),

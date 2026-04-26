@@ -75,6 +75,16 @@ function pushSchema(db: AppDatabase): void {
       download_date TEXT,
       probe_status TEXT NOT NULL DEFAULT 'pending',
       view_count INTEGER,
+      like_count INTEGER,
+      dislike_count INTEGER,
+      comment_count INTEGER,
+      category TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
+      upload_date TEXT,
+      description TEXT,
+      is_short INTEGER NOT NULL DEFAULT 0,
+      transcript_path TEXT,
+      detail_fetched_at TEXT,
       status TEXT NOT NULL DEFAULT 'active',
       deleted_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -142,6 +152,7 @@ function pushSchema(db: AppDatabase): void {
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_creator_id ON videos(creator_id)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status_created ON videos(status, created_at)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_detail_fetched ON videos(detail_fetched_at)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_cuts_creator_id ON cuts(creator_id)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_cuts_video_id ON cuts(video_id)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_cuts_status ON cuts(status)`)

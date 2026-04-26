@@ -85,7 +85,8 @@ function mockVideoRepo(overrides: Partial<IVideoRepository> = {}): IVideoReposit
 
 function mockPathResolver(): IPathResolver {
   return {
-    join: vi.fn((...segments: string[]) => segments.join('/'))
+    join: vi.fn((...segments: string[]) => segments.join('/')),
+    dirname: vi.fn((p: string) => p.split('/').slice(0, -1).join('/') || '/')
   }
 }
 

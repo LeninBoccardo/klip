@@ -15,6 +15,8 @@ const SORT_COLUMNS: Record<string, SQLiteColumn> = {
   duration: videos.duration,
   fileSize: videos.fileSize,
   viewCount: videos.viewCount,
+  likeCount: videos.likeCount,
+  uploadDate: videos.uploadDate,
   downloadDate: videos.downloadDate,
   status: videos.status,
   createdAt: videos.createdAt,
@@ -25,7 +27,19 @@ const DEFAULT_SORT_COLUMN = videos.createdAt
 type VideoRow = typeof videos.$inferSelect
 
 function mapRow(row: VideoRow): Video {
-  return { ...row, status: row.status as EntityStatus, probeStatus: row.probeStatus as ProbeStatus }
+  let parsedTags: string[] = []
+  try {
+    const t = JSON.parse((row.tags as string) ?? '[]')
+    if (Array.isArray(t)) parsedTags = t.filter((x): x is string => typeof x === 'string')
+  } catch {
+    parsedTags = []
+  }
+  return {
+    ...row,
+    tags: parsedTags,
+    status: row.status as EntityStatus,
+    probeStatus: row.probeStatus as ProbeStatus
+  }
 }
 
 export class SqliteVideoRepository implements IVideoRepository {
@@ -86,6 +100,16 @@ export class SqliteVideoRepository implements IVideoRepository {
         downloadDate: video.downloadDate,
         probeStatus: video.probeStatus,
         viewCount: video.viewCount,
+        likeCount: video.likeCount,
+        dislikeCount: video.dislikeCount,
+        commentCount: video.commentCount,
+        category: video.category,
+        tags: JSON.stringify(video.tags ?? []),
+        uploadDate: video.uploadDate,
+        description: video.description,
+        isShort: video.isShort,
+        transcriptPath: video.transcriptPath,
+        detailFetchedAt: video.detailFetchedAt,
         status: video.status,
         deletedAt: video.deletedAt,
         createdAt: video.createdAt,
@@ -105,12 +129,42 @@ export class SqliteVideoRepository implements IVideoRepository {
           downloadDate: sql`excluded.download_date`,
           probeStatus: sql`excluded.probe_status`,
           viewCount: sql`excluded.view_count`,
+          likeCount: sql`excluded.like_count`,
+          dislikeCount: sql`excluded.dislike_count`,
+          commentCount: sql`excluded.comment_count`,
+          category: sql`excluded.category`,
+          tags: sql`excluded.tags`,
+          uploadDate: sql`excluded.upload_date`,
+          description: sql`excluded.description`,
+          isShort: sql`excluded.is_short`,
+          transcriptPath: sql`excluded.transcript_path`,
+          detailFetchedAt: sql`excluded.detail_fetched_at`,
           status: sql`excluded.status`,
           deletedAt: sql`excluded.deleted_at`,
           updatedAt: sql`excluded.updated_at`
         }
       })
       .run()
+  }
+
+  /**
+   * Returns videos that have a YouTube URL but have not had detail metadata
+   * fetched yet (detail_fetched_at IS NULL). Used by EnrichAllVideos.
+   */
+  findNeedingDetail(): Video[] {
+    return this.db
+      .select()
+      .from(videos)
+      .where(
+        and(
+          eq(videos.status, 'active'),
+          sql`${videos.url} IS NOT NULL`,
+          sql`${videos.detailFetchedAt} IS NULL`
+        )
+      )
+      .orderBy(asc(videos.createdAt))
+      .all()
+      .map(mapRow)
   }
 
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void {

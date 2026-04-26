@@ -24,6 +24,7 @@ function mockFsReader(overrides: Partial<IFileSystemReader> = {}): IFileSystemRe
     listDirectories: vi.fn().mockReturnValue([]),
     listFiles: vi.fn().mockReturnValue([]),
     readJsonFile: vi.fn().mockReturnValue(null),
+    readTextFile: vi.fn().mockReturnValue(null),
     ...overrides
   }
 }

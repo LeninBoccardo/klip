@@ -59,6 +59,16 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     downloadDate: null,
     probeStatus: 'complete',
     viewCount: null,
+    likeCount: null,
+    dislikeCount: null,
+    commentCount: null,
+    category: null,
+    tags: [],
+    uploadDate: null,
+    description: null,
+    isShort: false,
+    transcriptPath: null,
+    detailFetchedAt: null,
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-02T00:00:00.000Z',
@@ -128,7 +138,8 @@ describe('MigrateRootFolder (integration)', () => {
       fileExists: vi.fn().mockReturnValue(false),
       listDirectories: vi.fn().mockReturnValue(['creator-a']),
       listFiles: vi.fn().mockReturnValue([]),
-      readJsonFile: vi.fn().mockReturnValue(null)
+      readJsonFile: vi.fn().mockReturnValue(null),
+      readTextFile: vi.fn().mockReturnValue(null)
     }
     fsWriter = {
       ensureDirectory: vi.fn(),

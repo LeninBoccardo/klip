@@ -24,6 +24,9 @@ export const IpcChannels = {
   GetVideoById: 'get-video-by-id',
   DeleteVideo: 'delete-video',
   RestoreVideo: 'restore-video',
+  FetchVideoDetail: 'fetch-video-detail',
+  EnrichAllVideos: 'enrich-all-videos',
+  GetTranscript: 'get-transcript',
 
   // ── Cuts ──
   GetCutsPaginated: 'get-cuts-paginated',

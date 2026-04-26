@@ -10,7 +10,9 @@ import type {
   PaginationParams,
   PaginatedResult,
   VideoQueryParams,
-  CutQueryParams
+  CutQueryParams,
+  VideoDetailWithTranscript,
+  EnrichVideosResult
 } from './types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
 
@@ -48,6 +50,9 @@ export interface IpcContract {
   'get-video-by-id': { params: [id: string]; result: VideoDto | null }
   'delete-video': { params: [id: string]; result: void }
   'restore-video': { params: [id: string]; result: void }
+  'fetch-video-detail': { params: [videoId: string]; result: VideoDetailWithTranscript }
+  'enrich-all-videos': { params: []; result: EnrichVideosResult }
+  'get-transcript': { params: [videoId: string]; result: string | null }
 
   // ── Cuts ──
   'get-cuts-paginated': {

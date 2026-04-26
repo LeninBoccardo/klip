@@ -34,6 +34,10 @@ export class AuditedVideoRepository implements IVideoRepository {
     return this.inner.findByProbeStatus(status)
   }
 
+  findNeedingDetail(): Video[] {
+    return this.inner.findNeedingDetail()
+  }
+
   upsert(video: Video): void {
     const existing = this.inner.findById(video.id)
     this.inner.upsert(video)

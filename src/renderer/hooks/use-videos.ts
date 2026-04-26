@@ -32,3 +32,30 @@ export function useRestoreVideo() {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.videos.all })
   })
 }
+
+export function useFetchVideoDetail() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (videoId: string) => window.api.fetchVideoDetail(videoId),
+    onSuccess: (_, videoId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.videos.detail(videoId) })
+      qc.invalidateQueries({ queryKey: queryKeys.videos.transcript(videoId) })
+    }
+  })
+}
+
+export function useEnrichAllVideos() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => window.api.enrichAllVideos(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.videos.all })
+  })
+}
+
+export function useTranscript(videoId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.videos.transcript(videoId!),
+    queryFn: () => window.api.getTranscript(videoId!),
+    enabled: !!videoId
+  })
+}

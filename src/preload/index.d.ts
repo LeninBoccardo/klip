@@ -11,7 +11,9 @@ import type {
   PaginationParams,
   PaginatedResult,
   VideoQueryParams,
-  CutQueryParams
+  CutQueryParams,
+  VideoDetailWithTranscript,
+  EnrichVideosResult
 } from '@shared/types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from '@shared/dtos'
 
@@ -37,6 +39,9 @@ interface KlipAPI {
   getVideoById(id: string): Promise<VideoDto | null>
   deleteVideo(id: string): Promise<void>
   restoreVideo(id: string): Promise<void>
+  fetchVideoDetail(videoId: string): Promise<VideoDetailWithTranscript>
+  enrichAllVideos(): Promise<EnrichVideosResult>
+  getTranscript(videoId: string): Promise<string | null>
 
   // ── Cuts ──
   getCutsPaginated(params: CutQueryParams): Promise<PaginatedResult<CutDto>>

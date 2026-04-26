@@ -38,6 +38,16 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     downloadDate: null,
     probeStatus: 'pending',
     viewCount: null,
+    likeCount: null,
+    dislikeCount: null,
+    commentCount: null,
+    category: null,
+    tags: [],
+    uploadDate: null,
+    description: null,
+    isShort: false,
+    transcriptPath: null,
+    detailFetchedAt: null,
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -124,13 +134,15 @@ function mockFs(overrides: Partial<IFileSystemReader> = {}): IFileSystemReader {
     listDirectories: vi.fn().mockReturnValue([]),
     listFiles: vi.fn().mockReturnValue([]),
     readJsonFile: vi.fn().mockReturnValue(null),
+    readTextFile: vi.fn().mockReturnValue(null),
     ...overrides
   }
 }
 
 function mockPath(): IPathResolver {
   return {
-    join: vi.fn((...segments: string[]) => segments.join('/'))
+    join: vi.fn((...segments: string[]) => segments.join('/')),
+    dirname: vi.fn((p: string) => p.split('/').slice(0, -1).join('/') || '/')
   }
 }
 

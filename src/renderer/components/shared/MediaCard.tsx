@@ -13,6 +13,8 @@ interface MediaCardProps {
   duration: number | null
   resolution: string | null
   fileSize: number | null
+  /** When true, render a small "Short" overlay badge on the thumbnail */
+  isShort?: boolean
   onClick?: () => void
   className?: string
   /** Slot for a context menu wrapper or extra overlay */
@@ -26,6 +28,7 @@ export function MediaCard({
   duration,
   resolution,
   fileSize,
+  isShort,
   onClick,
   className,
   children
@@ -52,6 +55,11 @@ export function MediaCard({
         {duration != null && (
           <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
             {formatDuration(duration)}
+          </span>
+        )}
+        {isShort && (
+          <span className="absolute top-1 left-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+            Short
           </span>
         )}
       </AspectRatio>

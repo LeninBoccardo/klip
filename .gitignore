@@ -1,6 +1,11 @@
 node_modules
 dist
 out
+.vscode
+.idea
+.tanstack
+build
+*.tsbuildinfo
 .DS_Store
 .eslintcache
 *.log*

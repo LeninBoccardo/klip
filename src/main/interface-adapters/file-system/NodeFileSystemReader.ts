@@ -51,4 +51,12 @@ export class NodeFileSystemReader implements IFileSystemReader {
       return null
     }
   }
+
+  readTextFile(filePath: string): string | null {
+    try {
+      return readFileSync(filePath, 'utf-8')
+    } catch {
+      return null
+    }
+  }
 }

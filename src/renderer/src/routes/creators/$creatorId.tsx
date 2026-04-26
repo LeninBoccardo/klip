@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useCreatorById } from '@/hooks/use-creators'
 import { useVideosPaginated, useDeleteVideo, useRestoreVideo } from '@/hooks/use-videos'
@@ -66,6 +66,7 @@ function CreatorDetailPage() {
 }
 
 function VideosTab({ creatorId }: { creatorId: string }) {
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const { data, isLoading } = useVideosPaginated({ page, pageSize: 20, creatorId })
   const deleteVideo = useDeleteVideo()
@@ -122,6 +123,13 @@ function VideosTab({ creatorId }: { creatorId: string }) {
               duration={video.duration}
               resolution={video.resolution}
               fileSize={video.fileSize}
+              isShort={video.isShort}
+              onClick={() =>
+                navigate({
+                  to: '/videos/$videoId',
+                  params: { videoId: video.id }
+                })
+              }
             />
           </EntityContextMenu>
         ))}

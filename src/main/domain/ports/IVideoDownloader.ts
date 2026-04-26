@@ -1,4 +1,5 @@
 import type { DownloadProgress, DownloadResult, VideoInfo, ChannelInfo } from '@domain/types'
+import type { VideoDetail } from '@shared/types'
 
 /** Options passed to the download method */
 export interface DownloadOptions {
@@ -20,6 +21,19 @@ export interface IVideoDownloader {
 
   /** Fetch channel-level metadata from a channel/handle URL */
   fetchChannelInfo(channelUrl: string): Promise<ChannelInfo>
+
+  /**
+   * Fetch extended per-video metadata (likes, comments, category, tags,
+   * description, isShort, etc.) without downloading the media file.
+   */
+  fetchVideoDetail(url: string): Promise<Omit<VideoDetail, 'hasTranscript' | 'transcriptPath'>>
+
+  /**
+   * Fetch the auto-generated transcript for a video.
+   * Writes a `.vtt` file to `outputDir` and returns its path, or null if no
+   * auto-subtitles are available for the requested language.
+   */
+  fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string | null>
 
   /** Download a video to the given output directory, streaming progress */
   download(

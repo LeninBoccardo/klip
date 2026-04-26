@@ -5,6 +5,7 @@ import { useAppStore } from '@/hooks/use-app-store'
 import { RootPathDisplay } from '@components/features/settings/RootPathDisplay'
 import { MigrateRootButton } from '@components/features/settings/MigrateRootButton'
 import { ReconcileButton } from '@components/features/settings/ReconcileButton'
+import { EnrichVideosButton } from '@components/features/settings/EnrichVideosButton'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
@@ -49,6 +50,18 @@ function SettingsPage() {
         </CardHeader>
         <CardContent>
           <ReconcileButton disabled={isBlocking} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Metadata Enrichment</CardTitle>
+          <CardDescription>
+            Fetch extended metadata (likes, comments, transcripts) for indexed videos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EnrichVideosButton disabled={isBlocking} />
         </CardContent>
       </Card>
 

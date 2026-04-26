@@ -64,7 +64,8 @@ function createMocks() {
     fileExists: vi.fn(),
     listDirectories: vi.fn().mockReturnValue(['creator-a', 'creator-b', 'creator-c']),
     listFiles: vi.fn().mockReturnValue([]),
-    readJsonFile: vi.fn()
+    readJsonFile: vi.fn(),
+    readTextFile: vi.fn()
   }
   const fsWriter: IFileSystemWriter = {
     ensureDirectory: vi.fn(),
@@ -74,7 +75,8 @@ function createMocks() {
     isDirectoryEmpty: vi.fn().mockReturnValue(true)
   }
   const pathResolver: IPathResolver = {
-    join: vi.fn((...segments: string[]) => join(...segments))
+    join: vi.fn((...segments: string[]) => join(...segments)),
+    dirname: vi.fn((p: string) => p.split('/').slice(0, -1).join('/') || '/')
   }
   const fileWatcher: IFileWatcher = {
     start: vi.fn(),

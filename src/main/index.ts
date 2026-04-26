@@ -104,7 +104,12 @@ app.whenReady().then(() => {
     container.useCases.fetchChannelInfo
   )
   registerCreatorController(container.repositories.creator)
-  registerVideoController(container.repositories.video)
+  registerVideoController(
+    container.repositories.video,
+    container.useCases.fetchVideoDetail,
+    container.useCases.enrichAllVideos,
+    container.ports.fsReader
+  )
   registerCutController(container.repositories.cut)
   registerSettingsController(container.repositories.settings, container.useCases.migrateRootFolder)
   registerAuditLogController(container.repositories.auditLog)

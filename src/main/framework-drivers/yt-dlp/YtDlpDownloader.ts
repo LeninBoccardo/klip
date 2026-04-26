@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { IBinaryResolver, IVideoDownloader, DownloadOptions } from '@domain/ports'
 import type { ChannelInfo, DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
+import type { VideoDetail } from '@shared/types'
 
 /**
  * yt-dlp–backed implementation of IVideoDownloader.
@@ -116,6 +117,134 @@ export class YtDlpDownloader implements IVideoDownloader {
 
       proc.on('error', (err) => {
         reject(new Error(`yt-dlp fetchChannelInfo: failed to spawn: ${err.message}`))
+      })
+    })
+  }
+
+  // ── fetchVideoDetail ──
+
+  async fetchVideoDetail(
+    url: string
+  ): Promise<Omit<VideoDetail, 'hasTranscript' | 'transcriptPath'>> {
+    const bin = this.binaryResolver.resolve('yt-dlp')
+
+    return new Promise((resolve, reject) => {
+      const args = ['--dump-json', '--no-download', '--no-warnings', url]
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+
+      let stdout = ''
+      let stderr = ''
+
+      proc.stdout.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString()
+      })
+      proc.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString()
+      })
+
+      proc.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`yt-dlp fetchVideoDetail failed (code ${code}): ${stderr.trim()}`))
+          return
+        }
+        try {
+          const json = JSON.parse(stdout)
+          const tags: string[] = Array.isArray(json.tags)
+            ? json.tags.filter((t: unknown): t is string => typeof t === 'string')
+            : []
+          const categories: string[] = Array.isArray(json.categories) ? json.categories : []
+          const duration = typeof json.duration === 'number' ? json.duration : null
+          const width = typeof json.width === 'number' ? json.width : null
+          const height = typeof json.height === 'number' ? json.height : null
+          // YouTube Shorts: ≤ 60s and vertical aspect ratio
+          const isShort = duration !== null && duration <= 60 && height !== null && width !== null && height > width
+          // Normalize "20240315" → "2024-03-15"
+          const uploadDate =
+            typeof json.upload_date === 'string' && /^\d{8}$/.test(json.upload_date)
+              ? `${json.upload_date.slice(0, 4)}-${json.upload_date.slice(4, 6)}-${json.upload_date.slice(6, 8)}`
+              : (json.upload_date ?? null)
+
+          resolve({
+            videoId: json.id ?? '',
+            likeCount: json.like_count ?? null,
+            dislikeCount: json.dislike_count ?? null,
+            commentCount: json.comment_count ?? null,
+            viewCount: json.view_count ?? null,
+            category: categories[0] ?? null,
+            tags,
+            uploadDate,
+            description: json.description ?? null,
+            isShort
+          })
+        } catch (e) {
+          reject(new Error(`yt-dlp fetchVideoDetail: failed to parse JSON: ${e}`))
+        }
+      })
+
+      proc.on('error', (err) => {
+        reject(new Error(`yt-dlp fetchVideoDetail: failed to spawn: ${err.message}`))
+      })
+    })
+  }
+
+  // ── fetchTranscript ──
+
+  async fetchTranscript(
+    url: string,
+    outputDir: string,
+    lang: string = 'en'
+  ): Promise<string | null> {
+    const bin = this.binaryResolver.resolve('yt-dlp')
+    const outputTemplate = join(outputDir, 'transcript')
+
+    return new Promise((resolve, reject) => {
+      const args = [
+        '--write-auto-subs',
+        '--sub-langs',
+        lang,
+        '--sub-format',
+        'vtt',
+        '--skip-download',
+        '--no-warnings',
+        '-o',
+        outputTemplate,
+        url
+      ]
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+
+      let stderr = ''
+      proc.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString()
+      })
+
+      proc.on('close', (code) => {
+        if (code !== 0) {
+          // yt-dlp returns non-zero when no subs available; treat as null rather than throw
+          if (stderr.includes('There are no subtitles')) {
+            resolve(null)
+            return
+          }
+          reject(new Error(`yt-dlp fetchTranscript failed (code ${code}): ${stderr.trim()}`))
+          return
+        }
+
+        // yt-dlp writes <template>.<lang>.vtt
+        try {
+          const candidates = readdirSync(outputDir).filter(
+            (f) => f.startsWith('transcript.') && f.endsWith('.vtt')
+          )
+          if (candidates.length === 0) {
+            resolve(null)
+            return
+          }
+          resolve(join(outputDir, candidates[0]))
+        } catch (e) {
+          reject(new Error(`yt-dlp fetchTranscript: failed to locate output: ${e}`))
+        }
+      })
+
+      proc.on('error', (err) => {
+        reject(new Error(`yt-dlp fetchTranscript: failed to spawn: ${err.message}`))
       })
     })
   }

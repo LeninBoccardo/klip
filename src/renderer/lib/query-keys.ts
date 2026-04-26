@@ -9,7 +9,8 @@ export const queryKeys = {
   videos: {
     all: ['videos'] as const,
     list: (params: VideoQueryParams) => ['videos', 'list', params] as const,
-    detail: (id: string) => ['videos', 'detail', id] as const
+    detail: (id: string) => ['videos', 'detail', id] as const,
+    transcript: (id: string) => ['videos', 'transcript', id] as const
   },
   cuts: {
     all: ['cuts'] as const,

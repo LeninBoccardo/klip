@@ -13,32 +13,38 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as VideosVideoIdRouteImport } from './routes/videos.$videoId'
 import { Route as CreatorsCreatorIdRouteImport } from './routes/creators/$creatorId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DownloadsRoute = DownloadsRouteImport.update({
   id: '/downloads',
   path: '/downloads',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VideosVideoIdRoute = VideosVideoIdRouteImport.update({
+  id: '/videos/$videoId',
+  path: '/videos/$videoId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CreatorsCreatorIdRoute = CreatorsCreatorIdRouteImport.update({
   id: '/creators/$creatorId',
   path: '/creators/$creatorId',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/downloads': typeof DownloadsRoute
   '/settings': typeof SettingsRoute
   '/creators/$creatorId': typeof CreatorsCreatorIdRoute
+  '/videos/$videoId': typeof VideosVideoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/downloads': typeof DownloadsRoute
   '/settings': typeof SettingsRoute
   '/creators/$creatorId': typeof CreatorsCreatorIdRoute
+  '/videos/$videoId': typeof VideosVideoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/downloads': typeof DownloadsRoute
   '/settings': typeof SettingsRoute
   '/creators/$creatorId': typeof CreatorsCreatorIdRoute
+  '/videos/$videoId': typeof VideosVideoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/downloads'
+    | '/settings'
+    | '/creators/$creatorId'
+    | '/videos/$videoId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
-  id: '__root__' | '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId'
+  to:
+    | '/'
+    | '/about'
+    | '/downloads'
+    | '/settings'
+    | '/creators/$creatorId'
+    | '/videos/$videoId'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/downloads'
+    | '/settings'
+    | '/creators/$creatorId'
+    | '/videos/$videoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   DownloadsRoute: typeof DownloadsRoute
   SettingsRoute: typeof SettingsRoute
   CreatorsCreatorIdRoute: typeof CreatorsCreatorIdRoute
+  VideosVideoIdRoute: typeof VideosVideoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -109,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/videos/$videoId': {
+      id: '/videos/$videoId'
+      path: '/videos/$videoId'
+      fullPath: '/videos/$videoId'
+      preLoaderRoute: typeof VideosVideoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/creators/$creatorId': {
       id: '/creators/$creatorId'
       path: '/creators/$creatorId'
@@ -124,7 +160,8 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   DownloadsRoute: DownloadsRoute,
   SettingsRoute: SettingsRoute,
-  CreatorsCreatorIdRoute: CreatorsCreatorIdRoute
+  CreatorsCreatorIdRoute: CreatorsCreatorIdRoute,
+  VideosVideoIdRoute: VideosVideoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

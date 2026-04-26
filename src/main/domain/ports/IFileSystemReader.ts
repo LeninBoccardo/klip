@@ -17,4 +17,7 @@ export interface IFileSystemReader {
 
   /** Reads a JSON file and returns the parsed object, or null if missing/malformed */
   readJsonFile<T = unknown>(filePath: string): T | null
+
+  /** Reads a UTF-8 text file and returns its contents, or null if missing/unreadable */
+  readTextFile(filePath: string): string | null
 }

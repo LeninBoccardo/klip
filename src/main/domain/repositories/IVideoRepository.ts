@@ -10,6 +10,8 @@ export interface IVideoRepository {
   findById(id: string): Video | null
   findByCreatorId(creatorId: string): Video[]
   findByProbeStatus(status: ProbeStatus): Video[]
+  /** Active videos with a URL but detail metadata never fetched (detailFetchedAt IS NULL) */
+  findNeedingDetail(): Video[]
   upsert(video: Video): void
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void

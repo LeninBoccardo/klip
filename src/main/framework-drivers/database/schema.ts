@@ -46,6 +46,16 @@ export const videos = sqliteTable(
     downloadDate: text('download_date'),
     probeStatus: text('probe_status').notNull().default('pending'),
     viewCount: integer('view_count'),
+    likeCount: integer('like_count'),
+    dislikeCount: integer('dislike_count'),
+    commentCount: integer('comment_count'),
+    category: text('category'),
+    tags: text('tags').notNull().default('[]'),
+    uploadDate: text('upload_date'),
+    description: text('description'),
+    isShort: integer('is_short', { mode: 'boolean' }).notNull().default(false),
+    transcriptPath: text('transcript_path'),
+    detailFetchedAt: text('detail_fetched_at'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),
     createdAt: text('created_at')
@@ -58,7 +68,8 @@ export const videos = sqliteTable(
   (table) => [
     index('idx_videos_creator_id').on(table.creatorId),
     index('idx_videos_status').on(table.status),
-    index('idx_videos_status_created').on(table.status, table.createdAt)
+    index('idx_videos_status_created').on(table.status, table.createdAt),
+    index('idx_videos_detail_fetched').on(table.detailFetchedAt)
   ]
 )
 

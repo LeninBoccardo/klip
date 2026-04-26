@@ -27,6 +27,8 @@ import type { IRecoverOperations } from '@use-cases/IRecoverOperations'
 import type { IEnrichMediaMetadata } from '@use-cases/IEnrichMediaMetadata'
 import type { IFetchChannelInfo } from '@use-cases/IFetchChannelInfo'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
+import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
+import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -61,6 +63,8 @@ import { RecoverOperations } from '@use-cases/RecoverOperations'
 import { EnrichMediaMetadata } from '@use-cases/EnrichMediaMetadata'
 import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
 import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
+import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
+import { EnrichAllVideos } from '@use-cases/EnrichAllVideos'
 
 /**
  * Application dependency container.
@@ -99,6 +103,8 @@ export interface AppContainer {
     enrichMedia: IEnrichMediaMetadata
     fetchChannelInfo: IFetchChannelInfo
     migrateRootFolder: IMigrateRootFolder
+    fetchVideoDetail: IFetchVideoDetail
+    enrichAllVideos: IEnrichAllVideos
   }
   services: {
     fileWatcher: IFileWatcher
@@ -195,6 +201,15 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const fileWatcher = new ChokidarWatcher(config.rootPath)
   fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
 
+  const fetchVideoDetail = new FetchVideoDetail(videoRepo, videoDownloader, fsReader, pathResolver)
+
+  const enrichAllVideos = new EnrichAllVideos(
+    videoRepo,
+    fetchVideoDetail,
+    downloadQueue,
+    notifier
+  )
+
   const migrateRootFolder = new MigrateRootFolder(
     operationRepo,
     settingsRepo,
@@ -243,7 +258,9 @@ export function createAppContainer(config: AppConfig): AppContainer {
       recoverOperations,
       enrichMedia,
       fetchChannelInfo,
-      migrateRootFolder
+      migrateRootFolder,
+      fetchVideoDetail,
+      enrichAllVideos
     },
     services: {
       fileWatcher
