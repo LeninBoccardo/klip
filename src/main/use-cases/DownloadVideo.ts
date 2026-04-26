@@ -93,7 +93,12 @@ export class DownloadVideo implements IDownloadVideo {
       this.ensureCreator(folderName, creatorName, info)
 
       // 4. Prepare output directory
-      const outputDir = this.pathResolver.join(this.rootPath.value, folderName, 'downloads', videoId)
+      const outputDir = this.pathResolver.join(
+        this.rootPath.value,
+        folderName,
+        'downloads',
+        videoId
+      )
       this.fsWriter.ensureDirectory(outputDir)
 
       // 5. Download with progress relay

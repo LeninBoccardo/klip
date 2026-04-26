@@ -12,7 +12,8 @@ import type {
   VideoQueryParams,
   CutQueryParams,
   VideoDetailWithTranscript,
-  EnrichVideosResult
+  EnrichVideosResult,
+  VideoCommentsResult
 } from './types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
 
@@ -53,6 +54,10 @@ export interface IpcContract {
   'fetch-video-detail': { params: [videoId: string]; result: VideoDetailWithTranscript }
   'enrich-all-videos': { params: []; result: EnrichVideosResult }
   'get-transcript': { params: [videoId: string]; result: string | null }
+  'fetch-video-comments': {
+    params: [videoId: string, maxComments?: number]
+    result: VideoCommentsResult
+  }
 
   // ── Cuts ──
   'get-cuts-paginated': {

@@ -54,17 +54,12 @@
       "indexes": {
         "idx_audit_log_entity": {
           "name": "idx_audit_log_entity",
-          "columns": [
-            "entity_type",
-            "entity_id"
-          ],
+          "columns": ["entity_type", "entity_id"],
           "isUnique": false
         },
         "idx_audit_log_created": {
           "name": "idx_audit_log_created",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -167,23 +162,17 @@
       "indexes": {
         "creators_folder_name_unique": {
           "name": "creators_folder_name_unique",
-          "columns": [
-            "folder_name"
-          ],
+          "columns": ["folder_name"],
           "isUnique": true
         },
         "idx_creators_status": {
           "name": "idx_creators_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "idx_creators_yt_channel_id": {
           "name": "idx_creators_yt_channel_id",
-          "columns": [
-            "youtube_channel_id"
-          ],
+          "columns": ["youtube_channel_id"],
           "isUnique": false
         }
       },
@@ -323,31 +312,22 @@
       "indexes": {
         "idx_cuts_creator_id": {
           "name": "idx_cuts_creator_id",
-          "columns": [
-            "creator_id"
-          ],
+          "columns": ["creator_id"],
           "isUnique": false
         },
         "idx_cuts_video_id": {
           "name": "idx_cuts_video_id",
-          "columns": [
-            "video_id"
-          ],
+          "columns": ["video_id"],
           "isUnique": false
         },
         "idx_cuts_status": {
           "name": "idx_cuts_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "idx_cuts_status_created": {
           "name": "idx_cuts_status_created",
-          "columns": [
-            "status",
-            "created_at"
-          ],
+          "columns": ["status", "created_at"],
           "isUnique": false
         }
       },
@@ -356,12 +336,8 @@
           "name": "cuts_creator_id_creators_id_fk",
           "tableFrom": "cuts",
           "tableTo": "creators",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -369,12 +345,8 @@
           "name": "cuts_video_id_videos_id_fk",
           "tableFrom": "cuts",
           "tableTo": "videos",
-          "columnsFrom": [
-            "video_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["video_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -449,9 +421,7 @@
       "indexes": {
         "idx_operations_status": {
           "name": "idx_operations_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },
@@ -687,31 +657,22 @@
       "indexes": {
         "idx_videos_creator_id": {
           "name": "idx_videos_creator_id",
-          "columns": [
-            "creator_id"
-          ],
+          "columns": ["creator_id"],
           "isUnique": false
         },
         "idx_videos_status": {
           "name": "idx_videos_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "idx_videos_status_created": {
           "name": "idx_videos_status_created",
-          "columns": [
-            "status",
-            "created_at"
-          ],
+          "columns": ["status", "created_at"],
           "isUnique": false
         },
         "idx_videos_detail_fetched": {
           "name": "idx_videos_detail_fetched",
-          "columns": [
-            "detail_fetched_at"
-          ],
+          "columns": ["detail_fetched_at"],
           "isUnique": false
         }
       },
@@ -720,12 +681,8 @@
           "name": "videos_creator_id_creators_id_fk",
           "tableFrom": "videos",
           "tableTo": "creators",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

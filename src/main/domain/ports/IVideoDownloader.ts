@@ -1,5 +1,5 @@
 import type { DownloadProgress, DownloadResult, VideoInfo, ChannelInfo } from '@domain/types'
-import type { VideoDetail } from '@shared/types'
+import type { VideoComment, VideoDetail } from '@shared/types'
 
 /** Options passed to the download method */
 export interface DownloadOptions {
@@ -34,6 +34,16 @@ export interface IVideoDownloader {
    * auto-subtitles are available for the requested language.
    */
   fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string | null>
+
+  /**
+   * Fetch top-level comments and replies for a video on demand.
+   * Capped at `maxComments` (default 500) to bound scraping time.
+   * `wasTruncated` is `true` when the cap was hit.
+   */
+  fetchComments(
+    url: string,
+    maxComments?: number
+  ): Promise<{ comments: VideoComment[]; wasTruncated: boolean }>
 
   /** Download a video to the given output directory, streaming progress */
   download(

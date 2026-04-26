@@ -9,22 +9,24 @@ import { Skeleton } from '@ui/skeleton'
 import { ScrollArea } from '@ui/scroll-area'
 import { AspectRatio } from '@ui/aspect-ratio'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
-import { Eye, ThumbsUp, ThumbsDown, MessageSquare, RefreshCw, Loader2, Film, Copy } from 'lucide-react'
+import {
+  Eye,
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
+  RefreshCw,
+  Loader2,
+  Film,
+  Copy
+} from 'lucide-react'
 import { toast } from 'sonner'
-import { formatDuration, formatFileSize, toMediaSrc } from '@/lib/format'
+import { formatDuration, formatFileSize, toMediaSrc, formatCount } from '@/lib/format'
 import { useState } from 'react'
+import { CommentsTab } from '@components/features/videos/CommentsTab'
 
 export const Route = createFileRoute('/videos/$videoId')({
   component: VideoDetailPage
 })
-
-function formatCount(n: number | null | undefined): string {
-  if (n == null) return '—'
-  if (n < 1000) return n.toString()
-  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}K`
-  if (n < 1_000_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  return `${(n / 1_000_000_000).toFixed(1)}B`
-}
 
 function VideoDetailPage() {
   const { videoId } = Route.useParams()
@@ -102,16 +104,33 @@ function VideoDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile icon={<Eye className="size-4" />} label="Views" value={formatCount(video.viewCount)} />
-        <StatTile icon={<ThumbsUp className="size-4" />} label="Likes" value={formatCount(video.likeCount)} />
-        <StatTile icon={<ThumbsDown className="size-4" />} label="Dislikes" value={formatCount(video.dislikeCount)} />
-        <StatTile icon={<MessageSquare className="size-4" />} label="Comments" value={formatCount(video.commentCount)} />
+        <StatTile
+          icon={<Eye className="size-4" />}
+          label="Views"
+          value={formatCount(video.viewCount)}
+        />
+        <StatTile
+          icon={<ThumbsUp className="size-4" />}
+          label="Likes"
+          value={formatCount(video.likeCount)}
+        />
+        <StatTile
+          icon={<ThumbsDown className="size-4" />}
+          label="Dislikes"
+          value={formatCount(video.dislikeCount)}
+        />
+        <StatTile
+          icon={<MessageSquare className="size-4" />}
+          label="Comments"
+          value={formatCount(video.commentCount)}
+        />
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="transcript">Transcript</TabsTrigger>
+          <TabsTrigger value="comments">Comments</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="mt-4 space-y-4">
@@ -202,20 +221,16 @@ function VideoDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="comments" className="mt-4">
+          <CommentsTab videoId={videoId} knownCount={video.commentCount} />
+        </TabsContent>
       </Tabs>
     </PageContainer>
   )
 }
 
-function StatTile({
-  icon,
-  label,
-  value
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-}) {
+function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-1 p-4">
@@ -229,15 +244,7 @@ function StatTile({
   )
 }
 
-function Row({
-  label,
-  value,
-  mono
-}: {
-  label: string
-  value: string
-  mono?: boolean
-}) {
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex justify-between gap-4">
       <span className="text-muted-foreground">{label}</span>

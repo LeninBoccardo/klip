@@ -108,6 +108,7 @@ app.whenReady().then(() => {
     container.repositories.video,
     container.useCases.fetchVideoDetail,
     container.useCases.enrichAllVideos,
+    container.useCases.fetchVideoComments,
     container.ports.fsReader
   )
   registerCutController(container.repositories.cut)

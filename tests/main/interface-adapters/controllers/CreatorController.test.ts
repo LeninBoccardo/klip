@@ -23,7 +23,9 @@ function makeRepo(): ICreatorRepository {
     findById: vi.fn().mockReturnValue(null),
     findByFolderName: vi.fn(),
     findAllActive: vi.fn(),
-    findPaginated: vi.fn().mockReturnValue({ data: [], page: 1, pageSize: 20, total: 0, totalPages: 0 }),
+    findPaginated: vi
+      .fn()
+      .mockReturnValue({ data: [], page: 1, pageSize: 20, total: 0, totalPages: 0 }),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     delete: vi.fn()

@@ -13,7 +13,8 @@ import type {
   VideoQueryParams,
   CutQueryParams,
   VideoDetailWithTranscript,
-  EnrichVideosResult
+  EnrichVideosResult,
+  VideoCommentsResult
 } from '@shared/types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from '@shared/dtos'
 
@@ -42,6 +43,7 @@ interface KlipAPI {
   fetchVideoDetail(videoId: string): Promise<VideoDetailWithTranscript>
   enrichAllVideos(): Promise<EnrichVideosResult>
   getTranscript(videoId: string): Promise<string | null>
+  fetchVideoComments(videoId: string, maxComments?: number): Promise<VideoCommentsResult>
 
   // ── Cuts ──
   getCutsPaginated(params: CutQueryParams): Promise<PaginatedResult<CutDto>>

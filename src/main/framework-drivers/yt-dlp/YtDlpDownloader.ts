@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { IBinaryResolver, IVideoDownloader, DownloadOptions } from '@domain/ports'
 import type { ChannelInfo, DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
-import type { VideoDetail } from '@shared/types'
+import type { VideoComment, VideoDetail } from '@shared/types'
 
 /**
  * yt-dlp–backed implementation of IVideoDownloader.
@@ -157,7 +157,12 @@ export class YtDlpDownloader implements IVideoDownloader {
           const width = typeof json.width === 'number' ? json.width : null
           const height = typeof json.height === 'number' ? json.height : null
           // YouTube Shorts: ≤ 60s and vertical aspect ratio
-          const isShort = duration !== null && duration <= 60 && height !== null && width !== null && height > width
+          const isShort =
+            duration !== null &&
+            duration <= 60 &&
+            height !== null &&
+            width !== null &&
+            height > width
           // Normalize "20240315" → "2024-03-15"
           const uploadDate =
             typeof json.upload_date === 'string' && /^\d{8}$/.test(json.upload_date)
@@ -245,6 +250,89 @@ export class YtDlpDownloader implements IVideoDownloader {
 
       proc.on('error', (err) => {
         reject(new Error(`yt-dlp fetchTranscript: failed to spawn: ${err.message}`))
+      })
+    })
+  }
+
+  // ── fetchComments ──
+
+  async fetchComments(
+    url: string,
+    maxComments: number = 500
+  ): Promise<{ comments: VideoComment[]; wasTruncated: boolean }> {
+    const bin = this.binaryResolver.resolve('yt-dlp')
+
+    return new Promise((resolve, reject) => {
+      const args = [
+        '--dump-json',
+        '--write-comments',
+        '--extractor-args',
+        `youtube:max_comments=${maxComments};comment_sort=top`,
+        '--skip-download',
+        '--no-warnings',
+        url
+      ]
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+
+      let stdout = ''
+      let stderr = ''
+      let settled = false
+
+      // Comment scraping can run long for popular videos. Cap at 90s.
+      const timeout = setTimeout(() => {
+        if (settled) return
+        settled = true
+        proc.kill('SIGTERM')
+        reject(new Error('yt-dlp fetchComments: timed out after 90s'))
+      }, 90_000)
+
+      proc.stdout.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString()
+      })
+      proc.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString()
+      })
+
+      proc.on('close', (code) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+
+        if (code !== 0) {
+          reject(new Error(`yt-dlp fetchComments failed (code ${code}): ${stderr.trim()}`))
+          return
+        }
+        try {
+          const json = JSON.parse(stdout)
+          const raw: unknown[] = Array.isArray(json.comments) ? json.comments : []
+          const comments: VideoComment[] = raw.map((c) => {
+            const r = c as Record<string, unknown>
+            const parent = typeof r.parent === 'string' ? r.parent : null
+            return {
+              id: typeof r.id === 'string' ? r.id : '',
+              text: typeof r.text === 'string' ? r.text : '',
+              author: typeof r.author === 'string' ? r.author : '',
+              authorId: typeof r.author_id === 'string' ? r.author_id : null,
+              likeCount: typeof r.like_count === 'number' ? r.like_count : 0,
+              isPinned: r.is_pinned === true,
+              parentId: parent === 'root' || parent === null ? null : parent,
+              timestamp: typeof r.timestamp === 'number' ? r.timestamp : null
+            }
+          })
+          // yt-dlp doesn't emit a truncation flag; best heuristic is that we
+          // hit the cap exactly.
+          const wasTruncated = comments.length >= maxComments
+          resolve({ comments, wasTruncated })
+        } catch (e) {
+          reject(new Error(`yt-dlp fetchComments: failed to parse JSON: ${e}`))
+        }
+      })
+
+      proc.on('error', (err) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        reject(new Error(`yt-dlp fetchComments: failed to spawn: ${err.message}`))
       })
     })
   }

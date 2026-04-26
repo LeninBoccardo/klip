@@ -30,3 +30,14 @@ export function toMediaSrc(filePath: string | null): string | undefined {
   // Encode the path for URL safety; the custom protocol handler decodes it
   return `klip-media://${encodeURIComponent(filePath)}`
 }
+
+/**
+ * Format a number into a compact human-readable count (e.g. 1.2K, 3.4M).
+ */
+export function formatCount(n: number | null | undefined): string {
+  if (n == null) return '—'
+  if (n < 1000) return n.toString()
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}K`
+  if (n < 1_000_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  return `${(n / 1_000_000_000).toFixed(1)}B`
+}

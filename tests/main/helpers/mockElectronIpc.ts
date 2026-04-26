@@ -1,9 +1,6 @@
 import { vi } from 'vitest'
 
-export type IpcInvokeHandler = (
-  event: unknown,
-  ...args: unknown[]
-) => unknown | Promise<unknown>
+export type IpcInvokeHandler = (event: unknown, ...args: unknown[]) => unknown | Promise<unknown>
 
 /**
  * Returns a fake `electron.ipcMain` that captures every `handle()` registration

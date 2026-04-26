@@ -107,9 +107,7 @@ describe('EnrichAllVideos', () => {
   })
 
   it('skips videos with no URL', async () => {
-    vi.mocked(videoRepo.findNeedingDetail).mockReturnValue([
-      makeVideo({ id: 'no-url', url: null })
-    ])
+    vi.mocked(videoRepo.findNeedingDetail).mockReturnValue([makeVideo({ id: 'no-url', url: null })])
 
     const result = await useCase.execute()
     expect(result).toEqual({ total: 1, enriched: 0, failed: 0, skipped: 1 })

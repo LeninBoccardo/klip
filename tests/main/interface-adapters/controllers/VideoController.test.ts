@@ -3,6 +3,7 @@ import type { IVideoRepository } from '@domain/repositories'
 import type { IFileSystemReader } from '@domain/ports'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
+import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
 
 const electron = vi.hoisted(() => {
   const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
@@ -43,11 +44,13 @@ function makeRepo(): IVideoRepository {
 function makeDeps(): {
   fetchVideoDetail: IFetchVideoDetail
   enrichAllVideos: IEnrichAllVideos
+  fetchVideoComments: IFetchVideoComments
   fsReader: IFileSystemReader
 } {
   return {
     fetchVideoDetail: { execute: vi.fn() },
     enrichAllVideos: { execute: vi.fn() },
+    fetchVideoComments: { execute: vi.fn() },
     fsReader: {
       directoryExists: vi.fn(),
       fileExists: vi.fn(),
@@ -71,13 +74,20 @@ describe('VideoController', () => {
     electron.ipcMain.handle.mockClear()
   })
 
-  it('registers all seven video channels', () => {
+  it('registers all eight video channels', () => {
     const d = makeDeps()
-    registerVideoController(makeRepo(), d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      makeRepo(),
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     expect([...electron.handlers.keys()].sort()).toEqual(
       [
         'delete-video',
         'enrich-all-videos',
+        'fetch-video-comments',
         'fetch-video-detail',
         'get-transcript',
         'get-video-by-id',
@@ -87,10 +97,37 @@ describe('VideoController', () => {
     )
   })
 
+  it('"fetch-video-comments" delegates to FetchVideoComments use case', async () => {
+    const repo = makeRepo()
+    const d = makeDeps()
+    vi.mocked(d.fetchVideoComments.execute).mockResolvedValue({
+      videoId: 'video-1',
+      comments: [],
+      totalFetched: 0,
+      wasTruncated: false
+    })
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
+    const result = await invoke<{ totalFetched: number }>('fetch-video-comments', 'video-1', 100)
+    expect(d.fetchVideoComments.execute).toHaveBeenCalledWith('video-1', 100)
+    expect(result.totalFetched).toBe(0)
+  })
+
   it('"get-videos-paginated" forwards params', async () => {
     const repo = makeRepo()
     const d = makeDeps()
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     const params = { page: 1, pageSize: 10, creatorId: 'c-1' }
     await invoke('get-videos-paginated', params)
     expect(repo.findPaginated).toHaveBeenCalledWith(params)
@@ -99,7 +136,13 @@ describe('VideoController', () => {
   it('"get-video-by-id" forwards id', async () => {
     const repo = makeRepo()
     const d = makeDeps()
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     await invoke('get-video-by-id', 'video-1')
     expect(repo.findById).toHaveBeenCalledWith('video-1')
   })
@@ -107,7 +150,13 @@ describe('VideoController', () => {
   it('"delete-video" sets status=deleted with timestamp', async () => {
     const repo = makeRepo()
     const d = makeDeps()
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     await invoke('delete-video', 'video-1')
     expect(repo.updateStatus).toHaveBeenCalledWith('video-1', 'deleted', expect.any(String))
   })
@@ -115,7 +164,13 @@ describe('VideoController', () => {
   it('"restore-video" sets status=active with null deletedAt', async () => {
     const repo = makeRepo()
     const d = makeDeps()
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     await invoke('restore-video', 'video-1')
     expect(repo.updateStatus).toHaveBeenCalledWith('video-1', 'active', null)
   })
@@ -138,7 +193,13 @@ describe('VideoController', () => {
       transcriptPath: null,
       transcriptText: null
     })
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     const result = await invoke<{ likeCount: number }>('fetch-video-detail', 'video-1')
     expect(d.fetchVideoDetail.execute).toHaveBeenCalledWith('video-1')
     expect(result.likeCount).toBe(5)
@@ -153,7 +214,13 @@ describe('VideoController', () => {
       failed: 1,
       skipped: 0
     })
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     const result = await invoke<{ enriched: number }>('enrich-all-videos')
     expect(d.enrichAllVideos.execute).toHaveBeenCalled()
     expect(result.enriched).toBe(2)
@@ -169,7 +236,13 @@ describe('VideoController', () => {
     vi.mocked(d.fsReader.readTextFile).mockReturnValue(
       'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello'
     )
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     const result = await invoke('get-transcript', 'video-1')
     expect(result).toBe('Hello')
   })
@@ -181,7 +254,13 @@ describe('VideoController', () => {
       transcriptPath: null
     } as never)
     const d = makeDeps()
-    registerVideoController(repo, d.fetchVideoDetail, d.enrichAllVideos, d.fsReader)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader
+    )
     const result = await invoke('get-transcript', 'video-1')
     expect(result).toBeNull()
     expect(d.fsReader.readTextFile).not.toHaveBeenCalled()

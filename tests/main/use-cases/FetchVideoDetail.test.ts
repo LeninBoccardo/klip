@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
 import type { IVideoRepository } from '@domain/repositories'
-import type {
-  IVideoDownloader,
-  IFileSystemReader,
-  IPathResolver
-} from '@domain/ports'
+import type { IVideoDownloader, IFileSystemReader, IPathResolver } from '@domain/ports'
 import type { Video } from '@domain/entities'
 
 function makeVideo(overrides: Partial<Video> = {}): Video {

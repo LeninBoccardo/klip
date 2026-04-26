@@ -59,3 +59,10 @@ export function useTranscript(videoId: string | undefined) {
     enabled: !!videoId
   })
 }
+
+export function useFetchVideoComments() {
+  return useMutation({
+    mutationFn: ({ videoId, maxComments = 500 }: { videoId: string; maxComments?: number }) =>
+      window.api.fetchVideoComments(videoId, maxComments)
+  })
+}

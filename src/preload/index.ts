@@ -30,6 +30,7 @@ const api = {
   fetchVideoDetail: createTypedInvoker('fetch-video-detail'),
   enrichAllVideos: createTypedInvoker('enrich-all-videos'),
   getTranscript: createTypedInvoker('get-transcript'),
+  fetchVideoComments: createTypedInvoker('fetch-video-comments'),
 
   // ── Cuts ──
   getCutsPaginated: createTypedInvoker('get-cuts-paginated'),

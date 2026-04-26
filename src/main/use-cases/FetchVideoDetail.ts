@@ -1,9 +1,5 @@
 import type { IVideoRepository } from '@domain/repositories'
-import type {
-  IVideoDownloader,
-  IFileSystemReader,
-  IPathResolver
-} from '@domain/ports'
+import type { IVideoDownloader, IFileSystemReader, IPathResolver } from '@domain/ports'
 import type { VideoDetailWithTranscript } from '@shared/types'
 import { parseVtt } from '@domain/types'
 import type { IFetchVideoDetail } from './IFetchVideoDetail'

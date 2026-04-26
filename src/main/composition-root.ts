@@ -29,6 +29,7 @@ import type { IFetchChannelInfo } from '@use-cases/IFetchChannelInfo'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
+import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -65,6 +66,7 @@ import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
 import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
 import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
 import { EnrichAllVideos } from '@use-cases/EnrichAllVideos'
+import { FetchVideoComments } from '@use-cases/FetchVideoComments'
 
 /**
  * Application dependency container.
@@ -105,6 +107,7 @@ export interface AppContainer {
     migrateRootFolder: IMigrateRootFolder
     fetchVideoDetail: IFetchVideoDetail
     enrichAllVideos: IEnrichAllVideos
+    fetchVideoComments: IFetchVideoComments
   }
   services: {
     fileWatcher: IFileWatcher
@@ -203,12 +206,9 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const fetchVideoDetail = new FetchVideoDetail(videoRepo, videoDownloader, fsReader, pathResolver)
 
-  const enrichAllVideos = new EnrichAllVideos(
-    videoRepo,
-    fetchVideoDetail,
-    downloadQueue,
-    notifier
-  )
+  const enrichAllVideos = new EnrichAllVideos(videoRepo, fetchVideoDetail, downloadQueue, notifier)
+
+  const fetchVideoComments = new FetchVideoComments(videoRepo, videoDownloader)
 
   const migrateRootFolder = new MigrateRootFolder(
     operationRepo,
@@ -260,7 +260,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       fetchChannelInfo,
       migrateRootFolder,
       fetchVideoDetail,
-      enrichAllVideos
+      enrichAllVideos,
+      fetchVideoComments
     },
     services: {
       fileWatcher
