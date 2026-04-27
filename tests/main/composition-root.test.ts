@@ -9,7 +9,8 @@ vi.mock('electron', () => ({
   app: {
     isPackaged: false,
     getAppPath: () => '/fake/app/path',
-    getPath: () => '/fake/user/data'
+    getPath: () => '/fake/user/data',
+    getVersion: () => '0.0.0-test'
   },
   BrowserWindow: { getAllWindows: () => [] },
   dialog: { showOpenDialog: vi.fn() },
@@ -36,7 +37,7 @@ describe('composition-root smoke test', () => {
 
   it('wires every dependency declared on AppContainer with a non-null instance', () => {
     database = createTestDb()
-    const container = createAppContainer({ database, rootPath: '/fake/root' })
+    const container = createAppContainer({ database, rootPath: '/fake/root', isDev: true })
 
     // Repositories
     expect(container.repositories.creator).toBeDefined()
@@ -58,6 +59,7 @@ describe('composition-root smoke test', () => {
     expect(container.ports.mediaProbe).toBeDefined()
     expect(container.ports.downloadQueue).toBeDefined()
     expect(container.ports.idGenerator).toBeDefined()
+    expect(container.ports.updater).toBeDefined()
 
     // Use cases
     expect(container.useCases.reconcile).toBeDefined()
@@ -81,7 +83,7 @@ describe('composition-root smoke test', () => {
 
   it('returns the same DatabaseInstance that was passed in', () => {
     database = createTestDb()
-    const container = createAppContainer({ database, rootPath: '/fake/root' })
+    const container = createAppContainer({ database, rootPath: '/fake/root', isDev: true })
 
     expect(container.database).toBe(database)
     container.shutdown()
@@ -90,7 +92,7 @@ describe('composition-root smoke test', () => {
 
   it('exposes audited repositories for creator/video/cut (not the raw Sqlite ones)', () => {
     database = createTestDb()
-    const container = createAppContainer({ database, rootPath: '/fake/root' })
+    const container = createAppContainer({ database, rootPath: '/fake/root', isDev: true })
 
     // Audited decorators are named distinctly from raw repos; this guards
     // against a future regression where someone wires the raw repository.

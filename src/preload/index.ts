@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IpcChannels } from '@shared/ipc-channels'
-import type { DownloadProgress, MigrateRootProgress } from '@shared/types'
+import type { DownloadProgress, MigrateRootProgress, UpdaterStatus } from '@shared/types'
 import { createTypedInvoker } from './create-typed-invoker'
 
 // Custom APIs for renderer
@@ -54,6 +54,11 @@ const api = {
   getOperationById: createTypedInvoker('get-operation-by-id'),
   getOperationsByStatus: createTypedInvoker('get-operations-by-status'),
 
+  // ── Updater ──
+  checkForUpdates: createTypedInvoker('check-for-updates'),
+  installUpdate: createTypedInvoker('install-update'),
+  getUpdaterStatus: createTypedInvoker('get-updater-status'),
+
   // ── Push event listeners ──
   onDownloadProgress: (
     callback: (_event: unknown, data: DownloadProgress) => void
@@ -76,6 +81,12 @@ const api = {
     ipcRenderer.on(IpcChannels.MigrateRootProgress, callback)
     return (): void => {
       ipcRenderer.removeListener(IpcChannels.MigrateRootProgress, callback)
+    }
+  },
+  onUpdaterStatus: (callback: (_event: unknown, data: UpdaterStatus) => void): (() => void) => {
+    ipcRenderer.on(IpcChannels.UpdaterStatus, callback)
+    return (): void => {
+      ipcRenderer.removeListener(IpcChannels.UpdaterStatus, callback)
     }
   }
 }

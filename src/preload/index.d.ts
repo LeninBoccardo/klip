@@ -14,7 +14,8 @@ import type {
   CutQueryParams,
   VideoDetailWithTranscript,
   EnrichVideosResult,
-  VideoCommentsResult
+  VideoCommentsResult,
+  UpdaterStatus
 } from '@shared/types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from '@shared/dtos'
 
@@ -67,6 +68,11 @@ interface KlipAPI {
   getOperationById(id: string): Promise<OperationDto | null>
   getOperationsByStatus(status: string): Promise<OperationDto[]>
 
+  // ── Updater ──
+  checkForUpdates(): Promise<UpdaterStatus>
+  installUpdate(): Promise<void>
+  getUpdaterStatus(): Promise<UpdaterStatus>
+
   // ── Push event listeners ──
   /** Subscribe to download progress events; returns an unsubscribe function */
   onDownloadProgress(callback: (event: unknown, data: DownloadProgress) => void): () => void
@@ -74,6 +80,8 @@ interface KlipAPI {
   onDbUpdated(callback: () => void): () => void
   /** Subscribe to migrate-root progress events; returns an unsubscribe function */
   onMigrateRootProgress(callback: (event: unknown, data: MigrateRootProgress) => void): () => void
+  /** Subscribe to auto-updater status changes; returns an unsubscribe function */
+  onUpdaterStatus(callback: (event: unknown, data: UpdaterStatus) => void): () => void
 }
 
 declare global {

@@ -17,6 +17,7 @@ import type {
   IMediaProbe,
   IDownloadQueue,
   IIdGenerator,
+  IUpdater,
   RootPathRef
 } from '@domain/ports'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
@@ -52,6 +53,10 @@ import { NodeIdGenerator } from './interface-adapters/crypto/NodeIdGenerator'
 import { NodeDebouncer } from './framework-drivers/timers'
 import { ElectronNotifier } from './framework-drivers/electron/ElectronNotifier'
 import { ElectronBinaryResolver } from './framework-drivers/electron/ElectronBinaryResolver'
+import {
+  ElectronAutoUpdater,
+  DisabledUpdater
+} from './framework-drivers/electron/ElectronAutoUpdater'
 import { ChokidarWatcher } from './framework-drivers/file-system/ChokidarWatcher'
 import { YtDlpDownloader } from './framework-drivers/yt-dlp/YtDlpDownloader'
 import { FfprobeMediaProbe } from './framework-drivers/ffprobe/FfprobeMediaProbe'
@@ -94,6 +99,7 @@ export interface AppContainer {
     mediaProbe: IMediaProbe
     downloadQueue: IDownloadQueue
     idGenerator: IIdGenerator
+    updater: IUpdater
   }
   useCases: {
     reconcile: IReconcileDirectory
@@ -120,6 +126,8 @@ export interface AppContainer {
 export interface AppConfig {
   database: DatabaseInstance
   rootPath: string
+  /** When true, the auto-updater is replaced with a no-op `DisabledUpdater`. */
+  isDev: boolean
 }
 
 /**
@@ -143,6 +151,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const mediaProbe = new FfprobeMediaProbe(binaryResolver)
   const downloadQueue = new PQueueDownloadQueue(2)
   const idGenerator = new NodeIdGenerator()
+  const updater: IUpdater = config.isDev ? new DisabledUpdater() : new ElectronAutoUpdater()
+  updater.onStatusChange((status) => notifier.notify('updater-status', status))
 
   // ── Repositories (raw Drizzle) ──
   const sqliteCreatorRepo = new SqliteCreatorRepository(database.db)
@@ -247,7 +257,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       videoDownloader,
       mediaProbe,
       downloadQueue,
-      idGenerator
+      idGenerator,
+      updater
     },
     useCases: {
       reconcile,

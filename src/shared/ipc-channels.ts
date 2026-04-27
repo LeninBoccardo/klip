@@ -51,10 +51,16 @@ export const IpcChannels = {
   GetOperationById: 'get-operation-by-id',
   GetOperationsByStatus: 'get-operations-by-status',
 
+  // ── Updater ──
+  CheckForUpdates: 'check-for-updates',
+  InstallUpdate: 'install-update',
+  GetUpdaterStatus: 'get-updater-status',
+
   // ── Push events (webContents.send → ipcRenderer.on) ──
   DbUpdated: 'db-updated',
   DownloadProgress: 'download-progress',
-  MigrateRootProgress: 'migrate-root-progress'
+  MigrateRootProgress: 'migrate-root-progress',
+  UpdaterStatus: 'updater-status'
 } as const
 
 /** Union of all IPC channel name values */

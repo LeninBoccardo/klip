@@ -13,7 +13,8 @@ import type {
   CutQueryParams,
   VideoDetailWithTranscript,
   EnrichVideosResult,
-  VideoCommentsResult
+  VideoCommentsResult,
+  UpdaterStatus
 } from './types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
 
@@ -96,20 +97,30 @@ export interface IpcContract {
     result: OperationDto[]
   }
 
+  // ── Updater ──
+  'check-for-updates': { params: []; result: UpdaterStatus }
+  'install-update': { params: []; result: void }
+  'get-updater-status': { params: []; result: UpdaterStatus }
+
   // ── Push events (main → renderer) ──
   'db-updated': { params: []; result: void }
   'download-progress': { params: [data: DownloadProgress]; result: void }
   'migrate-root-progress': { params: [data: MigrateRootProgress]; result: void }
+  'updater-status': { params: [data: UpdaterStatus]; result: void }
 }
 
 /** Channels that use ipcMain.handle (request/response pattern) */
 export type InvokeChannel = Exclude<
   keyof IpcContract,
-  'db-updated' | 'download-progress' | 'migrate-root-progress'
+  'db-updated' | 'download-progress' | 'migrate-root-progress' | 'updater-status'
 >
 
 /** Channels that use webContents.send (push pattern) */
-export type PushChannel = 'db-updated' | 'download-progress' | 'migrate-root-progress'
+export type PushChannel =
+  | 'db-updated'
+  | 'download-progress'
+  | 'migrate-root-progress'
+  | 'updater-status'
 
 /** Extract the result type for a given channel */
 export type IpcResult<C extends keyof IpcContract> = IpcContract[C]['result']

@@ -33,5 +33,8 @@ export const queryKeys = {
     all: ['operations'] as const,
     detail: (id: string) => ['operations', 'detail', id] as const,
     byStatus: (status: string) => ['operations', 'byStatus', status] as const
+  },
+  updater: {
+    status: ['updater', 'status'] as const
   }
 } as const

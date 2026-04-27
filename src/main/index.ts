@@ -11,6 +11,7 @@ import { registerCutController } from './interface-adapters/controllers/CutContr
 import { registerSettingsController } from './interface-adapters/controllers/SettingsController'
 import { registerAuditLogController } from './interface-adapters/controllers/AuditLogController'
 import { registerOperationController } from './interface-adapters/controllers/OperationController'
+import { registerUpdaterController } from './interface-adapters/controllers/UpdaterController'
 import { join } from 'path'
 import { initializeDatabase } from './framework-drivers/database'
 import { SqliteSettingsRepository } from './interface-adapters/repositories'
@@ -92,7 +93,7 @@ app.whenReady().then(() => {
   }
 
   // Phase 2: Create container with resolved rootPath and pre-opened DB
-  container = createAppContainer({ database, rootPath })
+  container = createAppContainer({ database, rootPath, isDev: is.dev })
   console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
 
   // ── Register IPC controllers ──
@@ -115,6 +116,7 @@ app.whenReady().then(() => {
   registerSettingsController(container.repositories.settings, container.useCases.migrateRootFolder)
   registerAuditLogController(container.repositories.auditLog)
   registerOperationController(container.repositories.operation)
+  registerUpdaterController(container.ports.updater)
   console.log(`[klip] IPC controllers registered`)
 
   // ── Recover stale operations from previous crash ──
@@ -149,6 +151,13 @@ app.whenReady().then(() => {
   container.services.fileWatcher.start()
 
   createWindow()
+
+  // ── Auto-check for updates (production only; DisabledUpdater is a no-op in dev) ──
+  if (!is.dev) {
+    container.ports.updater.checkForUpdates().catch((err) => {
+      console.error(`[klip] Initial update check failed:`, err)
+    })
+  }
 
   app.on('activate', function () {
     // On macOS, it's common to re-create a window in the app when the

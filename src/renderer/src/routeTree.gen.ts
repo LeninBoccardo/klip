@@ -19,32 +19,32 @@ import { Route as CreatorsCreatorIdRouteImport } from './routes/creators/$creato
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const DownloadsRoute = DownloadsRouteImport.update({
   id: '/downloads',
   path: '/downloads',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const VideosVideoIdRoute = VideosVideoIdRouteImport.update({
   id: '/videos/$videoId',
   path: '/videos/$videoId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const CreatorsCreatorIdRoute = CreatorsCreatorIdRouteImport.update({
   id: '/creators/$creatorId',
   path: '/creators/$creatorId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -82,13 +82,7 @@ export interface FileRouteTypes {
     | '/creators/$creatorId'
     | '/videos/$videoId'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/about'
-    | '/downloads'
-    | '/settings'
-    | '/creators/$creatorId'
-    | '/videos/$videoId'
+  to: '/' | '/about' | '/downloads' | '/settings' | '/creators/$creatorId' | '/videos/$videoId'
   id:
     | '__root__'
     | '/'
@@ -161,7 +155,7 @@ const rootRouteChildren: RootRouteChildren = {
   DownloadsRoute: DownloadsRoute,
   SettingsRoute: SettingsRoute,
   CreatorsCreatorIdRoute: CreatorsCreatorIdRoute,
-  VideosVideoIdRoute: VideosVideoIdRoute,
+  VideosVideoIdRoute: VideosVideoIdRoute
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

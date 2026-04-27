@@ -6,6 +6,7 @@ import { RootPathDisplay } from '@components/features/settings/RootPathDisplay'
 import { MigrateRootButton } from '@components/features/settings/MigrateRootButton'
 import { ReconcileButton } from '@components/features/settings/ReconcileButton'
 import { EnrichVideosButton } from '@components/features/settings/EnrichVideosButton'
+import { UpdatesCard } from '@components/features/settings/UpdatesCard'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
@@ -62,6 +63,16 @@ function SettingsPage() {
         </CardHeader>
         <CardContent>
           <EnrichVideosButton disabled={isBlocking} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Updates</CardTitle>
+          <CardDescription>Stay up to date with the latest version of Klip.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UpdatesCard />
         </CardContent>
       </Card>
 
