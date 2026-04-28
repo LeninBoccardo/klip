@@ -10,7 +10,7 @@ interface CreatorSelectorProps {
  * Simple text input for the creator name.
  * In the future this can be upgraded to a Combobox with existing creator suggestions.
  */
-export function CreatorSelector({ value, onChange }: CreatorSelectorProps) {
+export function CreatorSelector({ value, onChange }: CreatorSelectorProps): React.ReactElement {
   return (
     <Field>
       <FieldLabel htmlFor="creator-name">Creator name</FieldLabel>

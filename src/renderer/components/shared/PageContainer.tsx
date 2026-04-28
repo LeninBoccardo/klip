@@ -19,7 +19,7 @@ interface PageContainerProps {
  * - Max-width constrained content area (max-w-6xl)
  * - Consistent padding (p-6) and vertical spacing (space-y-6)
  */
-export function PageContainer({ children, className }: PageContainerProps) {
+export function PageContainer({ children, className }: PageContainerProps): React.ReactElement {
   return (
     <ScrollArea className="h-full">
       <div className={cn('mx-auto w-full max-w-6xl space-y-6 p-6', className)}>{children}</div>

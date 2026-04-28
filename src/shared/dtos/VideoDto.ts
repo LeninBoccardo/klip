@@ -1,7 +1,15 @@
 import type { EntityStatus } from '../types/entity-status'
 import type { ProbeStatus } from '../types/probe-status'
 
-/** Renderer-facing representation of a video */
+/**
+ * Renderer-facing representation of a video.
+ *
+ * Does **not** expose `filePath`, `thumbnailPath`, or `transcriptPath` — the
+ * renderer references media via the entity-keyed `klip-media://video/<id>/file`
+ * scheme and never holds raw filesystem paths. Boolean `hasThumbnail` /
+ * `hasTranscript` flags let the UI short-circuit broken-image cases without
+ * leaking the underlying path.
+ */
 export interface VideoDto {
   id: string
   creatorId: string
@@ -10,8 +18,8 @@ export interface VideoDto {
   duration: number | null
   resolution: string | null
   fileSize: number | null
-  filePath: string
-  thumbnailPath: string | null
+  hasThumbnail: boolean
+  hasTranscript: boolean
   downloadDate: string | null
   probeStatus: ProbeStatus
   viewCount: number | null
@@ -23,7 +31,6 @@ export interface VideoDto {
   uploadDate: string | null
   description: string | null
   isShort: boolean
-  transcriptPath: string | null
   detailFetchedAt: string | null
   status: EntityStatus
   deletedAt: string | null

@@ -5,6 +5,7 @@ import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
 import { parseVtt } from '@domain/types'
 import { createTypedHandler } from './create-typed-handler'
+import { toVideoDto, mapPaginated } from './dto-mappers'
 
 /**
  * IPC controller for video CRUD + detail/transcript operations.
@@ -27,11 +28,12 @@ export function registerVideoController(
   fsReader: IFileSystemReader
 ): void {
   createTypedHandler('get-videos-paginated', async (_event, params) => {
-    return videoRepo.findPaginated(params)
+    return mapPaginated(videoRepo.findPaginated(params), toVideoDto)
   })
 
   createTypedHandler('get-video-by-id', async (_event, id) => {
-    return videoRepo.findById(id)
+    const video = videoRepo.findById(id)
+    return video ? toVideoDto(video) : null
   })
 
   createTypedHandler('delete-video', async (_event, id) => {

@@ -5,7 +5,7 @@ interface MediaGridProps {
   className?: string
 }
 
-export function MediaGrid({ children, className }: MediaGridProps) {
+export function MediaGrid({ children, className }: MediaGridProps): React.ReactElement {
   return (
     <div
       className={cn(

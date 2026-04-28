@@ -26,7 +26,7 @@ export interface IVideoDownloader {
    * Fetch extended per-video metadata (likes, comments, category, tags,
    * description, isShort, etc.) without downloading the media file.
    */
-  fetchVideoDetail(url: string): Promise<Omit<VideoDetail, 'hasTranscript' | 'transcriptPath'>>
+  fetchVideoDetail(url: string): Promise<Omit<VideoDetail, 'hasTranscript'>>
 
   /**
    * Fetch the auto-generated transcript for a video.

@@ -78,7 +78,6 @@ export class FetchVideoDetail implements IFetchVideoDetail {
       description: detail.description,
       isShort: detail.isShort,
       hasTranscript: transcriptPath !== null,
-      transcriptPath,
       transcriptText
     }
   }

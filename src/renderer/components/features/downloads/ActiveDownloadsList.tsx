@@ -5,7 +5,7 @@ import { ItemGroup } from '@/components/ui/item'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Download } from 'lucide-react'
 
-export function ActiveDownloadsList() {
+export function ActiveDownloadsList(): React.ReactElement {
   const activeDownloads = useAppStore((s) => s.activeDownloads)
   const cancelDownload = useCancelDownload()
   const entries = Object.values(activeDownloads)

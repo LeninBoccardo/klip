@@ -1,45 +1,85 @@
 import { realpathSync } from 'fs'
-import { isAbsolute, sep } from 'path'
+import { sep } from 'path'
+import type { MediaKind, MediaAsset } from '@use-cases/IResolveMediaUrl'
 
 /**
- * Result of validating a `klip-media://` request against the active root path.
+ * Pure URL-parsing and path-containment primitives for the `klip-media://`
+ * protocol. The protocol orchestration (entity lookup + `protocol.handle()`
+ * registration + `net.fetch`) lives in `KlipMediaProtocolHandler.ts`; this
+ * module is split out so the parsing/containment decisions stay unit-testable
+ * without an Electron environment.
  *
- * The handler surface lives in `src/main/index.ts`; this module is the pure
- * (modulo `realpath`) decision: either the request resolves to a path that's
- * provably inside the root, or it gets rejected with the appropriate HTTP-style
- * status. Keeping the decision separable from `protocol.handle()` is what
- * makes the containment behaviour unit-testable.
+ * URL scheme (entity-keyed):
+ *   klip-media://<kind>/<id>/<asset>
+ *
+ * Examples:
+ *   klip-media://video/abc123/file
+ *   klip-media://video/abc123/thumbnail
+ *   klip-media://cut/2f9a-…/file
+ *   klip-media://creator/jane-doe/avatar
+ *
+ * Path-based URLs (e.g. `klip-media://C:/Users/.../video.mp4`) are no longer
+ * accepted — the renderer never holds raw filesystem paths. This eliminates
+ * the entire path-traversal threat surface by construction; the realpath /
+ * prefix-bounded containment check below remains as a defence-in-depth
+ * second gate against bugs in the index.
  */
-export type KlipMediaResolution =
+
+const VALID_KINDS: ReadonlySet<MediaKind> = new Set(['video', 'cut', 'creator'])
+const VALID_ASSETS: ReadonlySet<MediaAsset> = new Set(['file', 'thumbnail', 'avatar'])
+
+export type KlipMediaUrlParse =
+  | { ok: true; kind: MediaKind; id: string; asset: MediaAsset }
+  | { ok: false; status: 400 }
+
+/**
+ * Parse a `klip-media://<kind>/<id>/<asset>` URL into its components.
+ * Returns `{ ok: false, status: 400 }` for any malformed input — including
+ * legacy path-based URLs, missing segments, or unknown kind/asset values.
+ */
+export function parseKlipMediaUrl(url: string): KlipMediaUrlParse {
+  const stripped = url.replace(/^klip-media:\/\//, '')
+  if (!stripped) return { ok: false, status: 400 }
+
+  const segments = stripped.split('/')
+  if (segments.length !== 3) return { ok: false, status: 400 }
+
+  const [rawKind, rawId, rawAsset] = segments
+  // Defensive decode — IDs are URL-safe by construction (slugified or UUID),
+  // but the renderer encodes anyway and the parser must symmetrically decode.
+  const kind = decodeURIComponent(rawKind)
+  const id = decodeURIComponent(rawId)
+  const asset = decodeURIComponent(rawAsset)
+
+  if (!id) return { ok: false, status: 400 }
+  if (!VALID_KINDS.has(kind as MediaKind)) return { ok: false, status: 400 }
+  if (!VALID_ASSETS.has(asset as MediaAsset)) return { ok: false, status: 400 }
+
+  return { ok: true, kind: kind as MediaKind, id, asset: asset as MediaAsset }
+}
+
+export type KlipMediaPathCheck =
   | { ok: true; absolutePath: string }
-  | { ok: false; status: 400 | 403 | 404 | 500 }
+  | { ok: false; status: 403 | 404 | 500 }
 
 /**
- * Decide whether a `klip-media://` request may be served, and if so, the
- * canonical absolute path to fetch.
+ * Verify that `absolutePath` (already resolved from the entity index) sits
+ * inside the active root path. Both sides are realpath-resolved first so
+ * symlink escape is caught, and the trailing `sep` prevents
+ * `<root>-evil/` aliasing.
  *
- * The check is **realpath-based + prefix-bounded**: both the requested path
- * and the configured root are resolved via `realpathSync` first (which follows
- * symlinks), then the resolved request must equal the resolved root or sit
- * strictly under it (`+ sep` prevents `<root>-evil/` aliasing). This catches:
+ * - `404` if the requested path no longer exists on disk
+ * - `403` if the path resolves outside the root
+ * - `500` if the configured root itself cannot be resolved
  *
- *   - URL-encoded traversal (`%2E%2E%2F` etc.) — `decodeURIComponent` runs first.
- *   - Symlink escape — `realpathSync` walks links to ground truth.
- *   - Sibling-prefix aliasing — the trailing `sep` excludes `<root>-evil`.
- *
- * Relative URLs are rejected outright (`400`) — every internal call site
- * builds absolute paths via `pathResolver.join(rootPath, ...)`, so a relative
- * request can only come from a malformed or attacker-crafted URL.
+ * This is belt-and-braces — under the entity-keyed scheme, the path comes
+ * from a row that the main process trusts. The check defends against future
+ * bugs that might write a tampered path into a row.
  */
-export function resolveKlipMediaRequest(url: string, rootPath: string): KlipMediaResolution {
-  const decoded = decodeURIComponent(url.replace(/^klip-media:\/\//, ''))
-  if (!decoded || !isAbsolute(decoded)) {
-    return { ok: false, status: 400 }
-  }
-
+export function checkPathInsideRoot(absolutePath: string, rootPath: string): KlipMediaPathCheck {
   let resolvedRequest: string
   try {
-    resolvedRequest = realpathSync(decoded)
+    resolvedRequest = realpathSync(absolutePath)
   } catch {
     return { ok: false, status: 404 }
   }
@@ -48,7 +88,6 @@ export function resolveKlipMediaRequest(url: string, rootPath: string): KlipMedi
   try {
     resolvedRoot = realpathSync(rootPath)
   } catch {
-    // Misconfigured root — fail closed.
     return { ok: false, status: 500 }
   }
 

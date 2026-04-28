@@ -1,5 +1,6 @@
 import type { ICutRepository } from '@domain/repositories'
 import { createTypedHandler } from './create-typed-handler'
+import { toCutDto, mapPaginated } from './dto-mappers'
 
 /**
  * IPC controller for cut CRUD operations.
@@ -13,15 +14,16 @@ import { createTypedHandler } from './create-typed-handler'
  */
 export function registerCutController(cutRepo: ICutRepository): void {
   createTypedHandler('get-cuts-paginated', async (_event, params) => {
-    return cutRepo.findPaginated(params)
+    return mapPaginated(cutRepo.findPaginated(params), toCutDto)
   })
 
   createTypedHandler('get-cut-by-id', async (_event, id) => {
-    return cutRepo.findById(id)
+    const cut = cutRepo.findById(id)
+    return cut ? toCutDto(cut) : null
   })
 
   createTypedHandler('get-cuts-by-tags', async (_event, tags) => {
-    return cutRepo.findByTags(tags)
+    return cutRepo.findByTags(tags).map(toCutDto)
   })
 
   createTypedHandler('delete-cut', async (_event, id) => {

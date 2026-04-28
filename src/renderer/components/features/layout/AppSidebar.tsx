@@ -19,7 +19,7 @@ const navItems = [
   { label: 'About', to: '/about', icon: Info }
 ] as const
 
-export function AppSidebar() {
+export function AppSidebar(): React.ReactElement {
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
 

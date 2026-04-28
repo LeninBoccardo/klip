@@ -26,7 +26,7 @@ interface MigrateRootButtonProps {
   currentRootPath: string | null | undefined
 }
 
-export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps) {
+export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps): React.ReactElement {
   const isBlocking = useAppStore((s) => s.blockingOperation !== null)
   const { mutation, selectFolder } = useMigrateRoot()
 
@@ -34,7 +34,7 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [showResult, setShowResult] = useState(false)
 
-  const handleClick = async () => {
+  const handleClick = async (): Promise<void> => {
     const folder = await selectFolder()
     if (folder) {
       setSelectedFolder(folder)
@@ -42,7 +42,7 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps) {
     }
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = (): void => {
     setShowConfirm(false)
     if (selectedFolder) {
       mutation.mutate(selectedFolder, {
@@ -53,7 +53,7 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps) {
     }
   }
 
-  const handleRetry = () => {
+  const handleRetry = (): void => {
     setShowResult(false)
     if (selectedFolder) {
       mutation.mutate(selectedFolder, {
@@ -64,7 +64,7 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps) {
     }
   }
 
-  const handleDismissResult = () => {
+  const handleDismissResult = (): void => {
     setShowResult(false)
     setSelectedFolder(null)
   }

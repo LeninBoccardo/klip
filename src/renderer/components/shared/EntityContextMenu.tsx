@@ -19,7 +19,7 @@ export function EntityContextMenu({
   onDelete,
   onRestore,
   children
-}: EntityContextMenuProps) {
+}: EntityContextMenuProps): React.ReactElement {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { useEffect, useCallback } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { queryKeys } from '@/lib/query-keys'
@@ -11,7 +11,10 @@ import type { MigrateRootProgress, MigrateRootResult } from '@shared/types'
  * subscribes to real-time progress events, and provides
  * the mutation to trigger migration.
  */
-export function useMigrateRoot() {
+export function useMigrateRoot(): {
+  mutation: UseMutationResult<MigrateRootResult, Error, string>
+  selectFolder: () => Promise<string | null>
+} {
   const startBlocking = useAppStore((s) => s.startBlockingOperation)
   const updateProgress = useAppStore((s) => s.updateBlockingProgress)
   const endBlocking = useAppStore((s) => s.endBlockingOperation)

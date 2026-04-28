@@ -25,33 +25,33 @@ Step 6 of [plans/plan-codeOverview.prompt.md](../plans/plan-codeOverview.prompt.
 
 **Severity rubric (per Step 6 spec):**
 
-| Severity | Bar |
-|---|---|
-| **CRITICAL** | Remote code execution or arbitrary data exfiltration. Must fix before ship. |
-| **HIGH** | Local privilege escalation or data tampering. Fix before ship unless explicit accept-risk. |
-| **MEDIUM** | Information disclosure or hardening gap with realistic attacker capability under our threat model. |
-| **LOW** | Defense-in-depth gap. Cheap to fix; small marginal benefit. |
+| Severity     | Bar                                                                                                |
+| ------------ | -------------------------------------------------------------------------------------------------- |
+| **CRITICAL** | Remote code execution or arbitrary data exfiltration. Must fix before ship.                        |
+| **HIGH**     | Local privilege escalation or data tampering. Fix before ship unless explicit accept-risk.         |
+| **MEDIUM**   | Information disclosure or hardening gap with realistic attacker capability under our threat model. |
+| **LOW**      | Defense-in-depth gap. Cheap to fix; small marginal benefit.                                        |
 
 ---
 
 ## Findings summary
 
-| ID | Severity | Surface | Status |
-|---|---|---|---|
-| F1 | **CRITICAL** | `klip-media://` arbitrary file read | fix |
-| F2 | **HIGH** | Renderer `sandbox: false` + implicit `contextIsolation` | fix |
-| F3 | **HIGH** | Production code-signing not configured | `[needs-product-decision]` (linked: F-PD-2) |
-| F4 | **MEDIUM** | No runtime IPC payload validation | fix |
-| F5 | **MEDIUM** | Logging hygiene — paths in stdout/stderr | fix (linked: F-PD-3) |
-| F6 | **MEDIUM** | `JSON.parse` without runtime schema | fix |
-| F7 | **MEDIUM** | yt-dlp output-template `videoId` interpolation | fix |
-| F8 | **LOW** | Bundled binary checksum verification missing | fix |
-| F9 | **LOW** | `download-binaries.ts` uses `execSync` with interpolated paths | fix |
-| F10 | **LOW** | CSP missing explicit `object-src 'none'` | fix |
-| F11 | **LOW** | `autoDownload + autoInstallOnAppQuit` without explicit consent | defer (UX decision) |
-| F-PD-1 | needs-decision | DB-at-rest encryption (SQLCipher) | recommend defer |
-| F-PD-2 | needs-decision | Production code-signing (Apple + Windows) | recommend adopt before public release |
-| F-PD-3 | needs-decision | Log/telemetry redaction policy | recommend adopt now |
+| ID     | Severity       | Surface                                                        | Status                                      |
+| ------ | -------------- | -------------------------------------------------------------- | ------------------------------------------- |
+| F1     | **CRITICAL**   | `klip-media://` arbitrary file read                            | fix                                         |
+| F2     | **HIGH**       | Renderer `sandbox: false` + implicit `contextIsolation`        | fix                                         |
+| F3     | **HIGH**       | Production code-signing not configured                         | `[needs-product-decision]` (linked: F-PD-2) |
+| F4     | **MEDIUM**     | No runtime IPC payload validation                              | fix                                         |
+| F5     | **MEDIUM**     | Logging hygiene — paths in stdout/stderr                       | fix (linked: F-PD-3)                        |
+| F6     | **MEDIUM**     | `JSON.parse` without runtime schema                            | fix                                         |
+| F7     | **MEDIUM**     | yt-dlp output-template `videoId` interpolation                 | fix                                         |
+| F8     | **LOW**        | Bundled binary checksum verification missing                   | fix                                         |
+| F9     | **LOW**        | `download-binaries.ts` uses `execSync` with interpolated paths | fix                                         |
+| F10    | **LOW**        | CSP missing explicit `object-src 'none'`                       | fix                                         |
+| F11    | **LOW**        | `autoDownload + autoInstallOnAppQuit` without explicit consent | defer (UX decision)                         |
+| F-PD-1 | needs-decision | DB-at-rest encryption (SQLCipher)                              | recommend defer                             |
+| F-PD-2 | needs-decision | Production code-signing (Apple + Windows)                      | recommend adopt before public release       |
+| F-PD-3 | needs-decision | Log/telemetry redaction policy                                 | recommend adopt now                         |
 
 **Tally.** 11 technical findings (1 CRITICAL, 2 HIGH, 4 MEDIUM, 4 LOW) + 3 product-decision items.
 
@@ -63,7 +63,7 @@ Step 6 of [plans/plan-codeOverview.prompt.md](../plans/plan-codeOverview.prompt.
 
 **Threat scenario.** A malicious YouTube comment or video description renders an `<img src="klip-media://C:/Users/<user>/Documents/secrets.txt">`. The renderer fetches it via `klip-media://`. The protocol handler decodes the URL, resolves the path, and returns the file contents as the `<img>` body. With CSP `img-src ... klip-media:` permitting the protocol, the only thing stopping exfiltration is the protocol handler itself — which has no path containment.
 
-The threat model assumes attacker-influenced stored content (comments / metadata / transcripts). The CSP's `script-src 'self'` blocks classic XSS, but `<img onerror>` is *not* a script and the CSP doesn't apply to error-channel exfiltration via image dimensions or via timing.
+The threat model assumes attacker-influenced stored content (comments / metadata / transcripts). The CSP's `script-src 'self'` blocks classic XSS, but `<img onerror>` is _not_ a script and the CSP doesn't apply to error-channel exfiltration via image dimensions or via timing.
 
 **Vulnerability site.** [src/main/index.ts:73-76](../src/main/index.ts#L73-L76):
 
@@ -79,7 +79,7 @@ There is no normalisation, no `realpath` resolution, no `startsWith(rootPath)` c
 **Reproduction sketch.**
 
 1. A comment text contains `<img src="klip-media://C:/Windows/System32/drivers/etc/hosts">`.
-2. (Even though our renderer text-escapes content, *any* future template that renders raw HTML — or any direct DOM manipulation — would trigger the load.)
+2. (Even though our renderer text-escapes content, _any_ future template that renders raw HTML — or any direct DOM manipulation — would trigger the load.)
 3. More directly: a stored creator.json with `"thumbnailPath": "../../../../etc/passwd"` plus a renderer that builds a `klip-media://` URL from that path will leak the file content into the rendered DOM, accessible via DevTools, screenshot, or future ML/clipboard features.
 
 **Recommended fix.** Containment check inside the handler:
@@ -100,6 +100,7 @@ protocol.handle('klip-media', (request) => {
 ```
 
 Caveats:
+
 - `realpathSync` resolves symlinks, mitigating symlink-escape.
 - The check uses `+ sep` to prevent `<root>-evil/` matching `<root>` as a prefix.
 - Returns 403 (not 404) so the handler signals refusal, not "doesn't exist."
@@ -114,7 +115,7 @@ Caveats:
 
 ### F2 — Renderer sandbox disabled + `contextIsolation` not explicit — HIGH
 
-**Threat scenario.** Compounds F1's exfiltration impact. If F1 escalates to script execution (e.g., a future renderer addition uses `dangerouslySetInnerHTML` to render rich-text comments, or a dependency ships an XSS gadget), the *cost* of that XSS is determined by sandbox + contextIsolation. With `sandbox: false`, the renderer process has access to Node.js APIs through preload's process. With `contextIsolation` left at the (correct, but unstated) default, a future change to that default would silently break preload's bridge.
+**Threat scenario.** Compounds F1's exfiltration impact. If F1 escalates to script execution (e.g., a future renderer addition uses `dangerouslySetInnerHTML` to render rich-text comments, or a dependency ships an XSS gadget), the _cost_ of that XSS is determined by sandbox + contextIsolation. With `sandbox: false`, the renderer process has access to Node.js APIs through preload's process. With `contextIsolation` left at the (correct, but unstated) default, a future change to that default would silently break preload's bridge.
 
 **Vulnerability site.** [src/main/index.ts:34-37](../src/main/index.ts#L34-L37):
 
@@ -172,10 +173,10 @@ The preload's fallback at [src/preload/index.ts:115-119](../src/preload/index.ts
 
 **This finding has two halves:**
 
-| Half | Severity in audit terms | Action |
-|---|---|---|
-| Code path: unsigned auto-updates would be rejected by `electron-updater` (good — accidental defense) | LOW | Verified — `electron-updater` rejects unsigned updates by default on Windows. Document. |
-| Product readiness: app cannot ship signed updates without certs + signing pipeline | HIGH | Linked to F-PD-2. Requires Apple Developer ID + Windows OV/EV cert + CI signing pipeline. |
+| Half                                                                                                 | Severity in audit terms | Action                                                                                    |
+| ---------------------------------------------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
+| Code path: unsigned auto-updates would be rejected by `electron-updater` (good — accidental defense) | LOW                     | Verified — `electron-updater` rejects unsigned updates by default on Windows. Document.   |
+| Product readiness: app cannot ship signed updates without certs + signing pipeline                   | HIGH                    | Linked to F-PD-2. Requires Apple Developer ID + Windows OV/EV cert + CI signing pipeline. |
 
 **Recommended fix.** Linked to **F-PD-2** product decision below. No code-side fix needed until certs are acquired. Once acquired:
 
@@ -277,7 +278,7 @@ export function redactError(err: unknown, root?: string): { message: string; sta
 }
 ```
 
-Then sweep the 27 sites: replace `console.error(msg, err)` with `console.error(msg, redactError(err, rootPath))` and `console.log(\`... ${path}\`)` with `console.log(\`... ${redactPath(path, rootPath)}\`)`.
+Then sweep the 27 sites: replace `console.error(msg, err)` with `console.error(msg, redactError(err, rootPath))` and `console.log(\`... ${path}\`)`with`console.log(\`... ${redactPath(path, rootPath)}\`)`.
 
 **Effort.** M (helper ~30 LoC + 27 sites × 1-line change). Cleanest done in one sweep.
 
@@ -307,13 +308,17 @@ const { oldPath, newPath } = payload
 ```ts
 const RenameFolderPayload = z.object({ oldPath: z.string(), newPath: z.string() })
 const MigrateRootPayload = z.object({
-  oldRoot: z.string(), newRoot: z.string(),
-  folders: z.array(z.string()), movedSoFar: z.array(z.string())
+  oldRoot: z.string(),
+  newRoot: z.string(),
+  folders: z.array(z.string()),
+  movedSoFar: z.array(z.string())
 })
 // ...
 
 const result = RenameFolderPayload.safeParse(JSON.parse(op.payload))
-if (!result.success) { /* mark rolled_back with parse-error message — already done */ }
+if (!result.success) {
+  /* mark rolled_back with parse-error message — already done */
+}
 ```
 
 The existing tests at [tests/main/use-cases/RecoverOperations.test.ts:174](../tests/main/use-cases/RecoverOperations.test.ts#L174) (`should mark rename_folder as rolled_back when payload is malformed JSON`) confirm the pattern is already to roll back on parse failure — formalising with zod tightens the runtime check.
@@ -339,7 +344,7 @@ If `videoId` contains `..`, `path.join` upstream collapses it before reaching th
 
 ```ts
 const info = await this.fetchInfo.execute(url)
-const videoId = info.videoId  // from yt-dlp's --dump-json
+const videoId = info.videoId // from yt-dlp's --dump-json
 ```
 
 Under our threat model, the yt-dlp binary is trusted. So `videoId` is what yt-dlp says it is — typically an 11-char alphanumeric YouTube ID. **But:**
@@ -362,7 +367,7 @@ const outputDir = this.pathResolver.join(
   this.rootPath.value,
   folderName,
   'downloads',
-  videoId  // ← if videoId is '../../', this escapes
+  videoId // ← if videoId is '../../', this escapes
 )
 ```
 
@@ -401,7 +406,7 @@ const SHASUMS = {
   'yt-dlp.exe': 'abc123...',
   'yt-dlp_macos': 'def456...',
   'yt-dlp_linux': 'ghi789...',
-  'ffprobe-6.1-win-64.zip': '...',
+  'ffprobe-6.1-win-64.zip': '...'
   // etc.
 }
 
@@ -409,7 +414,9 @@ const SHASUMS = {
 const actual = createHash('sha256').update(readFileSync(dest)).digest('hex')
 if (actual !== SHASUMS[spec.outputName]) {
   unlinkSync(dest)
-  throw new Error(`Checksum mismatch for ${spec.name}: expected ${SHASUMS[spec.outputName]}, got ${actual}`)
+  throw new Error(
+    `Checksum mismatch for ${spec.name}: expected ${SHASUMS[spec.outputName]}, got ${actual}`
+  )
 }
 ```
 
@@ -435,6 +442,7 @@ execSync(`unzip -o "${zipPath}" -d "${BIN_DIR}"`, { stdio: 'pipe' })
 `zipPath` and `BIN_DIR` are constructed from `__dirname` + hardcoded names. Under our threat model (single-user, trusted operator), the user owns `__dirname`. But on Windows, a username with `'` in it (rare but possible) could break the powershell quoting. And on macOS / Linux, a path with embedded `"` or `$` would inject.
 
 This is **LOW** because:
+
 - The script runs at install/setup, not at runtime.
 - The threat model treats the user as trusted.
 - The injection requires a user who installs to a path with shell metacharacters.
@@ -443,13 +451,17 @@ This is **LOW** because:
 
 ```ts
 if (platform === 'win32') {
-  execFileSync('powershell', ['-Command', `Expand-Archive -Path "${zipPath}" -DestinationPath "${BIN_DIR}" -Force`], { stdio: 'pipe' })
+  execFileSync(
+    'powershell',
+    ['-Command', `Expand-Archive -Path "${zipPath}" -DestinationPath "${BIN_DIR}" -Force`],
+    { stdio: 'pipe' }
+  )
 } else {
   execFileSync('unzip', ['-o', zipPath, '-d', BIN_DIR], { stdio: 'pipe' })
 }
 ```
 
-The macOS/Linux `unzip` form is fully shell-free. The Windows form still has a `-Command` string but the *path* arguments are no longer in shell scope.
+The macOS/Linux `unzip` form is fully shell-free. The Windows form still has a `-Command` string but the _path_ arguments are no longer in shell scope.
 
 **Effort.** XS.
 
@@ -460,8 +472,10 @@ The macOS/Linux `unzip` form is fully shell-free. The Windows form still has a `
 **Threat scenario.** [src/renderer/index.html:7-10](../src/renderer/index.html#L7-L10):
 
 ```html
-<meta http-equiv="Content-Security-Policy"
-  content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: klip-media:" />
+<meta
+  http-equiv="Content-Security-Policy"
+  content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: klip-media:"
+/>
 ```
 
 `object-src` falls back to `default-src 'self'`, which already restricts `<object>` / `<embed>` / `<applet>` to same-origin. Explicit `object-src 'none'` is the W3C-recommended hardening — it removes any future risk if `default-src` is loosened.
@@ -469,10 +483,12 @@ The macOS/Linux `unzip` form is fully shell-free. The Windows form still has a `
 **Recommended fix.**
 
 ```html
-content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: klip-media:; object-src 'none'; base-uri 'self'; form-action 'none'"
+content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'
+data: klip-media:; object-src 'none'; base-uri 'self'; form-action 'none'"
 ```
 
 Adds:
+
 - `object-src 'none'` — no plugins.
 - `base-uri 'self'` — prevents `<base>` injection.
 - `form-action 'none'` — no forms expected.
@@ -490,7 +506,7 @@ autoUpdater.autoDownload = true
 autoUpdater.autoInstallOnAppQuit = true
 ```
 
-Updates download in the background without user prompt and install on quit. If F3 is resolved (production builds signed), `electron-updater` validates signatures, so the worst case is a *rolled-back* version — not RCE. Without F3, the unsigned-update flow already fails on Windows (good — accidental defense, see F3).
+Updates download in the background without user prompt and install on quit. If F3 is resolved (production builds signed), `electron-updater` validates signatures, so the worst case is a _rolled-back_ version — not RCE. Without F3, the unsigned-update flow already fails on Windows (good — accidental defense, see F3).
 
 This is a **product UX call**, not a vuln per se. Some apps prefer "download with consent → install with consent" for transparency.
 
@@ -541,7 +557,7 @@ These items require product / business decisions and are surfaced separately fro
 The following surfaces were checked and came back clean. Future audits should start from this baseline; any drift represents a regression.
 
 - ✅ **CSP** ([src/renderer/index.html:7-10](../src/renderer/index.html#L7-L10)) — `default-src 'self'`, `script-src 'self'`, no `'unsafe-eval'`, `'unsafe-inline'` for styles only (Tailwind requires it). Minor object-src nit handled in F10.
-- ✅ **SQL injection** — all repositories use Drizzle's parameterized `sql\`\`` template. LIKE patterns escaped via [escape-like.ts](../src/main/interface-adapters/repositories/escape-like.ts). `findByTags` parameterizes each tag via `sql.join`. No raw string interpolation found.
+- ✅ **SQL injection** — all repositories use Drizzle's parameterized `sql\`\``template. LIKE patterns escaped via [escape-like.ts](../src/main/interface-adapters/repositories/escape-like.ts).`findByTags`parameterizes each tag via`sql.join`. No raw string interpolation found.
 - ✅ **Preload bridge** ([src/preload/index.ts](../src/preload/index.ts)) — exposes only `window.api` (typed IPC invokers) and `window.electron` (toolkit defaults — limited surface). `process`, `require`, `node` globals not leaked.
 - ✅ **`window.api` typing discipline** — no `(window as any).api`, `as any`, or `as unknown as` bypasses found in `src/renderer/` (excluding auto-gen `routeTree.gen.ts`).
 - ✅ **Path traversal in FS layer** — folder names always come from `fsReader.listDirectories()` (filesystem-listed, not raw user input). [MigrateRootFolder.ts:120-121](../src/main/use-cases/MigrateRootFolder.ts#L120-L121) validates both roots exist before iteration.
@@ -559,21 +575,21 @@ The following surfaces were checked and came back clean. Future audits should st
 
 Recommended order (CRITICAL → LOW), with effort estimates.
 
-| # | Finding | Effort | Reason / dependency |
-|---|---|---|---|
-| 1 | **F1** — `klip-media://` containment | S | CRITICAL. No dependency. Land first. |
-| 2 | **F2a** — explicit `contextIsolation: true` | XS | HIGH. Independent of F2b. Cheap. |
-| 3 | **F7** — videoId allowlist | S | MEDIUM. Independent. Cheap. |
-| 4 | **F6** — zod schemas for operation payloads | S | MEDIUM. Localised to RecoverOperations + 3 payload types. |
-| 5 | **F4** — IPC payload zod validation | M | MEDIUM. Largest mechanical sweep. Can land progressively. |
-| 6 | **F5** + **F-PD-3** — logging redaction helpers + sweep | M | MEDIUM. Lands the redaction policy at the same time. |
-| 7 | **F10** — explicit `object-src 'none'` etc. in CSP | XS | LOW. One-line edit. |
-| 8 | **F8** — binary sha256 verification | S | LOW. Setup-script hardening. |
-| 9 | **F9** — `download-binaries.ts` `execFileSync` | XS | LOW. Setup-script hardening. |
-| 10 | **F11** — auto-update consent UX | defer | LOW. UX call after F-PD-2 settles. |
-| 11 | **F2b** — sandbox: true (if feasible) | M | HIGH defense-in-depth. Re-evaluate after F2a + F1 close the immediate concerns. |
-| 12 | **F3 + F-PD-2** — code-signing | L | HIGH product decision. Procurement + CI work. Land before any public release. |
-| 13 | **F-PD-1** — DB-at-rest encryption | — | Defer indefinitely under current threat model. |
+| #   | Finding                                                 | Effort | Reason / dependency                                                             |
+| --- | ------------------------------------------------------- | ------ | ------------------------------------------------------------------------------- |
+| 1   | **F1** — `klip-media://` containment                    | S      | CRITICAL. No dependency. Land first.                                            |
+| 2   | **F2a** — explicit `contextIsolation: true`             | XS     | HIGH. Independent of F2b. Cheap.                                                |
+| 3   | **F7** — videoId allowlist                              | S      | MEDIUM. Independent. Cheap.                                                     |
+| 4   | **F6** — zod schemas for operation payloads             | S      | MEDIUM. Localised to RecoverOperations + 3 payload types.                       |
+| 5   | **F4** — IPC payload zod validation                     | M      | MEDIUM. Largest mechanical sweep. Can land progressively.                       |
+| 6   | **F5** + **F-PD-3** — logging redaction helpers + sweep | M      | MEDIUM. Lands the redaction policy at the same time.                            |
+| 7   | **F10** — explicit `object-src 'none'` etc. in CSP      | XS     | LOW. One-line edit.                                                             |
+| 8   | **F8** — binary sha256 verification                     | S      | LOW. Setup-script hardening.                                                    |
+| 9   | **F9** — `download-binaries.ts` `execFileSync`          | XS     | LOW. Setup-script hardening.                                                    |
+| 10  | **F11** — auto-update consent UX                        | defer  | LOW. UX call after F-PD-2 settles.                                              |
+| 11  | **F2b** — sandbox: true (if feasible)                   | M      | HIGH defense-in-depth. Re-evaluate after F2a + F1 close the immediate concerns. |
+| 12  | **F3 + F-PD-2** — code-signing                          | L      | HIGH product decision. Procurement + CI work. Land before any public release.   |
+| 13  | **F-PD-1** — DB-at-rest encryption                      | —      | Defer indefinitely under current threat model.                                  |
 
 **Verification gate after fix phase:**
 

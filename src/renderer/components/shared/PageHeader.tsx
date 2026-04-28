@@ -12,7 +12,12 @@ interface PageHeaderProps {
  * Consistent page header with title, optional description, and action slot.
  * Uses the same typography tokens across all pages.
  */
-export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  className
+}: PageHeaderProps): React.ReactElement {
   return (
     <div className={cn('flex items-start justify-between gap-4', className)}>
       <div className="space-y-1">

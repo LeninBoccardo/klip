@@ -24,7 +24,12 @@ interface ResponsiveGridProps
  * Shared responsive CSS-grid wrapper.
  * Use the `columns` variant to pick a density preset.
  */
-export function ResponsiveGrid({ className, columns, children, ...props }: ResponsiveGridProps) {
+export function ResponsiveGrid({
+  className,
+  columns,
+  children,
+  ...props
+}: ResponsiveGridProps): React.ReactElement {
   return (
     <div className={cn(gridVariants({ columns }), className)} {...props}>
       {children}

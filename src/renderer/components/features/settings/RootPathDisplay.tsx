@@ -11,7 +11,7 @@ interface RootPathDisplayProps {
   rootPath: string | null | undefined
 }
 
-export function RootPathDisplay({ rootPath }: RootPathDisplayProps) {
+export function RootPathDisplay({ rootPath }: RootPathDisplayProps): React.ReactElement {
   return (
     <Field>
       <FieldLabel>Root directory</FieldLabel>

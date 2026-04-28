@@ -33,7 +33,7 @@ export function CreatorFilters({
   onSearchChange,
   statusFilter,
   onStatusFilterChange
-}: CreatorFiltersProps) {
+}: CreatorFiltersProps): React.ReactElement {
   const currentStatusValue =
     !statusFilter || (statusFilter.length === 1 && statusFilter[0] === 'active')
       ? 'active'

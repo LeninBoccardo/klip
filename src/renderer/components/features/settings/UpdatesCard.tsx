@@ -18,7 +18,7 @@ const STATE_COPY: Record<UpdaterState, string> = {
   disabled: 'Auto-updates run in production builds only.'
 }
 
-function StateBadge({ status }: { status: UpdaterStatus }) {
+function StateBadge({ status }: { status: UpdaterStatus }): React.ReactElement {
   switch (status.state) {
     case 'up-to-date':
       return (
@@ -69,7 +69,7 @@ function StateBadge({ status }: { status: UpdaterStatus }) {
   }
 }
 
-export function UpdatesCard() {
+export function UpdatesCard(): React.ReactElement | null {
   const { data: status } = useUpdaterStatus()
   const checkForUpdates = useCheckForUpdates()
   const installUpdate = useInstallUpdate()

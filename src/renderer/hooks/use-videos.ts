@@ -1,15 +1,30 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+  type UseMutationResult
+} from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import type { VideoQueryParams } from '@shared/types'
+import type {
+  VideoQueryParams,
+  PaginatedResult,
+  VideoDetailWithTranscript,
+  EnrichVideosResult,
+  VideoCommentsResult
+} from '@shared/types'
+import type { VideoDto } from '@shared/dtos'
 
-export function useVideosPaginated(params: VideoQueryParams) {
+export function useVideosPaginated(
+  params: VideoQueryParams
+): UseQueryResult<PaginatedResult<VideoDto>, Error> {
   return useQuery({
     queryKey: queryKeys.videos.list(params),
     queryFn: () => window.api.getVideosPaginated(params)
   })
 }
 
-export function useVideoById(id: string | undefined) {
+export function useVideoById(id: string | undefined): UseQueryResult<VideoDto | null, Error> {
   return useQuery({
     queryKey: queryKeys.videos.detail(id!),
     queryFn: () => window.api.getVideoById(id!),
@@ -17,7 +32,7 @@ export function useVideoById(id: string | undefined) {
   })
 }
 
-export function useDeleteVideo() {
+export function useDeleteVideo(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.deleteVideo(id),
@@ -25,7 +40,7 @@ export function useDeleteVideo() {
   })
 }
 
-export function useRestoreVideo() {
+export function useRestoreVideo(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.restoreVideo(id),
@@ -33,7 +48,7 @@ export function useRestoreVideo() {
   })
 }
 
-export function useFetchVideoDetail() {
+export function useFetchVideoDetail(): UseMutationResult<VideoDetailWithTranscript, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (videoId: string) => window.api.fetchVideoDetail(videoId),
@@ -44,7 +59,7 @@ export function useFetchVideoDetail() {
   })
 }
 
-export function useEnrichAllVideos() {
+export function useEnrichAllVideos(): UseMutationResult<EnrichVideosResult, Error, void> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => window.api.enrichAllVideos(),
@@ -52,7 +67,7 @@ export function useEnrichAllVideos() {
   })
 }
 
-export function useTranscript(videoId: string | undefined) {
+export function useTranscript(videoId: string | undefined): UseQueryResult<string | null, Error> {
   return useQuery({
     queryKey: queryKeys.videos.transcript(videoId!),
     queryFn: () => window.api.getTranscript(videoId!),
@@ -60,7 +75,11 @@ export function useTranscript(videoId: string | undefined) {
   })
 }
 
-export function useFetchVideoComments() {
+export function useFetchVideoComments(): UseMutationResult<
+  VideoCommentsResult,
+  Error,
+  { videoId: string; maxComments?: number }
+> {
   return useMutation({
     mutationFn: ({ videoId, maxComments = 500 }: { videoId: string; maxComments?: number }) =>
       window.api.fetchVideoComments(videoId, maxComments)

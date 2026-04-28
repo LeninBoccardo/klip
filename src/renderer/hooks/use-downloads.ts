@@ -1,22 +1,26 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, type UseMutationResult } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
-import type { DownloadProgress } from '@shared/types'
+import type { DownloadProgress, VideoInfo, DownloadVideoResult } from '@shared/types'
 
-export function useFetchVideoInfo() {
+export function useFetchVideoInfo(): UseMutationResult<VideoInfo, Error, string> {
   return useMutation({
     mutationFn: (url: string) => window.api.fetchVideoInfo(url)
   })
 }
 
-export function useDownloadVideo() {
+export function useDownloadVideo(): UseMutationResult<
+  DownloadVideoResult,
+  Error,
+  { url: string; creatorName: string }
+> {
   return useMutation({
     mutationFn: ({ url, creatorName }: { url: string; creatorName: string }) =>
       window.api.downloadVideo(url, creatorName)
   })
 }
 
-export function useCancelDownload() {
+export function useCancelDownload(): UseMutationResult<void, Error, string> {
   return useMutation({
     mutationFn: (downloadId: string) => window.api.cancelDownload(downloadId)
   })

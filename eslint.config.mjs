@@ -37,11 +37,23 @@ export default defineConfig(
   },
   // Auto-generated shadcn primitives intentionally co-export hooks/variants
   // alongside components; rewriting them would diverge from upstream and
-  // re-break on every `npx shadcn add`.
+  // re-break on every `npx shadcn add`. The `explicit-function-return-type`
+  // rule is also disabled here — these files are regenerated, so hand-
+  // annotating return types fights the generator.
   {
     files: ['src/renderer/components/ui/**/*.{ts,tsx}'],
     rules: {
-      'react-refresh/only-export-components': 'off'
+      'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off'
+    }
+  },
+  // Test files: prioritise readability over return-type annotations. Tests
+  // are read top-to-bottom and the assertion vocabulary makes return shapes
+  // obvious; explicit annotations would just be noise.
+  {
+    files: ['tests/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
   eslintConfigPrettier

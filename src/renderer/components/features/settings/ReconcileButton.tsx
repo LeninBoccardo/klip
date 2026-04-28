@@ -8,11 +8,11 @@ import type { ReconcileResult } from '@shared/types'
 import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
-export function ReconcileButton({ disabled }: { disabled?: boolean }) {
+export function ReconcileButton({ disabled }: { disabled?: boolean }): React.ReactElement {
   const reconcile = useReconcile()
   const [result, setResult] = useState<ReconcileResult | null>(null)
 
-  const handleReconcile = () => {
+  const handleReconcile = (): void => {
     setResult(null)
     reconcile.mutate(undefined, {
       onSuccess: (res) => {

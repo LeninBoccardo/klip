@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatDuration, formatFileSize, toMediaSrc } from '@/lib/format'
+import { formatDuration, formatFileSize, mediaUrl } from '@/lib/format'
 
 describe('formatDuration', () => {
   it('returns dash for null', () => {
@@ -53,23 +53,26 @@ describe('formatFileSize', () => {
   })
 })
 
-describe('toMediaSrc', () => {
-  it('returns undefined for null', () => {
-    expect(toMediaSrc(null)).toBeUndefined()
+describe('mediaUrl', () => {
+  it('builds an entity-keyed video file URL', () => {
+    expect(mediaUrl('video', 'abc123', 'file')).toBe('klip-media://video/abc123/file')
   })
 
-  it('returns undefined for empty string', () => {
-    expect(toMediaSrc('')).toBeUndefined()
+  it('builds an entity-keyed video thumbnail URL', () => {
+    expect(mediaUrl('video', 'abc123', 'thumbnail')).toBe('klip-media://video/abc123/thumbnail')
   })
 
-  it('converts a file path to klip-media:// URL', () => {
-    const result = toMediaSrc('C:\\Users\\test\\thumb.jpg')
-    expect(result).toBe(`klip-media://${encodeURIComponent('C:\\Users\\test\\thumb.jpg')}`)
+  it('builds an entity-keyed cut file URL', () => {
+    expect(mediaUrl('cut', 'cut-id-1', 'file')).toBe('klip-media://cut/cut-id-1/file')
   })
 
-  it('encodes special characters', () => {
-    const result = toMediaSrc('/path/with spaces/file.jpg')
-    expect(result).toContain('klip-media://')
-    expect(result).toContain(encodeURIComponent('/path/with spaces/file.jpg'))
+  it('builds a creator avatar URL', () => {
+    expect(mediaUrl('creator', 'jane-doe', 'avatar')).toBe('klip-media://creator/jane-doe/avatar')
+  })
+
+  it('encodes ids that contain reserved URL characters', () => {
+    // IDs are slugified or UUIDs by construction, but defensively encode.
+    const url = mediaUrl('video', 'id with space', 'file')
+    expect(url).toBe('klip-media://video/id%20with%20space/file')
   })
 })

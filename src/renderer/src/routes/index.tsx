@@ -20,7 +20,7 @@ export const Route = createFileRoute('/')({
   component: LibraryPage
 })
 
-function LibraryPage() {
+function LibraryPage(): React.ReactElement {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -36,14 +36,14 @@ function LibraryPage() {
   const deleteCreator = useDeleteCreator()
   const restoreCreator = useRestoreCreator()
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = (id: string, name: string): void => {
     deleteCreator.mutate(id, {
       onSuccess: () => toast.success(`"${name}" deleted`),
       onError: (err) => toast.error(`Failed to delete: ${err.message}`)
     })
   }
 
-  const handleRestore = (id: string, name: string) => {
+  const handleRestore = (id: string, name: string): void => {
     restoreCreator.mutate(id, {
       onSuccess: () => toast.success(`"${name}" restored`),
       onError: (err) => toast.error(`Failed to restore: ${err.message}`)

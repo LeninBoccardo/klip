@@ -123,9 +123,7 @@ export class YtDlpDownloader implements IVideoDownloader {
 
   // ── fetchVideoDetail ──
 
-  async fetchVideoDetail(
-    url: string
-  ): Promise<Omit<VideoDetail, 'hasTranscript' | 'transcriptPath'>> {
+  async fetchVideoDetail(url: string): Promise<Omit<VideoDetail, 'hasTranscript'>> {
     const bin = this.binaryResolver.resolve('yt-dlp')
 
     return new Promise((resolve, reject) => {

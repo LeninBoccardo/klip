@@ -16,7 +16,7 @@ interface StatusBadgeProps {
   className?: string
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, className }: StatusBadgeProps): React.ReactElement {
   const config = statusConfig[status]
   return (
     <Badge variant={config.variant} className={cn('text-xs', className)}>

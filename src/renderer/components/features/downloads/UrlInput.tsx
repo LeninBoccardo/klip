@@ -22,7 +22,7 @@ interface UrlInputProps {
   isLoading?: boolean
 }
 
-export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
+export function UrlInput({ onSubmit, isLoading }: UrlInputProps): React.ReactElement {
   const {
     register,
     handleSubmit,

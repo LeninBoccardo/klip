@@ -130,7 +130,6 @@ describe('FetchVideoDetail', () => {
     expect(result.tags).toEqual(['rock', 'live'])
     expect(result.transcriptText).toBe('Hello world')
     expect(result.hasTranscript).toBe(true)
-    expect(result.transcriptPath).toBe('/root/creator-1/downloads/video-1/transcript.en.vtt')
 
     expect(mocks.videoRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({

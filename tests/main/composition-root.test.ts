@@ -71,9 +71,11 @@ describe('composition-root smoke test', () => {
     expect(container.useCases.enrichMedia).toBeDefined()
     expect(container.useCases.fetchChannelInfo).toBeDefined()
     expect(container.useCases.migrateRootFolder).toBeDefined()
+    expect(container.useCases.resolveMediaUrl).toBeDefined()
 
-    // Service + ref
+    // Services + ref
     expect(container.services.fileWatcher).toBeDefined()
+    expect(container.services.klipMediaProtocol).toBeDefined()
     expect(container.rootPathRef.value).toBe('/fake/root')
 
     // Cleanly tear down (closes DB, etc.).

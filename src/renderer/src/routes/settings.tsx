@@ -18,7 +18,7 @@ export const Route = createFileRoute('/settings')({
   component: SettingsPage
 })
 
-function SettingsPage() {
+function SettingsPage(): React.ReactElement {
   const { data: rootPath, isLoading: rootLoading } = useSetting('rootPath')
   const { data: auditEntries, isLoading: auditLoading } = useAuditLogRecent(30)
   const isBlocking = useAppStore((s) => s.blockingOperation !== null)

@@ -8,7 +8,7 @@ interface VideoInfoPreviewProps {
   info: VideoInfo
 }
 
-export function VideoInfoPreview({ info }: VideoInfoPreviewProps) {
+export function VideoInfoPreview({ info }: VideoInfoPreviewProps): React.ReactElement {
   return (
     <Card size="sm">
       <CardHeader className="pb-2">

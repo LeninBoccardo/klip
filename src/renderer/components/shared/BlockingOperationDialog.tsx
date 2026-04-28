@@ -22,7 +22,7 @@ const phaseLabels: Record<string, string> = {
  *
  * Mount once near the root layout.
  */
-export function BlockingOperationDialog() {
+export function BlockingOperationDialog(): React.ReactElement | null {
   const blockingOperation = useAppStore((s) => s.blockingOperation)
 
   if (!blockingOperation) return null

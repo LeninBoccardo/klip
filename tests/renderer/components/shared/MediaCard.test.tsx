@@ -5,9 +5,11 @@ import { MediaCard } from '@/components/shared/MediaCard'
 
 describe('MediaCard', () => {
   const defaultProps = {
+    entityKind: 'video' as const,
+    entityId: 'abc123',
+    hasThumbnail: false,
     title: 'My Video',
     status: 'active' as const,
-    thumbnailPath: null,
     duration: 125,
     resolution: '1920x1080',
     fileSize: 50 * 1024 * 1024
@@ -42,14 +44,20 @@ describe('MediaCard', () => {
   })
 
   it('renders placeholder icon when no thumbnail', () => {
-    render(<MediaCard {...defaultProps} thumbnailPath={null} />)
+    render(<MediaCard {...defaultProps} hasThumbnail={false} />)
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 
-  it('renders img when thumbnail path is provided', () => {
-    render(<MediaCard {...defaultProps} thumbnailPath="C:\\thumb.jpg" />)
+  it('renders entity-keyed klip-media URL when hasThumbnail is true', () => {
+    render(<MediaCard {...defaultProps} hasThumbnail={true} />)
     const img = screen.getByRole('img', { name: 'My Video' })
-    expect(img).toHaveAttribute('src', expect.stringContaining('klip-media://'))
+    expect(img).toHaveAttribute('src', 'klip-media://video/abc123/thumbnail')
+  })
+
+  it('uses cut entity-kind for cut thumbnails', () => {
+    render(<MediaCard {...defaultProps} entityKind="cut" entityId="cut-1" hasThumbnail={true} />)
+    const img = screen.getByRole('img', { name: 'My Video' })
+    expect(img).toHaveAttribute('src', 'klip-media://cut/cut-1/thumbnail')
   })
 
   it('calls onClick when card is clicked', async () => {

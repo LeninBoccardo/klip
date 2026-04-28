@@ -1,15 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+  type UseMutationResult
+} from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import type { CutQueryParams } from '@shared/types'
+import type { CutQueryParams, PaginatedResult } from '@shared/types'
+import type { CutDto } from '@shared/dtos'
 
-export function useCutsPaginated(params: CutQueryParams) {
+export function useCutsPaginated(
+  params: CutQueryParams
+): UseQueryResult<PaginatedResult<CutDto>, Error> {
   return useQuery({
     queryKey: queryKeys.cuts.list(params),
     queryFn: () => window.api.getCutsPaginated(params)
   })
 }
 
-export function useCutById(id: string | undefined) {
+export function useCutById(id: string | undefined): UseQueryResult<CutDto | null, Error> {
   return useQuery({
     queryKey: queryKeys.cuts.detail(id!),
     queryFn: () => window.api.getCutById(id!),
@@ -17,7 +26,7 @@ export function useCutById(id: string | undefined) {
   })
 }
 
-export function useCutsByTags(tags: string[]) {
+export function useCutsByTags(tags: string[]): UseQueryResult<CutDto[], Error> {
   return useQuery({
     queryKey: queryKeys.cuts.byTags(tags),
     queryFn: () => window.api.getCutsByTags(tags),
@@ -25,7 +34,7 @@ export function useCutsByTags(tags: string[]) {
   })
 }
 
-export function useDeleteCut() {
+export function useDeleteCut(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.deleteCut(id),
@@ -33,7 +42,7 @@ export function useDeleteCut() {
   })
 }
 
-export function useRestoreCut() {
+export function useRestoreCut(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.restoreCut(id),

@@ -17,7 +17,7 @@ export const Route = createFileRoute('/downloads')({
   component: DownloadsPage
 })
 
-function DownloadsPage() {
+function DownloadsPage(): React.ReactElement {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
   const [fetchedUrl, setFetchedUrl] = useState('')
   const [creatorName, setCreatorName] = useState('')
@@ -25,7 +25,7 @@ function DownloadsPage() {
   const fetchInfo = useFetchVideoInfo()
   const download = useDownloadVideo()
 
-  const handleFetchInfo = (url: string) => {
+  const handleFetchInfo = (url: string): void => {
     setVideoInfo(null)
     fetchInfo.mutate(url, {
       onSuccess: (info) => {
@@ -40,7 +40,7 @@ function DownloadsPage() {
     })
   }
 
-  const handleDownload = () => {
+  const handleDownload = (): void => {
     if (!fetchedUrl || !creatorName.trim()) {
       toast.error('Please provide a creator name')
       return

@@ -1,15 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+  type UseMutationResult
+} from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import type { PaginationParams } from '@shared/types'
+import type { PaginationParams, PaginatedResult } from '@shared/types'
+import type { CreatorDto } from '@shared/dtos'
 
-export function useCreatorsPaginated(params: PaginationParams) {
+export function useCreatorsPaginated(
+  params: PaginationParams
+): UseQueryResult<PaginatedResult<CreatorDto>, Error> {
   return useQuery({
     queryKey: queryKeys.creators.list(params),
     queryFn: () => window.api.getCreatorsPaginated(params)
   })
 }
 
-export function useCreatorById(id: string | undefined) {
+export function useCreatorById(id: string | undefined): UseQueryResult<CreatorDto | null, Error> {
   return useQuery({
     queryKey: queryKeys.creators.detail(id!),
     queryFn: () => window.api.getCreatorById(id!),
@@ -17,7 +26,7 @@ export function useCreatorById(id: string | undefined) {
   })
 }
 
-export function useDeleteCreator() {
+export function useDeleteCreator(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.deleteCreator(id),
@@ -25,7 +34,7 @@ export function useDeleteCreator() {
   })
 }
 
-export function useRestoreCreator() {
+export function useRestoreCreator(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.restoreCreator(id),

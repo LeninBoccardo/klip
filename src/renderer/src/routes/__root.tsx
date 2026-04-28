@@ -23,7 +23,7 @@ import { toast } from 'sonner'
 import { AppSidebar } from '@components/features/layout/AppSidebar'
 import { BlockingOperationDialog } from '@/components/shared'
 
-function GlobalListeners() {
+function GlobalListeners(): React.ReactElement {
   useDbListener()
   useDownloadProgressListener()
   return <UpdaterToastWatcher />
@@ -35,7 +35,7 @@ function GlobalListeners() {
  * back to `idle` after install) reset the latch so a fresh `ready` event will
  * notify again.
  */
-function UpdaterToastWatcher() {
+function UpdaterToastWatcher(): null {
   const { data: status } = useUpdaterStatus()
   const installUpdate = useInstallUpdate()
   const notifiedFor = useRef<string | null>(null)
@@ -78,7 +78,7 @@ const routeLabels: Record<string, string> = {
   '/about': 'About'
 }
 
-function AppBreadcrumb() {
+function AppBreadcrumb(): React.ReactElement | null {
   const matches = useMatches()
 
   // Build breadcrumb segments from matched routes (skip root)
@@ -119,7 +119,7 @@ function AppBreadcrumb() {
   )
 }
 
-const RootLayout = () => (
+const RootLayout = (): React.ReactElement => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <TooltipProvider>

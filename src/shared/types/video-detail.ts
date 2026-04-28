@@ -1,6 +1,10 @@
 /**
  * Extended per-video metadata fetched on demand from yt-dlp.
  * Persisted to the videos table when present.
+ *
+ * Does **not** expose `transcriptPath`. The renderer fetches transcript text
+ * via the `get-transcript` IPC channel by entity id; the on-disk path stays
+ * inside the main process.
  */
 export interface VideoDetail {
   videoId: string
@@ -14,7 +18,6 @@ export interface VideoDetail {
   description: string | null
   isShort: boolean
   hasTranscript: boolean
-  transcriptPath: string | null
 }
 
 /** Renderer payload returned by `fetch-video-detail` — includes parsed transcript text */

@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult
+} from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { queryKeys } from '@/lib/query-keys'
 import type { UpdaterStatus } from '@shared/types'
@@ -28,14 +33,14 @@ export function useUpdaterStatus(): ReturnType<typeof useQuery<UpdaterStatus>> {
  * Trigger a manual update check. Cache stays in sync via the push subscription
  * registered by `useUpdaterStatus`, so we don't write to the cache from here.
  */
-export function useCheckForUpdates() {
+export function useCheckForUpdates(): UseMutationResult<UpdaterStatus, Error, void> {
   return useMutation({
     mutationFn: () => window.api.checkForUpdates()
   })
 }
 
 /** Quit and install a previously downloaded update. */
-export function useInstallUpdate() {
+export function useInstallUpdate(): UseMutationResult<void, Error, void> {
   return useMutation({
     mutationFn: () => window.api.installUpdate()
   })

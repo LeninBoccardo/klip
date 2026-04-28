@@ -7,7 +7,7 @@ import type { EnrichVideosResult } from '@shared/types'
 import { useState } from 'react'
 import { Sparkles } from 'lucide-react'
 
-export function EnrichVideosButton({ disabled }: { disabled?: boolean }) {
+export function EnrichVideosButton({ disabled }: { disabled?: boolean }): React.ReactElement {
   const enrich = useEnrichAllVideos()
   const [result, setResult] = useState<EnrichVideosResult | null>(null)
 
@@ -56,7 +56,7 @@ export function EnrichVideosButton({ disabled }: { disabled?: boolean }) {
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: number }): React.ReactElement {
   return (
     <div>
       <p className="text-muted-foreground">{label}</p>

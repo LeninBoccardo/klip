@@ -19,7 +19,11 @@ interface PaginationControlsProps {
  * Shared pagination bar using shadcn Pagination.
  * Shows prev/next and up to 5 visible page numbers with ellipsis.
  */
-export function PaginationControls({ page, totalPages, onPageChange }: PaginationControlsProps) {
+export function PaginationControls({
+  page,
+  totalPages,
+  onPageChange
+}: PaginationControlsProps): React.ReactElement | null {
   const pages = useMemo(() => {
     const items: (number | 'ellipsis')[] = []
     if (totalPages <= 5) {

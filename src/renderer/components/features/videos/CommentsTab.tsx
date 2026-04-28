@@ -70,18 +70,18 @@ function formatRelative(timestamp: number | null): string {
   }
 }
 
-export function CommentsTab({ videoId, knownCount }: CommentsTabProps) {
+export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.ReactElement | null {
   const fetchComments = useFetchVideoComments()
   const data: VideoCommentsResult | undefined = fetchComments.data
 
   const threads = useMemo(() => (data ? groupThreads(data.comments) : []), [data])
   const replyCount = useMemo(() => threads.reduce((sum, t) => sum + t.replies.length, 0), [threads])
 
-  const handleLoad = () => {
+  const handleLoad = (): void => {
     fetchComments.mutate({ videoId })
   }
 
-  const handleCopyAll = async () => {
+  const handleCopyAll = async (): Promise<void> => {
     if (!data) return
     try {
       await navigator.clipboard.writeText(buildClipboardText(threads))
@@ -206,7 +206,7 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps) {
 
 // ── Comment row ──
 
-function CommentRow({ thread }: { thread: ThreadGroup }) {
+function CommentRow({ thread }: { thread: ThreadGroup }): React.ReactElement {
   const [open, setOpen] = useState(false)
   const { top, replies } = thread
 
@@ -269,7 +269,7 @@ function CommentRow({ thread }: { thread: ThreadGroup }) {
 
 // ── Reply row ──
 
-function ReplyRow({ comment }: { comment: VideoComment }) {
+function ReplyRow({ comment }: { comment: VideoComment }): React.ReactElement {
   return (
     <Item variant="default" className="border-transparent p-0 items-start gap-2">
       <ItemMedia variant="image" className="size-7 rounded-full">

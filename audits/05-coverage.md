@@ -4,11 +4,11 @@ Step 5 of [plans/plan-codeOverview.prompt.md](../plans/plan-codeOverview.prompt.
 
 **Severity rubric**
 
-| Severity | Bar |
-|---|---|
-| **HIGH** | Critical path with no test — wrong output for a real user input, or tooling failure that hides drift in CI. |
+| Severity   | Bar                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **HIGH**   | Critical path with no test — wrong output for a real user input, or tooling failure that hides drift in CI.                    |
 | **MEDIUM** | Convention-level gap that compounds — a class of unverified behaviour, or coverage-config drift relative to the canonical doc. |
-| **LOW** | Defensive note — narrow uncovered branch, or a scenario where blast radius is small. |
+| **LOW**    | Defensive note — narrow uncovered branch, or a scenario where blast radius is small.                                           |
 
 **Method note.** Surface A (per-file coverage percentages from `npm run test:coverage`) is **BLOCKED** by F1: the v8 coverage tool fails on every test file (61/61) with `TypeError: Cannot read properties of undefined (reading 'config')`. Plain `npm run test` passes (618/618) — this is a coverage-instrumentation regression, not a test regression. The audit therefore relies on static analysis for surfaces B/C/D and treats unblocking the coverage tool as the first fix-phase task.
 
@@ -16,17 +16,17 @@ Step 5 of [plans/plan-codeOverview.prompt.md](../plans/plan-codeOverview.prompt.
 
 ## Compliance summary
 
-| # | Surface | Status | Severity |
-|---|---|---|---|
-| **A** | Per-file coverage gaps from `coverage-summary.json` | ⛔ BLOCKED by F1 | HIGH |
-| B-8 | `MigrateRootFolder` rollback after partial failure | ✅ CLEAN | — |
-| B-9 | `ProcessFileNotifications` suspend / resume lifecycle | ✅ CLEAN (one race uncovered → F5) | LOW |
-| B-10 | `RecoverOperations` `OperationStatus` × `OperationType` matrix | ✅ CLEAN | — |
-| B-11 | `FetchVideoComments` error-propagation branch | ⚠ FINDING-F6 | LOW |
-| B-12 | `CommentsTab` rendering states | ⛔ FINDING-F2 | HIGH |
-| C-13–19 | Renderer mutation hooks (10 mutations across 6 hooks) | ⛔ FINDING-F3 | MEDIUM |
-| D-20 | Coverage exclusion-list drift (vitest.config.ts vs AGENTS.md L509) | ⚠ FINDING-F4 | MEDIUM |
-| D-21 | Excluded-but-testable surface review | ✅ CLEAN | — |
+| #       | Surface                                                            | Status                             | Severity |
+| ------- | ------------------------------------------------------------------ | ---------------------------------- | -------- |
+| **A**   | Per-file coverage gaps from `coverage-summary.json`                | ⛔ BLOCKED by F1                   | HIGH     |
+| B-8     | `MigrateRootFolder` rollback after partial failure                 | ✅ CLEAN                           | —        |
+| B-9     | `ProcessFileNotifications` suspend / resume lifecycle              | ✅ CLEAN (one race uncovered → F5) | LOW      |
+| B-10    | `RecoverOperations` `OperationStatus` × `OperationType` matrix     | ✅ CLEAN                           | —        |
+| B-11    | `FetchVideoComments` error-propagation branch                      | ⚠ FINDING-F6                       | LOW      |
+| B-12    | `CommentsTab` rendering states                                     | ⛔ FINDING-F2                      | HIGH     |
+| C-13–19 | Renderer mutation hooks (10 mutations across 6 hooks)              | ⛔ FINDING-F3                      | MEDIUM   |
+| D-20    | Coverage exclusion-list drift (vitest.config.ts vs AGENTS.md L509) | ⚠ FINDING-F4                       | MEDIUM   |
+| D-21    | Excluded-but-testable surface review                               | ✅ CLEAN                           | —        |
 
 **Tally.** 6 findings: 2 HIGH (F1, F2), 2 MEDIUM (F3, F4), 2 LOW (F5, F6).
 
@@ -78,15 +78,15 @@ Every `describe()` block fails at registration time with the same `'config'`-und
 
 **Why it matters.** `CommentsTab` is a 5-state finite-state-machine over the `useFetchVideoComments` mutation. A regression in any branch (e.g., a stale `data` reference rendering before `isPending` flips) silently produces broken UI. The states map cleanly to test cases:
 
-| State | Trigger | Visible behaviour |
-|---|---|---|
-| Idle (no `knownCount`) | `!isPending && !data && !isError` | "Click below to fetch comments" copy, no count phrase. |
-| Idle (with `knownCount`) | as above + prop set | "This video has X comments" copy. |
-| Loading | `isPending` | spinner + "Fetching comments…" |
-| Error | `isError` | error message + Retry button calling `mutate`. |
-| Loaded (with replies) | `data.totalFetched > 0`, `replies > 0` | reply count rendered, Collapsible toggles. |
-| Loaded (truncated) | `data.wasTruncated === true` | "First 500 only" badge. |
-| Loaded (empty) | `threads.length === 0` | "No comments on this video" empty state. |
+| State                    | Trigger                                | Visible behaviour                                      |
+| ------------------------ | -------------------------------------- | ------------------------------------------------------ |
+| Idle (no `knownCount`)   | `!isPending && !data && !isError`      | "Click below to fetch comments" copy, no count phrase. |
+| Idle (with `knownCount`) | as above + prop set                    | "This video has X comments" copy.                      |
+| Loading                  | `isPending`                            | spinner + "Fetching comments…"                         |
+| Error                    | `isError`                              | error message + Retry button calling `mutate`.         |
+| Loaded (with replies)    | `data.totalFetched > 0`, `replies > 0` | reply count rendered, Collapsible toggles.             |
+| Loaded (truncated)       | `data.wasTruncated === true`           | "First 500 only" badge.                                |
+| Loaded (empty)           | `threads.length === 0`                 | "No comments on this video" empty state.               |
 
 **Suggested test:** `tests/renderer/components/features/videos/CommentsTab.test.tsx` with one `it()` per row above. Mock `useFetchVideoComments` per the existing renderer-test pattern (`vi.mock('@/hooks/use-videos', ...)` returning a controllable mock).
 
@@ -98,18 +98,18 @@ Every `describe()` block fails at registration time with the same `'config'`-und
 
 **Surfaces.** 10 mutations across 6 hook files. None of them has a test asserting that `onSuccess` invalidates the right `queryKey`:
 
-| Hook file | Mutation | Invalidates |
-|---|---|---|
-| [use-creators.ts:20](../src/renderer/hooks/use-creators.ts#L20) | `useDeleteCreator` | `creators.all` |
-| [use-creators.ts:28](../src/renderer/hooks/use-creators.ts#L28) | `useRestoreCreator` | `creators.all` |
-| [use-videos.ts:20](../src/renderer/hooks/use-videos.ts#L20) | `useDeleteVideo` | `videos.all` |
-| [use-videos.ts:28](../src/renderer/hooks/use-videos.ts#L28) | `useRestoreVideo` | `videos.all` |
-| [use-videos.ts:36](../src/renderer/hooks/use-videos.ts#L36) | `useFetchVideoDetail` | `videos.detail(id)` + `videos.transcript(id)` |
-| [use-videos.ts:47](../src/renderer/hooks/use-videos.ts#L47) | `useEnrichAllVideos` | `videos.all` |
-| [use-cuts.ts:28](../src/renderer/hooks/use-cuts.ts#L28) | `useDeleteCut` | `cuts.all` |
-| [use-cuts.ts:36](../src/renderer/hooks/use-cuts.ts#L36) | `useRestoreCut` | `cuts.all` |
-| [use-migrate-root.ts:27](../src/renderer/hooks/use-migrate-root.ts#L27) | `useMigrateRoot` | `settings.all` + `creators.all` + `videos.all` + `cuts.all` |
-| [use-settings.ts:18](../src/renderer/hooks/use-settings.ts#L18) | `useSetSetting` | `settings.all` |
+| Hook file                                                               | Mutation              | Invalidates                                                 |
+| ----------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------- |
+| [use-creators.ts:20](../src/renderer/hooks/use-creators.ts#L20)         | `useDeleteCreator`    | `creators.all`                                              |
+| [use-creators.ts:28](../src/renderer/hooks/use-creators.ts#L28)         | `useRestoreCreator`   | `creators.all`                                              |
+| [use-videos.ts:20](../src/renderer/hooks/use-videos.ts#L20)             | `useDeleteVideo`      | `videos.all`                                                |
+| [use-videos.ts:28](../src/renderer/hooks/use-videos.ts#L28)             | `useRestoreVideo`     | `videos.all`                                                |
+| [use-videos.ts:36](../src/renderer/hooks/use-videos.ts#L36)             | `useFetchVideoDetail` | `videos.detail(id)` + `videos.transcript(id)`               |
+| [use-videos.ts:47](../src/renderer/hooks/use-videos.ts#L47)             | `useEnrichAllVideos`  | `videos.all`                                                |
+| [use-cuts.ts:28](../src/renderer/hooks/use-cuts.ts#L28)                 | `useDeleteCut`        | `cuts.all`                                                  |
+| [use-cuts.ts:36](../src/renderer/hooks/use-cuts.ts#L36)                 | `useRestoreCut`       | `cuts.all`                                                  |
+| [use-migrate-root.ts:27](../src/renderer/hooks/use-migrate-root.ts#L27) | `useMigrateRoot`      | `settings.all` + `creators.all` + `videos.all` + `cuts.all` |
+| [use-settings.ts:18](../src/renderer/hooks/use-settings.ts#L18)         | `useSetSetting`       | `settings.all`                                              |
 
 **Why it matters.** A typo in any `queryKey` argument leaves the UI showing stale data after a successful mutation — the most common class of TanStack Query bug. None is currently caught by either the type system (keys are `readonly unknown[]`) or runtime checks. The fix is mechanical: spy on `queryClient.invalidateQueries`, fire the mutation, assert call args.
 
@@ -153,7 +153,7 @@ The directory currently contains **11 `I*.ts` files**, so 6 are missed:
 
 These files are pure interfaces that compile to no JS, so the practical impact on percentages is small — but the explicit list will keep drifting every time a new use-case ships, defeating the AGENTS.md rule.
 
-**Drift B — `src/shared/**` excluded but not documented.** vitest.config.ts excludes the entire shared tree on line 72. AGENTS.md L509 does not mention it. Audit of [src/shared/](../src/shared/) confirms the contents are predominantly type-only (DTOs, ipc-channels constants, type re-exports), so the exclusion is materially correct — but the doc should reflect the implementation or vice versa.
+**Drift B — `src/shared/**` excluded but not documented.\*\* vitest.config.ts excludes the entire shared tree on line 72. AGENTS.md L509 does not mention it. Audit of [src/shared/](../src/shared/) confirms the contents are predominantly type-only (DTOs, ipc-channels constants, type re-exports), so the exclusion is materially correct — but the doc should reflect the implementation or vice versa.
 
 **Suggested fix.**
 
@@ -170,13 +170,13 @@ These files are pure interfaces that compile to no JS, so the practical impact o
 
 **What's covered (CLEAN).** Suspend / resume lifecycle is exercised across 7 tests: drops events when suspended, cancels pending debounce on suspend, drains stale events on resume, accepts events after resume, isSuspended state, double-suspend safe, resume-without-suspend safe. Plus 2 double-buffer tests verifying that `handleEvent` doesn't re-schedule debounce while a flush is in progress.
 
-**What's uncovered.** Calling `suspend()` *while* a `flush()` callback is mid-execution. Concretely:
+**What's uncovered.** Calling `suspend()` _while_ a `flush()` callback is mid-execution. Concretely:
 
 1. Flush callback starts (drained events being processed by `executeForCreator` / `execute`).
 2. User triggers `suspend()` (e.g., by pressing the Migrate Root button mid-reconcile).
 3. Resume happens later.
 
-Does the in-flight flush complete before the suspend takes effect? Does it abort? Does the state machine remain coherent? The codeOverview prompt specifically called this out (Step 5 §5: *"`ProcessFileNotifications` suspend/resume during in-flight events"*).
+Does the in-flight flush complete before the suspend takes effect? Does it abort? Does the state machine remain coherent? The codeOverview prompt specifically called this out (Step 5 §5: _"`ProcessFileNotifications` suspend/resume during in-flight events"_).
 
 **Why LOW.** The flush callback is short (drains queue, runs reconcile, notifies) and the suspend mechanism is monotonic — once suspended, new `handleEvent` calls drop. The likely behaviour is "flush completes, then suspend takes effect on the next tick", which is fine. But the contract is currently implicit.
 
@@ -198,7 +198,7 @@ it('lets in-flight flush complete when suspend fires mid-flush', async () => {
 
 **What's covered.** [tests/main/use-cases/FetchVideoComments.test.ts](../tests/main/use-cases/FetchVideoComments.test.ts) covers 6 cases: video-not-found, no-URL, happy path, truncation flag, default `maxComments=500`, no-persist invariant.
 
-**What's uncovered.** No test rejects the downloader (`downloader.fetchComments` throwing or rejecting) to verify that the error propagates cleanly through `execute()`. The 90s timeout the codeOverview prompt called out lives in [YtDlpDownloader.ts](../src/main/framework-drivers/yt-dlp/YtDlpDownloader.ts) (excluded from coverage per AGENTS.md L509), so the timeout itself is not directly testable in coverage terms — but the *use-case-side propagation* of any downloader error is.
+**What's uncovered.** No test rejects the downloader (`downloader.fetchComments` throwing or rejecting) to verify that the error propagates cleanly through `execute()`. The 90s timeout the codeOverview prompt called out lives in [YtDlpDownloader.ts](../src/main/framework-drivers/yt-dlp/YtDlpDownloader.ts) (excluded from coverage per AGENTS.md L509), so the timeout itself is not directly testable in coverage terms — but the _use-case-side propagation_ of any downloader error is.
 
 **Why LOW.** The use-case is a 1-statement passthrough — there's no error handling to verify, just `await`. Promise rejection bubbles by language semantics. Worth a one-liner regression test, not a HIGH.
 
@@ -222,7 +222,7 @@ it('propagates downloader errors (timeout, network) to the caller', async () => 
 
 Static analysis confirmed the following surfaces had a corresponding test file or in-test scenario; future audits start from this baseline.
 
-- ✅ **All 12 use-cases under [src/main/use-cases/](../src/main/use-cases/) have a test file.** Per-file *coverage percentages* are blocked behind F1.
+- ✅ **All 12 use-cases under [src/main/use-cases/](../src/main/use-cases/) have a test file.** Per-file _coverage percentages_ are blocked behind F1.
 - ✅ **All 9 repositories** (3 Sqlite for creator/video/cut + 3 Audited decorators + Sqlite{Operation,Settings,AuditLog}) have a test file.
 - ✅ **All 9 IPC controllers** under [interface-adapters/controllers/](../src/main/interface-adapters/controllers/) have a test file (controllers excluded from coverage anyway, but tests serve as functional contracts).
 - ✅ **All 5 logic-bearing domain types** (`pagination`, `slugify`, `collapse-events`, `path-classification`, `parse-vtt`) have a test file.
@@ -232,7 +232,7 @@ Static analysis confirmed the following surfaces had a corresponding test file o
 - ✅ **B-8 MigrateRootFolder rollback** — covered by 2 tests: partial-move-failure rollback + DB-failure-after-move ([MigrateRootFolder.test.ts:262, :289](../tests/main/use-cases/MigrateRootFolder.test.ts#L262)).
 - ✅ **B-9 ProcessFileNotifications suspend/resume** — 7 lifecycle tests + 2 double-buffer tests cover the high-blast-radius cases. (One narrow race uncovered — see F5.)
 - ✅ **B-10 RecoverOperations matrix** — comprehensive: all 3 `OperationType`s × `pending`/`in_progress` are exercised, plus malformed-payload, parse-error, stranded-folders, and mixed-batch edge cases. 12 tests in [RecoverOperations.test.ts](../tests/main/use-cases/RecoverOperations.test.ts).
-- ✅ **D-21 Excluded-but-testable surface review** — every excluded path in [vitest.config.ts:48-74](../vitest.config.ts#L48-L74) has a defensible reason (Electron-bound, auto-generated, type-only, or under integration-test surface). No exclusion is hiding logic that *should* be measured. (Drift on the *list itself* is F4.)
+- ✅ **D-21 Excluded-but-testable surface review** — every excluded path in [vitest.config.ts:48-74](../vitest.config.ts#L48-L74) has a defensible reason (Electron-bound, auto-generated, type-only, or under integration-test surface). No exclusion is hiding logic that _should_ be measured. (Drift on the _list itself_ is F4.)
 
 ---
 
@@ -247,9 +247,9 @@ cat coverage/coverage-summary.json | jq '.total'
 
 Once unblocked, fill the table below for `src/main/use-cases/` (12 rows) and pick up any file below the 90 % line / 80 % branch target as new findings.
 
-| File | Lines | Branches | Functions |
-|---|---|---|---|
-| _pending F1_ | — | — | — |
+| File         | Lines | Branches | Functions |
+| ------------ | ----- | -------- | --------- |
+| _pending F1_ | —     | —        | —         |
 
 ---
 
@@ -257,15 +257,15 @@ Once unblocked, fill the table below for `src/main/use-cases/` (12 rows) and pic
 
 Proposed order:
 
-| # | Finding | Effort | Reason |
-|---|---|---|---|
-| 1 | **F1** — Restore coverage tooling | S–L | Unblocks Surface A and CI. Must land first. |
-| 2 | **F2** — `CommentsTab.test.tsx` | M | Highest user-visible blast radius among missing tests; newly shipped feature. |
-| 3 | **F3** — Renderer mutation-hook tests | M | 5 new test files, one per hook; prioritise `useMigrateRoot` (4-key) within. |
-| 4 | **F4** — Exclusion-list drift | XS | One-line config change + one-line AGENTS.md note. |
-| 5 | **F5** — `ProcessFileNotifications` mid-flush suspend | S | Single new test in existing describe block. |
-| 6 | **F6** — `FetchVideoComments` error-propagation | XS | Single new `it()` in existing test file. |
-| 7 | **Surface A backfill** (after F1) | depends | Re-run coverage; add per-file findings only if any use-case is below 90 % / 80 %. |
-| 8 | **Per-project 90 % threshold** for `src/main/use-cases/` (closes [AGENTS.md L508](../AGENTS.md#L508)) | XS | Add `coverage.thresholds.perFile` block scoped to use-cases. Lands after step 7 confirms all use-cases are above 90 %. |
+| #   | Finding                                                                                               | Effort  | Reason                                                                                                                 |
+| --- | ----------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | **F1** — Restore coverage tooling                                                                     | S–L     | Unblocks Surface A and CI. Must land first.                                                                            |
+| 2   | **F2** — `CommentsTab.test.tsx`                                                                       | M       | Highest user-visible blast radius among missing tests; newly shipped feature.                                          |
+| 3   | **F3** — Renderer mutation-hook tests                                                                 | M       | 5 new test files, one per hook; prioritise `useMigrateRoot` (4-key) within.                                            |
+| 4   | **F4** — Exclusion-list drift                                                                         | XS      | One-line config change + one-line AGENTS.md note.                                                                      |
+| 5   | **F5** — `ProcessFileNotifications` mid-flush suspend                                                 | S       | Single new test in existing describe block.                                                                            |
+| 6   | **F6** — `FetchVideoComments` error-propagation                                                       | XS      | Single new `it()` in existing test file.                                                                               |
+| 7   | **Surface A backfill** (after F1)                                                                     | depends | Re-run coverage; add per-file findings only if any use-case is below 90 % / 80 %.                                      |
+| 8   | **Per-project 90 % threshold** for `src/main/use-cases/` (closes [AGENTS.md L508](../AGENTS.md#L508)) | XS      | Add `coverage.thresholds.perFile` block scoped to use-cases. Lands after step 7 confirms all use-cases are above 90 %. |
 
 **Verification gate after fix phase:** `npm run typecheck && npm run lint && npm run test:coverage` (all targets green, new use-case threshold passes).

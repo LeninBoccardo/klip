@@ -21,7 +21,7 @@ export const Route = createFileRoute('/creators/$creatorId')({
   component: CreatorDetailPage
 })
 
-function CreatorDetailPage() {
+function CreatorDetailPage(): React.ReactElement {
   const { creatorId } = Route.useParams()
   const { data: creator, isLoading: creatorLoading } = useCreatorById(creatorId)
 
@@ -65,7 +65,7 @@ function CreatorDetailPage() {
   )
 }
 
-function VideosTab({ creatorId }: { creatorId: string }) {
+function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const { data, isLoading } = useVideosPaginated({ page, pageSize: 20, creatorId })
@@ -117,9 +117,11 @@ function VideosTab({ creatorId }: { creatorId: string }) {
             }
           >
             <MediaCard
+              entityKind="video"
+              entityId={video.id}
+              hasThumbnail={video.hasThumbnail}
               title={video.title}
               status={video.status}
-              thumbnailPath={video.thumbnailPath}
               duration={video.duration}
               resolution={video.resolution}
               fileSize={video.fileSize}
@@ -139,7 +141,7 @@ function VideosTab({ creatorId }: { creatorId: string }) {
   )
 }
 
-function CutsTab({ creatorId }: { creatorId: string }) {
+function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
   const [page, setPage] = useState(1)
   const { data, isLoading } = useCutsPaginated({ page, pageSize: 20, creatorId })
   const deleteCut = useDeleteCut()
@@ -192,9 +194,11 @@ function CutsTab({ creatorId }: { creatorId: string }) {
             }
           >
             <MediaCard
+              entityKind="cut"
+              entityId={cut.id}
+              hasThumbnail={cut.hasThumbnail}
               title={cut.title}
               status={cut.status}
-              thumbnailPath={cut.thumbnailPath}
               duration={cut.duration}
               resolution={cut.resolution}
               fileSize={cut.fileSize}

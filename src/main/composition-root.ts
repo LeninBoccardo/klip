@@ -31,6 +31,7 @@ import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
+import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -60,6 +61,7 @@ import {
 import { ChokidarWatcher } from './framework-drivers/file-system/ChokidarWatcher'
 import { YtDlpDownloader } from './framework-drivers/yt-dlp/YtDlpDownloader'
 import { FfprobeMediaProbe } from './framework-drivers/ffprobe/FfprobeMediaProbe'
+import { KlipMediaProtocolHandler } from './framework-drivers/electron/KlipMediaProtocolHandler'
 import { ReconcileDirectory } from '@use-cases/ReconcileDirectory'
 import { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
 import { FetchVideoInfo } from '@use-cases/FetchVideoInfo'
@@ -72,6 +74,7 @@ import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
 import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
 import { EnrichAllVideos } from '@use-cases/EnrichAllVideos'
 import { FetchVideoComments } from '@use-cases/FetchVideoComments'
+import { ResolveMediaUrl } from '@use-cases/ResolveMediaUrl'
 
 /**
  * Application dependency container.
@@ -114,9 +117,11 @@ export interface AppContainer {
     fetchVideoDetail: IFetchVideoDetail
     enrichAllVideos: IEnrichAllVideos
     fetchVideoComments: IFetchVideoComments
+    resolveMediaUrl: IResolveMediaUrl
   }
   services: {
     fileWatcher: IFileWatcher
+    klipMediaProtocol: KlipMediaProtocolHandler
   }
   rootPathRef: RootPathRef
   /** Stop watcher, cancel timers, close DB */
@@ -247,6 +252,14 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const fetchVideoComments = new FetchVideoComments(videoRepo, videoDownloader)
 
+  // ── Media protocol (entity-keyed klip-media:// resolver + handler) ──
+  // The renderer references local media via klip-media://<kind>/<id>/<asset>
+  // and never holds raw filesystem paths. ResolveMediaUrl maps the entity ref
+  // back to a canonical path through the index; the handler enforces a
+  // realpath/prefix containment check as defence-in-depth.
+  const resolveMediaUrl = new ResolveMediaUrl(creatorRepo, videoRepo, cutRepo)
+  const klipMediaProtocol = new KlipMediaProtocolHandler(resolveMediaUrl, rootPathRef)
+
   const migrateRootFolder = new MigrateRootFolder(
     operationRepo,
     settingsRepo,
@@ -300,10 +313,12 @@ export function createAppContainer(config: AppConfig): AppContainer {
       migrateRootFolder,
       fetchVideoDetail,
       enrichAllVideos,
-      fetchVideoComments
+      fetchVideoComments,
+      resolveMediaUrl
     },
     services: {
-      fileWatcher
+      fileWatcher,
+      klipMediaProtocol
     },
     rootPathRef,
     shutdown(): void {

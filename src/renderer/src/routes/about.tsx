@@ -8,7 +8,7 @@ export const Route = createFileRoute('/about')({
   component: AboutPage
 })
 
-function AboutPage() {
+function AboutPage(): React.ReactElement {
   return (
     <PageContainer>
       <PageHeader title="About" description="Application information" />

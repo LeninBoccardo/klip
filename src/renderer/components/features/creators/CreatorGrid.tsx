@@ -5,7 +5,7 @@ interface CreatorGridProps {
   className?: string
 }
 
-export function CreatorGrid({ children, className }: CreatorGridProps) {
+export function CreatorGrid({ children, className }: CreatorGridProps): React.ReactElement {
   return (
     <div
       className={cn(

@@ -1,15 +1,20 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { formatDuration, formatFileSize, toMediaSrc } from '@/lib/format'
+import { formatDuration, formatFileSize, mediaUrl } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Film } from 'lucide-react'
 import type { EntityStatus } from '@shared/types'
 
 interface MediaCardProps {
+  /** Entity kind that owns the thumbnail asset. */
+  entityKind: 'video' | 'cut'
+  /** Entity id used to resolve `klip-media://<kind>/<id>/thumbnail`. */
+  entityId: string
+  /** Whether the entity has a local thumbnail file. Drives the fallback icon. */
+  hasThumbnail: boolean
   title: string
   status: EntityStatus
-  thumbnailPath: string | null
   duration: number | null
   resolution: string | null
   fileSize: number | null
@@ -20,17 +25,19 @@ interface MediaCardProps {
 }
 
 export function MediaCard({
+  entityKind,
+  entityId,
+  hasThumbnail,
   title,
   status,
-  thumbnailPath,
   duration,
   resolution,
   fileSize,
   isShort,
   onClick,
   className
-}: MediaCardProps) {
-  const src = toMediaSrc(thumbnailPath)
+}: MediaCardProps): React.ReactElement {
+  const src = hasThumbnail ? mediaUrl(entityKind, entityId, 'thumbnail') : undefined
 
   return (
     <Card

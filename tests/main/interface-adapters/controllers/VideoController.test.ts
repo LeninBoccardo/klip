@@ -190,7 +190,6 @@ describe('VideoController', () => {
       description: null,
       isShort: false,
       hasTranscript: false,
-      transcriptPath: null,
       transcriptText: null
     })
     registerVideoController(

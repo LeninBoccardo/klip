@@ -6,7 +6,7 @@ export function formatDuration(seconds: number | null): string {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const s = Math.floor(seconds % 60)
-  const pad = (n: number) => n.toString().padStart(2, '0')
+  const pad = (n: number): string => n.toString().padStart(2, '0')
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
 }
 
@@ -21,14 +21,22 @@ export function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
+/** Entity kinds that can serve a media asset over `klip-media://`. */
+export type MediaKind = 'video' | 'cut' | 'creator'
+
+/** Asset slots a `MediaKind` can serve. Not every (kind, asset) is valid. */
+export type MediaAsset = 'file' | 'thumbnail' | 'avatar'
+
 /**
- * Convert an absolute file path to a klip-media:// protocol URL for rendering thumbnails.
- * Returns undefined if the path is null.
+ * Build a `klip-media://<kind>/<id>/<asset>` URL for the entity-keyed protocol.
+ *
+ * The renderer never constructs raw filesystem paths — it references media by
+ * entity id, and the main-process protocol handler resolves the reference via
+ * the index, then realpath/prefix-bounds the result against the active root
+ * path before serving the file.
  */
-export function toMediaSrc(filePath: string | null): string | undefined {
-  if (!filePath) return undefined
-  // Encode the path for URL safety; the custom protocol handler decodes it
-  return `klip-media://${encodeURIComponent(filePath)}`
+export function mediaUrl(kind: MediaKind, id: string, asset: MediaAsset): string {
+  return `klip-media://${kind}/${encodeURIComponent(id)}/${asset}`
 }
 
 /**

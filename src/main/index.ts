@@ -1,9 +1,7 @@
-import { app, shell, BrowserWindow, protocol, net } from 'electron'
+import { app, shell, BrowserWindow, protocol } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { pathToFileURL } from 'url'
 import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
-import { resolveKlipMediaRequest } from './framework-drivers/electron/klip-media-protocol'
 import { redactPath, redactError } from './domain/types/redact'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
 import { registerDownloadController } from './interface-adapters/controllers/DownloadController'
@@ -35,20 +33,15 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      // `contextIsolation: true` is the Electron 41 default but pin it
-      // explicitly — the preload bridge falls back to direct `window.api`
-      // assignment if isolation is ever disabled (see preload/index.ts L115),
-      // which would bypass the contextBridge entirely.
+      // Both flags pinned explicitly. `contextIsolation: true` keeps the
+      // preload bridge isolated from renderer-world prototype tampering;
+      // `sandbox: true` strips Node from the renderer process entirely so
+      // a stored-content XSS (e.g. via comment text) can't reach
+      // `child_process` / `fs` / `path`. The preload uses only the IPC
+      // primitives and `@electron-toolkit/preload`'s `electronAPI`, both of
+      // which are sandbox-safe (toolkit ≥ 3.0.2).
       contextIsolation: true,
-      // `sandbox: false` is the legacy default from the electron-vite scaffold.
-      // F2b note (audit 06): a static check shows the preload only uses
-      // `electron` IPC primitives + `@electron-toolkit/preload`'s `electronAPI`
-      // (no `fs` / `path` / `child_process`), and the renderer never reads
-      // `window.electron`, so flipping to `sandbox: true` should be safe and
-      // would close the largest remaining XSS-cost-amplifier. Deferred only
-      // because the change requires a `npm run dev` smoke test of the IPC
-      // bridge end-to-end — that gate runs as part of the next fix cycle.
-      sandbox: false
+      sandbox: true
     }
   })
 
@@ -98,18 +91,12 @@ app.whenReady().then(() => {
     `[klip] Container initialised (db: ${redactPath(dbPath, rootPath)}, root: ${redactPath(rootPath, rootPath)})`
   )
 
-  // ── Custom protocol: klip-media:// serves local files for thumbnails ──
-  // Containment is enforced inside `resolveKlipMediaRequest` — every request
-  // is realpath-resolved and rejected (403) unless it sits inside the active
-  // rootPathRef. Reads from `container.rootPathRef.value` on every request so
-  // a `migrate-root` mid-session re-points the protocol without re-registering.
-  protocol.handle('klip-media', (request) => {
-    const result = resolveKlipMediaRequest(request.url, container.rootPathRef.value)
-    if (!result.ok) {
-      return new Response(null, { status: result.status })
-    }
-    return net.fetch(pathToFileURL(result.absolutePath).href)
-  })
+  // ── Custom protocol: klip-media:// serves local media via entity-keyed URLs ──
+  // The renderer references local files as `klip-media://<kind>/<id>/<asset>` and
+  // never holds raw filesystem paths. The handler resolves the entity reference
+  // through the index, then realpath/prefix-bounds the result against the active
+  // rootPathRef as defence-in-depth.
+  container.services.klipMediaProtocol.register()
 
   // ── Register IPC controllers ──
   registerReconcileController(container.useCases.reconcile, container.rootPathRef)

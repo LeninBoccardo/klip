@@ -1,5 +1,6 @@
 import type { ICreatorRepository } from '@domain/repositories'
 import { createTypedHandler } from './create-typed-handler'
+import { toCreatorDto, mapPaginated } from './dto-mappers'
 
 /**
  * IPC controller for creator CRUD operations.
@@ -12,11 +13,12 @@ import { createTypedHandler } from './create-typed-handler'
  */
 export function registerCreatorController(creatorRepo: ICreatorRepository): void {
   createTypedHandler('get-creators-paginated', async (_event, params) => {
-    return creatorRepo.findPaginated(params)
+    return mapPaginated(creatorRepo.findPaginated(params), toCreatorDto)
   })
 
   createTypedHandler('get-creator-by-id', async (_event, id) => {
-    return creatorRepo.findById(id)
+    const creator = creatorRepo.findById(id)
+    return creator ? toCreatorDto(creator) : null
   })
 
   createTypedHandler('delete-creator', async (_event, id) => {

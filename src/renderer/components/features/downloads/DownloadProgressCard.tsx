@@ -10,7 +10,10 @@ interface DownloadProgressCardProps {
   onCancel: (downloadId: string) => void
 }
 
-export function DownloadProgressCard({ progress, onCancel }: DownloadProgressCardProps) {
+export function DownloadProgressCard({
+  progress,
+  onCancel
+}: DownloadProgressCardProps): React.ReactElement {
   const isTerminal =
     progress.status === 'complete' || progress.status === 'error' || progress.status === 'cancelled'
 
