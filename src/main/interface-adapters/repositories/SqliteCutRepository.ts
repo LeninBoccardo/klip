@@ -202,6 +202,11 @@ export class SqliteCutRepository implements ICutRepository {
       .run()
   }
 
+  /** Inner repos don't track audit history, so the prior state is irrelevant. */
+  upsertWithPrevious(cut: Cut, _previous: Cut | null): void {
+    this.upsert(cut)
+  }
+
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void {
     this.db
       .update(cuts)

@@ -147,6 +147,11 @@ export class SqliteVideoRepository implements IVideoRepository {
       .run()
   }
 
+  /** Inner repos don't track audit history, so the prior state is irrelevant. */
+  upsertWithPrevious(video: Video, _previous: Video | null): void {
+    this.upsert(video)
+  }
+
   /**
    * Returns videos that have a YouTube URL but have not had detail metadata
    * fetched yet (detail_fetched_at IS NULL). Used by EnrichAllVideos.

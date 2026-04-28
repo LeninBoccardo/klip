@@ -44,12 +44,16 @@ export class AuditedVideoRepository implements IVideoRepository {
   }
 
   upsert(video: Video): void {
+    // Caller didn't supply prior state; read it for the audit diff.
+    this.upsertWithPrevious(video, this.inner.findById(video.id))
+  }
+
+  upsertWithPrevious(video: Video, previous: Video | null): void {
     this.transaction.run(() => {
-      const existing = this.inner.findById(video.id)
       this.inner.upsert(video)
 
       const now = new Date().toISOString()
-      if (!existing) {
+      if (!previous) {
         this.auditLog.append({
           entityType: 'video',
           entityId: video.id,
@@ -59,7 +63,7 @@ export class AuditedVideoRepository implements IVideoRepository {
         })
       } else {
         const changes = diffObjects(
-          existing as unknown as Record<string, unknown>,
+          previous as unknown as Record<string, unknown>,
           video as unknown as Record<string, unknown>
         )
         if (changes) {

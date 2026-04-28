@@ -48,12 +48,16 @@ export class AuditedCutRepository implements ICutRepository {
   }
 
   upsert(cut: Cut): void {
+    // Caller didn't supply prior state; read it for the audit diff.
+    this.upsertWithPrevious(cut, this.inner.findById(cut.id))
+  }
+
+  upsertWithPrevious(cut: Cut, previous: Cut | null): void {
     this.transaction.run(() => {
-      const existing = this.inner.findById(cut.id)
       this.inner.upsert(cut)
 
       const now = new Date().toISOString()
-      if (!existing) {
+      if (!previous) {
         this.auditLog.append({
           entityType: 'cut',
           entityId: cut.id,
@@ -63,7 +67,7 @@ export class AuditedCutRepository implements ICutRepository {
         })
       } else {
         const changes = diffObjects(
-          existing as unknown as Record<string, unknown>,
+          previous as unknown as Record<string, unknown>,
           cut as unknown as Record<string, unknown>
         )
         if (changes) {

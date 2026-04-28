@@ -16,4 +16,12 @@ export interface IReconcileDirectory {
    * Used by the granular processing path when few files changed.
    */
   executeForCreator(rootPath: string, creatorName: string): ReconcileResult
+
+  /**
+   * Reconcile a batch of creators inside one outer transaction. Equivalent to
+   * calling `executeForCreator` per name and merging results, but commits a
+   * single audit-log batch and pays one BEGIN/COMMIT pair instead of N. Used
+   * by the granular file-watcher path when one flush touches several creators.
+   */
+  executeForCreatorBatch(rootPath: string, creatorNames: string[]): ReconcileResult
 }

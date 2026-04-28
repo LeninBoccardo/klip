@@ -46,9 +46,17 @@ describe('ProcessFileNotifications', () => {
       schedule: vi.fn(),
       cancel: vi.fn()
     }
+    // executeForCreatorBatch delegates to executeForCreator (one call per name)
+    // so existing per-creator assertions keep working without test churn.
+    const executeForCreator = vi.fn().mockReturnValue(makeReconcileResult())
     mockReconcile = {
       execute: vi.fn().mockReturnValue(makeReconcileResult()),
-      executeForCreator: vi.fn().mockReturnValue(makeReconcileResult())
+      executeForCreator,
+      executeForCreatorBatch: vi.fn((rootPath: string, names: string[]) => {
+        let result = makeReconcileResult()
+        for (const name of names) result = executeForCreator(rootPath, name) ?? result
+        return result
+      })
     }
     mockNotifier = {
       notify: vi.fn()

@@ -69,7 +69,8 @@ export const videos = sqliteTable(
     index('idx_videos_creator_id').on(table.creatorId),
     index('idx_videos_status').on(table.status),
     index('idx_videos_status_created').on(table.status, table.createdAt),
-    index('idx_videos_detail_fetched').on(table.detailFetchedAt)
+    index('idx_videos_detail_fetched').on(table.detailFetchedAt),
+    index('idx_videos_probe_status').on(table.probeStatus)
   ]
 )
 
@@ -104,7 +105,8 @@ export const cuts = sqliteTable(
     index('idx_cuts_creator_id').on(table.creatorId),
     index('idx_cuts_video_id').on(table.videoId),
     index('idx_cuts_status').on(table.status),
-    index('idx_cuts_status_created').on(table.status, table.createdAt)
+    index('idx_cuts_status_created').on(table.status, table.createdAt),
+    index('idx_cuts_probe_status').on(table.probeStatus)
   ]
 )
 

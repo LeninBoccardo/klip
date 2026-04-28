@@ -13,6 +13,8 @@ export interface ICutRepository {
   findByTags(tags: string[]): Cut[]
   findByProbeStatus(status: ProbeStatus): Cut[]
   upsert(cut: Cut): void
+  /** See {@link ICreatorRepository.upsertWithPrevious} — same semantics. */
+  upsertWithPrevious(cut: Cut, previous: Cut | null): void
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void
   delete(id: string): void

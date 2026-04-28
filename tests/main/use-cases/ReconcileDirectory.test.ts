@@ -82,13 +82,18 @@ function makeCut(overrides: Partial<Cut> = {}): Cut {
 // ── Mock builders ──
 
 function mockCreatorRepo(): ICreatorRepository {
+  // upsertWithPrevious delegates to the upsert spy so existing assertions on
+  // .upsert keep registering the call regardless of which API the use case
+  // chose. Existing tests don't care about the `previous` arg.
+  const upsert = vi.fn()
   return {
     findAll: vi.fn().mockReturnValue([]),
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
     findByFolderName: vi.fn().mockReturnValue(null),
     findByYoutubeChannelId: vi.fn().mockReturnValue(null),
-    upsert: vi.fn(),
+    upsert,
+    upsertWithPrevious: vi.fn((c, _prev) => upsert(c)),
     updateStatus: vi.fn(),
     delete: vi.fn(),
     findPaginated: vi.fn()
@@ -96,21 +101,26 @@ function mockCreatorRepo(): ICreatorRepository {
 }
 
 function mockVideoRepo(): IVideoRepository {
+  const upsert = vi.fn()
   return {
     findAll: vi.fn().mockReturnValue([]),
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
     findByCreatorId: vi.fn().mockReturnValue([]),
     findByProbeStatus: vi.fn().mockReturnValue([]),
-    upsert: vi.fn(),
+    findNeedingDetail: vi.fn().mockReturnValue([]),
+    upsert,
+    upsertWithPrevious: vi.fn((v, _prev) => upsert(v)),
     updateStatus: vi.fn(),
     updateProbeStatus: vi.fn(),
     delete: vi.fn(),
-    findPaginated: vi.fn()
+    findPaginated: vi.fn(),
+    updateFilePathPrefix: vi.fn()
   }
 }
 
 function mockCutRepo(): ICutRepository {
+  const upsert = vi.fn()
   return {
     findAll: vi.fn().mockReturnValue([]),
     findAllActive: vi.fn().mockReturnValue([]),
@@ -119,11 +129,13 @@ function mockCutRepo(): ICutRepository {
     findByVideoId: vi.fn().mockReturnValue([]),
     findByTags: vi.fn().mockReturnValue([]),
     findByProbeStatus: vi.fn().mockReturnValue([]),
-    upsert: vi.fn(),
+    upsert,
+    upsertWithPrevious: vi.fn((c, _prev) => upsert(c)),
     updateStatus: vi.fn(),
     updateProbeStatus: vi.fn(),
     delete: vi.fn(),
-    findPaginated: vi.fn()
+    findPaginated: vi.fn(),
+    updateFilePathPrefix: vi.fn()
   }
 }
 
@@ -234,6 +246,10 @@ describe('ReconcileDirectory', () => {
 
   it('cascades missing status to videos and cuts when creator folder disappears', () => {
     creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+    // Full-sweep path uses findAll() once and groups by creatorId; per-creator
+    // findByCreatorId is also stubbed so executeForCreator-driven tests stay green.
+    videoRepo.findAll = vi.fn().mockReturnValue([makeVideo()])
+    cutRepo.findAll = vi.fn().mockReturnValue([makeCut()])
     videoRepo.findByCreatorId = vi.fn().mockReturnValue([makeVideo()])
     cutRepo.findByCreatorId = vi.fn().mockReturnValue([makeCut()])
     fs.listDirectories = vi.fn().mockReturnValue([])
@@ -300,6 +316,7 @@ describe('ReconcileDirectory', () => {
 
   it('marks a DB video as missing when its folder is gone', () => {
     creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+    videoRepo.findAll = vi.fn().mockReturnValue([makeVideo()])
     videoRepo.findByCreatorId = vi.fn().mockReturnValue([makeVideo()])
     fs.listDirectories = vi.fn().mockImplementation((p: string) => {
       if (p === ROOT) return ['creator-1']
@@ -343,6 +360,7 @@ describe('ReconcileDirectory', () => {
 
   it('recovers a missing video when its folder reappears', () => {
     creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+    videoRepo.findAll = vi.fn().mockReturnValue([makeVideo({ status: 'missing' })])
     videoRepo.findByCreatorId = vi.fn().mockReturnValue([makeVideo({ status: 'missing' })])
     fs.listDirectories = vi.fn().mockImplementation((p: string) => {
       if (p === ROOT) return ['creator-1']
@@ -892,6 +910,7 @@ describe('ReconcileDirectory', () => {
 
   it('recovers a missing cut when its folder reappears', () => {
     creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+    cutRepo.findAll = vi.fn().mockReturnValue([makeCut({ status: 'missing' })])
     cutRepo.findByCreatorId = vi.fn().mockReturnValue([makeCut({ status: 'missing' })])
     fs.listDirectories = vi.fn().mockImplementation((p: string) => {
       if (p === ROOT) return ['creator-1']

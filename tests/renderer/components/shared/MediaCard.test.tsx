@@ -69,13 +69,4 @@ describe('MediaCard', () => {
     const allText = document.body.textContent || ''
     expect(allText).not.toMatch(/\d+:\d{2}/)
   })
-
-  it('renders children instead of card when children are provided', () => {
-    render(
-      <MediaCard {...defaultProps}>
-        <div data-testid="custom-child">Custom</div>
-      </MediaCard>
-    )
-    expect(screen.getByTestId('custom-child')).toBeInTheDocument()
-  })
 })

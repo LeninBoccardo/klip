@@ -14,23 +14,6 @@ export interface FlushConfig {
 }
 
 /**
- * Merge two ReconcileResult objects by summing all counters.
- */
-function mergeResults(a: ReconcileResult, b: ReconcileResult): ReconcileResult {
-  return {
-    creatorsAdded: a.creatorsAdded + b.creatorsAdded,
-    creatorsMarkedMissing: a.creatorsMarkedMissing + b.creatorsMarkedMissing,
-    creatorsRecovered: a.creatorsRecovered + b.creatorsRecovered,
-    videosAdded: a.videosAdded + b.videosAdded,
-    videosMarkedMissing: a.videosMarkedMissing + b.videosMarkedMissing,
-    videosRecovered: a.videosRecovered + b.videosRecovered,
-    cutsAdded: a.cutsAdded + b.cutsAdded,
-    cutsMarkedMissing: a.cutsMarkedMissing + b.cutsMarkedMissing,
-    cutsRecovered: a.cutsRecovered + b.cutsRecovered
-  }
-}
-
-/**
  * Orchestrates file-system notification processing.
  *
  * Collects raw file events into a buffer, debounces bursts, collapses
@@ -158,8 +141,9 @@ export class ProcessFileNotifications {
   }
 
   /**
-   * Granular processing: classify events by creator and reconcile only affected creators.
-   * Unknown paths are silently skipped (filtered by ChokidarWatcher anyway).
+   * Granular processing: classify events by creator and reconcile the
+   * affected creators inside a **single** outer transaction. Unknown paths
+   * are silently skipped (filtered by ChokidarWatcher anyway).
    */
   private processGranular(events: FileEvent[]): ReconcileResult {
     const affectedCreators = new Set<string>()
@@ -171,23 +155,6 @@ export class ProcessFileNotifications {
       }
     }
 
-    let combined: ReconcileResult = {
-      creatorsAdded: 0,
-      creatorsMarkedMissing: 0,
-      creatorsRecovered: 0,
-      videosAdded: 0,
-      videosMarkedMissing: 0,
-      videosRecovered: 0,
-      cutsAdded: 0,
-      cutsMarkedMissing: 0,
-      cutsRecovered: 0
-    }
-
-    for (const creatorName of affectedCreators) {
-      const result = this.reconcile.executeForCreator(this.rootPath.value, creatorName)
-      combined = mergeResults(combined, result)
-    }
-
-    return combined
+    return this.reconcile.executeForCreatorBatch(this.rootPath.value, [...affectedCreators])
   }
 }

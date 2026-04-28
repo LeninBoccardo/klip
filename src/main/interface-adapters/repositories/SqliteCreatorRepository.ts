@@ -96,6 +96,11 @@ export class SqliteCreatorRepository implements ICreatorRepository {
       .run()
   }
 
+  /** Inner repos don't track audit history, so the prior state is irrelevant. */
+  upsertWithPrevious(creator: Creator, _previous: Creator | null): void {
+    this.upsert(creator)
+  }
+
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void {
     this.db
       .update(creators)

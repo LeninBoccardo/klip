@@ -42,12 +42,16 @@ export class AuditedCreatorRepository implements ICreatorRepository {
   }
 
   upsert(creator: Creator): void {
+    // Caller didn't supply prior state; read it for the audit diff.
+    this.upsertWithPrevious(creator, this.inner.findById(creator.id))
+  }
+
+  upsertWithPrevious(creator: Creator, previous: Creator | null): void {
     this.transaction.run(() => {
-      const existing = this.inner.findById(creator.id)
       this.inner.upsert(creator)
 
       const now = new Date().toISOString()
-      if (!existing) {
+      if (!previous) {
         this.auditLog.append({
           entityType: 'creator',
           entityId: creator.id,
@@ -57,7 +61,7 @@ export class AuditedCreatorRepository implements ICreatorRepository {
         })
       } else {
         const changes = diffObjects(
-          existing as unknown as Record<string, unknown>,
+          previous as unknown as Record<string, unknown>,
           creator as unknown as Record<string, unknown>
         )
         if (changes) {

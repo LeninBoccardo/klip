@@ -17,8 +17,6 @@ interface MediaCardProps {
   isShort?: boolean
   onClick?: () => void
   className?: string
-  /** Slot for a context menu wrapper or extra overlay */
-  children?: React.ReactNode
 }
 
 export function MediaCard({
@@ -30,12 +28,11 @@ export function MediaCard({
   fileSize,
   isShort,
   onClick,
-  className,
-  children
+  className
 }: MediaCardProps) {
   const src = toMediaSrc(thumbnailPath)
 
-  const card = (
+  return (
     <Card
       className={cn(
         'group overflow-hidden transition-colors hover:bg-accent/50 cursor-pointer',
@@ -74,12 +71,6 @@ export function MediaCard({
       </CardContent>
     </Card>
   )
-
-  return children ? <>{children}</> : card
 }
 
-/**
- * Inner card content extracted so context menu wrappers can compose it.
- * Usage: <ContextMenu><ContextMenuTrigger asChild><MediaCardContent .../></ContextMenuTrigger>...</ContextMenu>
- */
 MediaCard.displayName = 'MediaCard'

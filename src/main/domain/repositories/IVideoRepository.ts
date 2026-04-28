@@ -13,6 +13,8 @@ export interface IVideoRepository {
   /** Active videos with a URL but detail metadata never fetched (detailFetchedAt IS NULL) */
   findNeedingDetail(): Video[]
   upsert(video: Video): void
+  /** See {@link ICreatorRepository.upsertWithPrevious} — same semantics. */
+  upsertWithPrevious(video: Video, previous: Video | null): void
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void
   delete(id: string): void
