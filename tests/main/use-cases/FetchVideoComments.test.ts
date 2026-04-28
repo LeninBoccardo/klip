@@ -164,4 +164,13 @@ describe('FetchVideoComments', () => {
     expect(mocks.videoRepo.updateStatus).not.toHaveBeenCalled()
     expect(mocks.videoRepo.updateProbeStatus).not.toHaveBeenCalled()
   })
+
+  it('propagates downloader errors (timeout, network) to the caller', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.downloader.fetchComments).mockRejectedValue(
+      new Error('yt-dlp comment fetch timed out after 90s')
+    )
+
+    await expect(useCase.execute('video-1')).rejects.toThrow('timed out after 90s')
+  })
 })

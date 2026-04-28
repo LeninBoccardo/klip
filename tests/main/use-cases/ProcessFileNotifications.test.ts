@@ -254,6 +254,41 @@ describe('ProcessFileNotifications', () => {
 
       expect(mockDebouncer.schedule).not.toHaveBeenCalled()
     })
+
+    it('lets in-flight flush complete when suspend fires mid-flush', async () => {
+      // Defer the drain so we can interleave suspend() with an in-flight flush.
+      let resolveDrain!: (events: FileEvent[]) => void
+      const drainPromise = new Promise<FileEvent[]>((resolve) => {
+        resolveDrain = resolve
+      })
+      vi.mocked(mockQueue.drain).mockReturnValueOnce(drainPromise)
+
+      useCase.handleEvent(makeEvent('/root/trigger'))
+      const flushFn = vi.mocked(mockDebouncer.schedule).mock.calls[0][0]
+      const flushPromise = flushFn()
+
+      // suspend() must wait on the in-flight flush before resolving — otherwise
+      // a caller could observe `suspended === true` while a DB mutation was still
+      // mid-flight, breaking the migrate-root invariant.
+      let suspendResolved = false
+      const suspendPromise = useCase.suspend().then(() => {
+        suspendResolved = true
+      })
+
+      // After one microtask, neither promise has settled (drain is still pending).
+      await Promise.resolve()
+      expect(suspendResolved).toBe(false)
+      expect(useCase.isSuspended()).toBe(true)
+
+      resolveDrain([makeEvent('/root/c/downloads/v1/video.mp4')])
+      await flushPromise
+      await suspendPromise
+
+      expect(suspendResolved).toBe(true)
+      // The flush still ran to completion: notify fired, granular processing kicked in.
+      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated')
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'c')
+    })
   })
 
   // ── Error handling ──

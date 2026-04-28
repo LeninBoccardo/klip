@@ -1,6 +1,7 @@
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { vi } from 'vitest'
+import { renderHook, type RenderHookResult } from '@testing-library/react'
+import { vi, type MockInstance } from 'vitest'
 import type { CreatorDto } from '@shared/dtos'
 import type { VideoDto } from '@shared/dtos'
 import type { CutDto } from '@shared/dtos'
@@ -26,6 +27,24 @@ export function createQueryWrapper() {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(QueryClientProvider, { client: qc }, children)
   }
+}
+
+/**
+ * Renders a hook with a dedicated QueryClient and pre-attaches a spy on
+ * `invalidateQueries` so tests can assert on the `queryKey` argument. Use for
+ * mutation hooks where wrong-key invalidation = stale UI.
+ */
+export function renderMutationHook<T>(useHook: () => T): {
+  result: RenderHookResult<T, void>['result']
+  qc: QueryClient
+  invalidateSpy: MockInstance<QueryClient['invalidateQueries']>
+} {
+  const qc = createTestQueryClient()
+  const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+  const wrapper = ({ children }: { children: React.ReactNode }): React.ReactElement =>
+    React.createElement(QueryClientProvider, { client: qc }, children)
+  const { result } = renderHook(useHook, { wrapper })
+  return { result, qc, invalidateSpy }
 }
 
 /**
