@@ -3,6 +3,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { pathToFileURL } from 'url'
 import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
+import { resolveKlipMediaRequest } from './framework-drivers/electron/klip-media-protocol'
+import { redactPath, redactError } from './domain/types/redact'
 import { registerReconcileController } from './interface-adapters/controllers/ReconcileController'
 import { registerDownloadController } from './interface-adapters/controllers/DownloadController'
 import { registerCreatorController } from './interface-adapters/controllers/CreatorController'
@@ -33,6 +35,19 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
+      // `contextIsolation: true` is the Electron 41 default but pin it
+      // explicitly — the preload bridge falls back to direct `window.api`
+      // assignment if isolation is ever disabled (see preload/index.ts L115),
+      // which would bypass the contextBridge entirely.
+      contextIsolation: true,
+      // `sandbox: false` is the legacy default from the electron-vite scaffold.
+      // F2b note (audit 06): a static check shows the preload only uses
+      // `electron` IPC primitives + `@electron-toolkit/preload`'s `electronAPI`
+      // (no `fs` / `path` / `child_process`), and the renderer never reads
+      // `window.electron`, so flipping to `sandbox: true` should be safe and
+      // would close the largest remaining XSS-cost-amplifier. Deferred only
+      // because the change requires a `npm run dev` smoke test of the IPC
+      // bridge end-to-end — that gate runs as part of the next fix cycle.
       sandbox: false
     }
   })
@@ -69,12 +84,6 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // ── Custom protocol: klip-media:// serves local files for thumbnails ──
-  protocol.handle('klip-media', (request) => {
-    const filePath = decodeURIComponent(request.url.replace('klip-media://', ''))
-    return net.fetch(pathToFileURL(filePath).href)
-  })
-
   // ── Create DI container ──
   const defaultRootPath = join(app.getPath('documents'), 'klip')
   const dbPath = join(app.getPath('userData'), 'klip.db')
@@ -85,7 +94,22 @@ app.whenReady().then(() => {
   const database = initializeDatabase(dbPath)
   container = createAppContainer({ database, defaultRootPath, isDev: is.dev })
   const rootPath = container.rootPathRef.value
-  console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
+  console.log(
+    `[klip] Container initialised (db: ${redactPath(dbPath, rootPath)}, root: ${redactPath(rootPath, rootPath)})`
+  )
+
+  // ── Custom protocol: klip-media:// serves local files for thumbnails ──
+  // Containment is enforced inside `resolveKlipMediaRequest` — every request
+  // is realpath-resolved and rejected (403) unless it sits inside the active
+  // rootPathRef. Reads from `container.rootPathRef.value` on every request so
+  // a `migrate-root` mid-session re-points the protocol without re-registering.
+  protocol.handle('klip-media', (request) => {
+    const result = resolveKlipMediaRequest(request.url, container.rootPathRef.value)
+    if (!result.ok) {
+      return new Response(null, { status: result.status })
+    }
+    return net.fetch(pathToFileURL(result.absolutePath).href)
+  })
 
   // ── Register IPC controllers ──
   registerReconcileController(container.useCases.reconcile, container.rootPathRef)
@@ -117,7 +141,7 @@ app.whenReady().then(() => {
       console.log(`[klip] Operation recovery complete:`, recoverResult)
     }
   } catch (error) {
-    console.error(`[klip] Operation recovery failed:`, error)
+    console.error(`[klip] Operation recovery failed:`, redactError(error, rootPath))
   }
 
   // ── Initial reconciliation (one-time full scan at startup) ──
@@ -125,7 +149,7 @@ app.whenReady().then(() => {
     const result = container.useCases.reconcile.execute(rootPath)
     console.log(`[klip] Initial reconciliation complete:`, result)
   } catch (error) {
-    console.error(`[klip] Initial reconciliation failed:`, error)
+    console.error(`[klip] Initial reconciliation failed:`, redactError(error, rootPath))
   }
 
   // ── Enrich media metadata for newly discovered entities (async, non-blocking) ──
@@ -136,7 +160,9 @@ app.whenReady().then(() => {
         console.log(`[klip] Media enrichment complete:`, enrichResult)
       }
     })
-    .catch((error) => console.error(`[klip] Media enrichment failed:`, error))
+    .catch((error) =>
+      console.error(`[klip] Media enrichment failed:`, redactError(error, rootPath))
+    )
 
   // ── Start file watcher (runtime changes only, ignoreInitial: true) ──
   container.services.fileWatcher.start()
@@ -146,7 +172,7 @@ app.whenReady().then(() => {
   // ── Auto-check for updates (production only; DisabledUpdater is a no-op in dev) ──
   if (!is.dev) {
     container.ports.updater.checkForUpdates().catch((err) => {
-      console.error(`[klip] Initial update check failed:`, err)
+      console.error(`[klip] Initial update check failed:`, redactError(err, rootPath))
     })
   }
 

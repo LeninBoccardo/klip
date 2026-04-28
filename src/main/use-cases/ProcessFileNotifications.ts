@@ -1,6 +1,7 @@
 import type { INotificationQueue, IDebouncer, INotifier, RootPathRef } from '@domain/ports'
 import type { FileEvent } from '@domain/types'
 import { collapseEvents, classifyPath } from '@domain/types'
+import { redactError } from '@domain/types/redact'
 import type { IReconcileDirectory, ReconcileResult } from './IReconcileDirectory'
 import type { IEnrichMediaMetadata } from './IEnrichMediaMetadata'
 
@@ -125,13 +126,15 @@ export class ProcessFileNotifications {
       if (this.enrichMedia && !this.enrichPromise) {
         this.enrichPromise = this.enrichMedia
           .execute()
-          .catch((err) => console.error('[klip] Enrichment failed:', err))
+          .catch((err) =>
+            console.error('[klip] Enrichment failed:', redactError(err, this.rootPath.value))
+          )
           .finally(() => {
             this.enrichPromise = null
           })
       }
     } catch (error) {
-      console.error('[klip] Notification flush failed:', error)
+      console.error('[klip] Notification flush failed:', redactError(error, this.rootPath.value))
     } finally {
       // Double-buffer: check if new events arrived during this flush
       if (this.queue.size() > 0 && !this.suspended) {

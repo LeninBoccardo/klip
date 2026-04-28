@@ -204,10 +204,7 @@ describe('CommentsTab — loaded states', () => {
 
   it('hides the "replies" segment when no top-level comment has children', () => {
     vi.mocked(useFetchVideoComments).mockReturnValue(
-      loadedState([
-        makeComment({ id: 'top1', text: 'A' }),
-        makeComment({ id: 'top2', text: 'B' })
-      ])
+      loadedState([makeComment({ id: 'top1', text: 'A' }), makeComment({ id: 'top2', text: 'B' })])
     )
 
     render(<CommentsTab videoId="v1" knownCount={null} />)

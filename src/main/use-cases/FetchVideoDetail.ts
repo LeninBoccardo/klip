@@ -2,6 +2,7 @@ import type { IVideoRepository } from '@domain/repositories'
 import type { IVideoDownloader, IFileSystemReader, IPathResolver } from '@domain/ports'
 import type { VideoDetailWithTranscript } from '@shared/types'
 import { parseVtt } from '@domain/types'
+import { redactError } from '@domain/types/redact'
 import type { IFetchVideoDetail } from './IFetchVideoDetail'
 
 /**
@@ -43,7 +44,7 @@ export class FetchVideoDetail implements IFetchVideoDetail {
     } catch (err) {
       // Transcript fetch is best-effort — log and leave null on failure so the
       // detail enrichment still commits.
-      console.warn(`[klip] Transcript fetch failed for video ${video.id}:`, err)
+      console.warn(`[klip] Transcript fetch failed for video ${video.id}:`, redactError(err))
       transcriptPath = null
       transcriptText = null
     }

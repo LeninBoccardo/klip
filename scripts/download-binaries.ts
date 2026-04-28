@@ -8,10 +8,11 @@
  * Supports Windows, macOS, and Linux.
  */
 
-import { createWriteStream, mkdirSync, chmodSync, existsSync, unlinkSync } from 'fs'
+import { createWriteStream, mkdirSync, chmodSync, existsSync, unlinkSync, readFileSync } from 'fs'
+import { createHash } from 'crypto'
 import { get } from 'https'
 import { IncomingMessage } from 'http'
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import { NodePathResolver } from '@main/interface-adapters/file-system'
 
 const nodePathResolver = new NodePathResolver()
@@ -21,6 +22,22 @@ const BIN_DIR = nodePathResolver.join(__dirname, '..', 'resources', 'bin')
 // ── Version pins ──
 const YT_DLP_VERSION = '2025.02.19'
 const FFPROBE_VERSION = '6.1'
+
+// ── SHA256 hashes — verify downloaded binaries against upstream releases ──
+// Bumping versions: download the new binary, run `shasum -a 256 <file>` (or
+// `Get-FileHash -Algorithm SHA256 <file>` on Windows), paste the result here.
+// `null` skips verification with a warning — useful only while introducing the
+// pinning workflow. Aim to fill in every entry before the next public release.
+//
+// Set `KLIP_SKIP_BINARY_VERIFY=1` to bypass mismatches at install time (escape
+// hatch for one-off dev setup; never use in CI or release pipelines).
+const SHASUMS: Record<string, string | null> = {
+  'yt-dlp.exe': null,
+  'yt-dlp_macos': null,
+  'yt-dlp_linux': null,
+  'ffprobe.exe': null,
+  ffprobe: null
+}
 
 // ── Platform detection ──
 type Platform = 'win32' | 'darwin' | 'linux'
@@ -143,14 +160,24 @@ async function downloadAndExtractZip(url: string, outputName: string): Promise<v
 
   console.log(`  Extracting ${outputName}...`)
   try {
-    // Use platform-native tools for zip extraction
+    // Use array-form `execFileSync` so paths can never reach a shell parser.
+    // Earlier the script used `execSync` with template-interpolated paths — a
+    // username with `'` or `"` (rare on Windows but possible on macOS/Linux)
+    // could break out of the quoting and inject. The unzip form is fully
+    // shell-free; the powershell form keeps the script literal in `-Command`
+    // but the path arguments are now bound through powershell's own parser.
     if (platform === 'win32') {
-      execSync(
-        `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${BIN_DIR}' -Force"`,
+      execFileSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-Command',
+          `Expand-Archive -Path "${zipPath}" -DestinationPath "${BIN_DIR}" -Force`
+        ],
         { stdio: 'pipe' }
       )
     } else {
-      execSync(`unzip -o "${zipPath}" -d "${BIN_DIR}"`, { stdio: 'pipe' })
+      execFileSync('unzip', ['-o', zipPath, '-d', BIN_DIR], { stdio: 'pipe' })
     }
   } finally {
     // Clean up zip file
@@ -158,6 +185,33 @@ async function downloadAndExtractZip(url: string, outputName: string): Promise<v
       unlinkSync(zipPath)
     }
   }
+}
+
+function verifyBinaryHash(filePath: string, outputName: string): void {
+  const expected = SHASUMS[outputName]
+  if (!expected) {
+    console.warn(
+      `  ⚠ No SHA256 pinned for ${outputName} — skipping verification (TODO: pin in scripts/download-binaries.ts).`
+    )
+    return
+  }
+  const actual = createHash('sha256').update(readFileSync(filePath)).digest('hex')
+  if (actual === expected) {
+    console.log(`  ✓ SHA256 verified for ${outputName}`)
+    return
+  }
+  if (process.env.KLIP_SKIP_BINARY_VERIFY === '1') {
+    console.warn(
+      `  ⚠ SHA256 mismatch for ${outputName} (expected ${expected}, got ${actual}) — bypassed via KLIP_SKIP_BINARY_VERIFY.`
+    )
+    return
+  }
+  unlinkSync(filePath)
+  throw new Error(
+    `SHA256 mismatch for ${outputName}: expected ${expected}, got ${actual}. ` +
+      `Refusing to install a tampered or stale binary. ` +
+      `Set KLIP_SKIP_BINARY_VERIFY=1 to bypass (dev only).`
+  )
 }
 
 async function downloadBinary(spec: BinarySpec): Promise<void> {
@@ -176,16 +230,20 @@ async function downloadBinary(spec: BinarySpec): Promise<void> {
     await downloadRaw(spec.url, dest)
   }
 
+  if (!existsSync(dest)) {
+    throw new Error(`Failed to install ${spec.name} — file not found at ${dest}`)
+  }
+
+  // Verify the binary integrity BEFORE making it executable. A tampered binary
+  // should never be marked +x — that's the whole point of the check.
+  verifyBinaryHash(dest, spec.outputName)
+
   // Make executable on Unix
-  if (platform !== 'win32' && existsSync(dest)) {
+  if (platform !== 'win32') {
     chmodSync(dest, 0o755)
   }
 
-  if (existsSync(dest)) {
-    console.log(`  ✓ ${spec.name} installed`)
-  } else {
-    throw new Error(`Failed to install ${spec.name} — file not found at ${dest}`)
-  }
+  console.log(`  ✓ ${spec.name} installed`)
 }
 
 // ── Main ──

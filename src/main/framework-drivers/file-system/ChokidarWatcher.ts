@@ -3,6 +3,7 @@ import type { FSWatcher } from 'chokidar'
 import { existsSync, mkdirSync } from 'fs'
 import type { IFileWatcher } from '@domain/ports'
 import type { FileEvent, FileEventType } from '@domain/types'
+import { redactPath, redactError } from '@domain/types/redact'
 
 /**
  * Regex that matches paths relevant to the Klip folder structure.
@@ -93,7 +94,7 @@ export class ChokidarWatcher implements IFileWatcher {
     if (!existsSync(this.rootPath)) {
       try {
         mkdirSync(this.rootPath, { recursive: true })
-        console.log(`[klip] Created root directory: ${this.rootPath}`)
+        console.log(`[klip] Created root directory: ${redactPath(this.rootPath, this.rootPath)}`)
       } catch {
         if (attempt < ROOT_MAX_RETRIES) {
           console.warn(
@@ -142,10 +143,10 @@ export class ChokidarWatcher implements IFileWatcher {
     }
 
     this.watcher.on('error', (error) => {
-      console.error('[klip] Watcher error:', error)
+      console.error('[klip] Watcher error:', redactError(error, this.rootPath))
     })
 
-    console.log(`[klip] File watcher started on: ${this.rootPath}`)
+    console.log(`[klip] File watcher started on: ${redactPath(this.rootPath, this.rootPath)}`)
   }
 
   /**

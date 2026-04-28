@@ -10,6 +10,7 @@ import type {
 } from '@domain/ports'
 import type { DownloadRequest, DownloadProgress, VideoInfo } from '@domain/types'
 import { slugify } from '@domain/types'
+import { redactError } from '@domain/types/redact'
 import type { Video, Creator } from '@domain/entities'
 import type { IDownloadVideo, DownloadVideoResult } from './IDownloadVideo'
 import type { IFetchVideoInfo } from './IFetchVideoInfo'
@@ -65,7 +66,12 @@ export class DownloadVideo implements IDownloadVideo {
     // Enqueue — the task runs when a concurrency slot opens
     this.downloadQueue
       .enqueue(() => this.performDownload(downloadId, url, creatorName.trim()))
-      .catch((err) => console.error(`[klip] Download queue error (${downloadId}):`, err))
+      .catch((err) =>
+        console.error(
+          `[klip] Download queue error (${downloadId}):`,
+          redactError(err, this.rootPath.value)
+        )
+      )
 
     return { downloadId }
   }
@@ -85,6 +91,15 @@ export class DownloadVideo implements IDownloadVideo {
       // 1. Pre-flight: fetch video info to get canonical ID
       const info = await this.fetchInfo.execute(url)
       const videoId = info.videoId
+
+      // Defense-in-depth: yt-dlp produces canonical platform IDs (YouTube is
+      // 11-char alphanumeric; other extractors fall in the same shape), but a
+      // tampered binary or a future ID-format change must not let traversal
+      // characters reach the `-o` template (`<outputDir>/${videoId}.%(ext)s`)
+      // or the DB primary key.
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(videoId)) {
+        throw new Error(`Invalid videoId from yt-dlp: ${JSON.stringify(videoId)}`)
+      }
 
       // 2. Slugify creator name for disk/DB identity
       const folderName = slugify(creatorName)
@@ -176,7 +191,10 @@ export class DownloadVideo implements IDownloadVideo {
         status: 'error'
       })
 
-      console.error(`[klip] Download failed (${downloadId}):`, error)
+      console.error(
+        `[klip] Download failed (${downloadId}):`,
+        redactError(error, this.rootPath.value)
+      )
     }
   }
 

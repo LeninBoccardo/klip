@@ -1,6 +1,7 @@
 import type { IVideoRepository } from '@domain/repositories'
 import type { IDownloadQueue, INotifier } from '@domain/ports'
 import type { EnrichVideosResult } from '@shared/types'
+import { redactError } from '@domain/types/redact'
 import type { IFetchVideoDetail } from './IFetchVideoDetail'
 import type { IEnrichAllVideos } from './IEnrichAllVideos'
 
@@ -56,7 +57,7 @@ export class EnrichAllVideos implements IEnrichAllVideos {
           result.enriched++
         } catch (err) {
           result.failed++
-          console.error(`[klip] EnrichAllVideos failed for ${video.id}:`, err)
+          console.error(`[klip] EnrichAllVideos failed for ${video.id}:`, redactError(err))
         }
       }
       this.notifier.notify('enrich-progress', {

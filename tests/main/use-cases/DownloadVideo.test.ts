@@ -559,6 +559,41 @@ describe('DownloadVideo', () => {
     )
   })
 
+  // ── videoId allowlist (defense against tampered yt-dlp output) ──
+
+  it('should reject videoIds containing path-traversal characters before reaching disk', async () => {
+    vi.mocked(fetchInfo.execute).mockResolvedValue({
+      ...videoInfo,
+      videoId: '../../../etc/passwd'
+    })
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    // Output dir creation must NOT happen — we never reach `pathResolver.join`.
+    expect(fsWriter.ensureDirectory).not.toHaveBeenCalled()
+    expect(downloader.download).not.toHaveBeenCalled()
+    // Error path emits a download-progress event with status='error' (caught
+    // inside performDownload), so the failure surfaces to the renderer.
+    expect(notifier.notify).toHaveBeenCalledWith(
+      'download-progress',
+      expect.objectContaining({ status: 'error' })
+    )
+  })
+
+  it('should reject videoIds with slashes', async () => {
+    vi.mocked(fetchInfo.execute).mockResolvedValue({
+      ...videoInfo,
+      videoId: 'evil/id'
+    })
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(fsWriter.ensureDirectory).not.toHaveBeenCalled()
+    expect(downloader.download).not.toHaveBeenCalled()
+  })
+
   // ── YouTube metadata enrichment on ensureCreator ──
 
   it('should set YouTube metadata on a new Creator when info.channelId is provided', async () => {

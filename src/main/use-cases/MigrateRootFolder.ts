@@ -18,6 +18,7 @@ import type { IReconcileDirectory } from './IReconcileDirectory'
 import type { ProcessFileNotifications } from './ProcessFileNotifications'
 import type { IMigrateRootFolder } from './IMigrateRootFolder'
 import type { MigrateRootResult } from '@shared/types'
+import { redactError } from '@domain/types/redact'
 
 interface MigrateRootPayload {
   oldRoot: string
@@ -201,12 +202,18 @@ export class MigrateRootFolder implements IMigrateRootFolder {
         try {
           await this.fileWatcher.restart(oldRootPath)
         } catch (err) {
-          console.error('[klip] Failed to restart watcher after migrate failure:', err)
+          console.error(
+            '[klip] Failed to restart watcher after migrate failure:',
+            redactError(err, oldRootPath)
+          )
         }
         try {
           await this.processNotifications.resume()
         } catch (err) {
-          console.error('[klip] Failed to resume notifications after migrate failure:', err)
+          console.error(
+            '[klip] Failed to resume notifications after migrate failure:',
+            redactError(err, oldRootPath)
+          )
         }
       }
     }
@@ -239,7 +246,10 @@ export class MigrateRootFolder implements IMigrateRootFolder {
         const srcPath = this.pathResolver.join(payload.oldRoot, folder)
         this.fsWriter.moveDirectory(destPath, srcPath)
       } catch (rollbackErr) {
-        console.error(`[klip] Rollback failed for folder "${folder}":`, rollbackErr)
+        console.error(
+          `[klip] Rollback failed for folder "${folder}":`,
+          redactError(rollbackErr, payload.newRoot)
+        )
       }
     }
 

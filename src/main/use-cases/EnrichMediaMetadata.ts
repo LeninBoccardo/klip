@@ -1,5 +1,6 @@
 import type { IVideoRepository, ICutRepository } from '@domain/repositories'
 import type { IMediaProbe, INotifier } from '@domain/ports'
+import { redactPath, redactError } from '@domain/types/redact'
 import type { IEnrichMediaMetadata, EnrichResult } from './IEnrichMediaMetadata'
 
 /**
@@ -39,7 +40,10 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
         })
         result.videosProbed++
       } catch (err) {
-        console.error(`[klip] ffprobe failed for video ${video.id} (${video.filePath}):`, err)
+        console.error(
+          `[klip] ffprobe failed for video ${video.id} (${redactPath(video.filePath)}):`,
+          redactError(err)
+        )
         this.videoRepo.updateProbeStatus(video.id, 'failed')
         result.failures++
       }
@@ -60,7 +64,10 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
         })
         result.cutsProbed++
       } catch (err) {
-        console.error(`[klip] ffprobe failed for cut ${cut.id} (${cut.filePath}):`, err)
+        console.error(
+          `[klip] ffprobe failed for cut ${cut.id} (${redactPath(cut.filePath)}):`,
+          redactError(err)
+        )
         this.cutRepo.updateProbeStatus(cut.id, 'failed')
         result.failures++
       }
