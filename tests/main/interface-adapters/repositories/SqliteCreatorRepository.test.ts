@@ -211,4 +211,54 @@ describe('SqliteCreatorRepository', () => {
     expect(active).toHaveLength(1)
     expect(active[0].name).toBe('Active')
   })
+
+  describe('searchByName', () => {
+    it('returns an empty array for an empty query', () => {
+      repo.upsert(makeCreator({ id: 'c-1', name: 'anyone' }))
+      expect(repo.searchByName('', 10)).toEqual([])
+      expect(repo.searchByName('   ', 10)).toEqual([])
+    })
+
+    it('matches case-insensitive substrings of the name', () => {
+      repo.upsert(makeCreator({ id: 'c-1', folderName: 'a', name: 'Alpha Tech' }))
+      repo.upsert(makeCreator({ id: 'c-2', folderName: 'b', name: 'Beta Lab' }))
+      repo.upsert(makeCreator({ id: 'c-3', folderName: 'c', name: 'Gamma Studio' }))
+
+      const results = repo.searchByName('beta', 10)
+      expect(results.map((c) => c.id)).toEqual(['c-2'])
+    })
+
+    it('caps results to limit, ordered alphabetically', () => {
+      repo.upsert(makeCreator({ id: 'c-1', folderName: 'a', name: 'Search Alpha' }))
+      repo.upsert(makeCreator({ id: 'c-2', folderName: 'b', name: 'Search Bravo' }))
+      repo.upsert(makeCreator({ id: 'c-3', folderName: 'c', name: 'Search Charlie' }))
+
+      const results = repo.searchByName('search', 2)
+      expect(results.map((c) => c.name)).toEqual(['Search Alpha', 'Search Bravo'])
+    })
+
+    it('skips deleted and missing creators', () => {
+      repo.upsert(makeCreator({ id: 'live', folderName: 'live', name: 'Live Show' }))
+      repo.upsert(
+        makeCreator({
+          id: 'gone',
+          folderName: 'gone',
+          name: 'Live Stream',
+          status: 'deleted',
+          deletedAt: '2025-06-01'
+        })
+      )
+
+      const results = repo.searchByName('live', 10)
+      expect(results.map((c) => c.id)).toEqual(['live'])
+    })
+
+    it('escapes LIKE wildcards in the query', () => {
+      repo.upsert(makeCreator({ id: 'c-1', folderName: 'pct', name: '50% off' }))
+      repo.upsert(makeCreator({ id: 'c-2', folderName: 'plain', name: 'Plain name' }))
+
+      const results = repo.searchByName('%', 10)
+      expect(results.map((c) => c.id)).toEqual(['c-1'])
+    })
+  })
 })

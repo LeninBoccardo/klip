@@ -18,15 +18,75 @@ import { queryClient } from '@/lib/query-client'
 import { useDbListener } from '@/hooks/use-db-listener'
 import { useDownloadProgressListener } from '@/hooks/use-downloads'
 import { useUpdaterStatus, useInstallUpdate } from '@/hooks/use-updater'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AppSidebar } from '@components/features/layout/AppSidebar'
 import { BlockingOperationDialog } from '@/components/shared'
+import { CommandPalette } from '@/components/features/search/CommandPalette'
+import { Button } from '@ui/button'
+import { Search } from 'lucide-react'
 
 function GlobalListeners(): React.ReactElement {
   useDbListener()
   useDownloadProgressListener()
   return <UpdaterToastWatcher />
+}
+
+/**
+ * Returns true while the active focus is in a text-entry surface — used to
+ * suppress global single-key shortcuts (`/`) so they don't hijack typing.
+ * The Cmd/Ctrl+K shortcut intentionally bypasses this since it's the
+ * standard escape hatch from any input.
+ */
+function isTextInputActive(): boolean {
+  const el = document.activeElement
+  if (!el) return false
+  const tag = el.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+  if ((el as HTMLElement).isContentEditable) return true
+  return false
+}
+
+function CommandPaletteController(): React.ReactElement {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      const isCmdK = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k'
+      const isSlash = event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey
+
+      if (isCmdK) {
+        event.preventDefault()
+        setOpen((prev) => !prev)
+        return
+      }
+      if (isSlash && !isTextInputActive()) {
+        event.preventDefault()
+        setOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="ml-auto gap-2 text-muted-foreground"
+        aria-label="Open search palette"
+      >
+        <Search className="size-4" />
+        <span className="hidden sm:inline">Search</span>
+        <kbd className="ml-2 hidden rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline">
+          Ctrl K
+        </kbd>
+      </Button>
+      <CommandPalette open={open} onOpenChange={setOpen} />
+    </>
+  )
 }
 
 /**
@@ -130,6 +190,7 @@ const RootLayout = (): React.ReactElement => (
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
               <AppBreadcrumb />
+              <CommandPaletteController />
             </header>
             <div className="flex-1 overflow-hidden">
               <Outlet />

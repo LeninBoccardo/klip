@@ -38,3 +38,4 @@ export type {
   RenameTagGloballyResult
 } from './tags'
 export type { DbUpdateScope, DbUpdatedPayload } from './notification-events'
+export type { SearchAllResult } from './search'

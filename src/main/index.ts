@@ -9,6 +9,7 @@ import { registerCreatorController } from './interface-adapters/controllers/Crea
 import { registerVideoController } from './interface-adapters/controllers/VideoController'
 import { registerCutController } from './interface-adapters/controllers/CutController'
 import { registerTagController } from './interface-adapters/controllers/TagController'
+import { registerSearchController } from './interface-adapters/controllers/SearchController'
 import { registerSettingsController } from './interface-adapters/controllers/SettingsController'
 import { registerAuditLogController } from './interface-adapters/controllers/AuditLogController'
 import { registerOperationController } from './interface-adapters/controllers/OperationController'
@@ -121,6 +122,7 @@ app.whenReady().then(() => {
     container.useCases.bulkUpdateTags,
     container.useCases.renameTagGlobally
   )
+  registerSearchController(container.useCases.searchAll)
   registerSettingsController(container.repositories.settings, container.useCases.migrateRootFolder)
   registerAuditLogController(container.repositories.auditLog)
   registerOperationController(container.repositories.operation)

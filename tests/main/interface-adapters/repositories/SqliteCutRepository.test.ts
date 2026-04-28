@@ -633,4 +633,51 @@ describe('SqliteCutRepository', () => {
       expect(tags.map((t) => t.tag)).toEqual(['funny'])
     })
   })
+
+  // ── searchByTitle ──
+
+  describe('searchByTitle', () => {
+    it('returns an empty array for empty / whitespace query', () => {
+      cutRepo.upsert(makeCut({ id: 'c-1', title: 'anything' }))
+      expect(cutRepo.searchByTitle('', 10)).toEqual([])
+      expect(cutRepo.searchByTitle('  ', 10)).toEqual([])
+    })
+
+    it('returns an empty array when limit ≤ 0', () => {
+      cutRepo.upsert(makeCut({ id: 'c-1', title: 'foo' }))
+      expect(cutRepo.searchByTitle('foo', 0)).toEqual([])
+    })
+
+    it('matches case-insensitive substrings of the title', () => {
+      cutRepo.upsert(makeCut({ id: 'c-1', title: 'Best Moment Ever' }))
+      cutRepo.upsert(makeCut({ id: 'c-2', title: 'a moment of silence' }))
+      cutRepo.upsert(makeCut({ id: 'c-3', title: 'totally unrelated' }))
+
+      const results = cutRepo.searchByTitle('moment', 10)
+      expect(results.map((c) => c.id).sort()).toEqual(['c-1', 'c-2'])
+    })
+
+    it('caps results to the supplied limit', () => {
+      cutRepo.upsert(makeCut({ id: 'c-1', title: 'clip one' }))
+      cutRepo.upsert(makeCut({ id: 'c-2', title: 'clip two' }))
+      cutRepo.upsert(makeCut({ id: 'c-3', title: 'clip three' }))
+      expect(cutRepo.searchByTitle('clip', 2)).toHaveLength(2)
+    })
+
+    it('skips non-active cuts', () => {
+      cutRepo.upsert(makeCut({ id: 'active', title: 'foo active' }))
+      cutRepo.upsert(makeCut({ id: 'gone', title: 'foo gone', status: 'deleted' }))
+
+      const results = cutRepo.searchByTitle('foo', 10)
+      expect(results.map((c) => c.id)).toEqual(['active'])
+    })
+
+    it('escapes LIKE wildcards in the query', () => {
+      cutRepo.upsert(makeCut({ id: 'c-1', title: '50% snip' }))
+      cutRepo.upsert(makeCut({ id: 'c-2', title: 'plain title' }))
+
+      const results = cutRepo.searchByTitle('%', 10)
+      expect(results.map((c) => c.id)).toEqual(['c-1'])
+    })
+  })
 })

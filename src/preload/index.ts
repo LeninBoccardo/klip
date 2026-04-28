@@ -45,6 +45,9 @@ const api = {
   deleteCut: createTypedInvoker('delete-cut'),
   restoreCut: createTypedInvoker('restore-cut'),
 
+  // ── Search ──
+  searchAll: createTypedInvoker('search-all'),
+
   // ── Tags ──
   getAllDistinctTags: createTypedInvoker('get-all-distinct-tags'),
   bulkUpdateTags: createTypedInvoker('bulk-update-tags'),

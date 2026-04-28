@@ -102,6 +102,21 @@ export class SqliteVideoRepository implements IVideoRepository {
     return rows.map(mapRow)
   }
 
+  searchByTitle(query: string, limit: number): Video[] {
+    const trimmed = query.trim()
+    if (trimmed.length === 0 || limit <= 0) return []
+
+    const pattern = `%${escapeLike(trimmed)}%`
+    return this.db
+      .select()
+      .from(videos)
+      .where(and(eq(videos.status, 'active'), sql`${videos.title} LIKE ${pattern} ESCAPE '\\'`))
+      .orderBy(desc(videos.createdAt))
+      .limit(limit)
+      .all()
+      .map(mapRow)
+  }
+
   getAllDistinctTags(): { tag: string; count: number }[] {
     // SQLite's json_each emits one row per tag in each video's JSON array.
     // Grouping by the tag value gives a per-tag count of *videos*; multiple

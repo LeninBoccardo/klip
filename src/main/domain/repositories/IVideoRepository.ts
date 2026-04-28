@@ -15,6 +15,12 @@ export interface IVideoRepository {
   /** Active videos that have at least one of the given tags. */
   findByTags(tags: string[]): Video[]
   /**
+   * Active videos whose `title` contains the (case-insensitive) query as a
+   * substring. Caller bounds the result via `limit`. Used by the global
+   * search palette.
+   */
+  searchByTitle(query: string, limit: number): Video[]
+  /**
    * Returns every distinct tag used by an active video, with the number of
    * active videos that carry it. Tags are case-sensitive (the canonical form
    * is whatever was written to the JSON column).

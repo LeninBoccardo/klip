@@ -20,7 +20,8 @@ import type {
   TagAggregation,
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
-  RenameTagGloballyResult
+  RenameTagGloballyResult,
+  SearchAllResult
 } from './types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
 
@@ -75,6 +76,12 @@ export interface IpcContract {
   'get-cuts-by-tags': { params: [tags: string[]]; result: CutDto[] }
   'delete-cut': { params: [id: string]; result: void }
   'restore-cut': { params: [id: string]; result: void }
+
+  // ── Search ──
+  'search-all': {
+    params: [query: string, limit?: number]
+    result: SearchAllResult
+  }
 
   // ── Tags ──
   'get-all-distinct-tags': { params: []; result: TagAggregation[] }

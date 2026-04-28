@@ -21,7 +21,8 @@ import type {
   TagAggregation,
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
-  RenameTagGloballyResult
+  RenameTagGloballyResult,
+  SearchAllResult
 } from '@shared/types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from '@shared/dtos'
 
@@ -58,6 +59,9 @@ interface KlipAPI {
   getCutsByTags(tags: string[]): Promise<CutDto[]>
   deleteCut(id: string): Promise<void>
   restoreCut(id: string): Promise<void>
+
+  // ── Search ──
+  searchAll(query: string, limit?: number): Promise<SearchAllResult>
 
   // ── Tags ──
   getAllDistinctTags(): Promise<TagAggregation[]>

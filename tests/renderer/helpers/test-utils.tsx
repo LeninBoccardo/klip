@@ -81,6 +81,7 @@ export function mockWindowApi() {
     getAuditLogRecent: vi.fn(),
     getOperationById: vi.fn(),
     getOperationsByStatus: vi.fn(),
+    searchAll: vi.fn(),
     onDownloadProgress: vi.fn(() => vi.fn()),
     onDbUpdated: vi.fn(() => vi.fn())
   }

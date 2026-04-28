@@ -40,5 +40,9 @@ export const queryKeys = {
   tags: {
     all: ['tags'] as const,
     distinct: ['tags', 'distinct'] as const
+  },
+  search: {
+    all: ['search'] as const,
+    query: (query: string, limit: number) => ['search', 'all', query, limit] as const
   }
 } as const

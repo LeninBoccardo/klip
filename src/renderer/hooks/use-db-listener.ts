@@ -38,6 +38,12 @@ export function useDbListener(): void {
         queryClient.invalidateQueries({ queryKey: queryKeys.tags.all })
       }
 
+      // Search results derive from creators+videos+cuts+tags, so any scoped
+      // push invalidates the global palette cache to keep results fresh.
+      if (includes('creators') || includes('videos') || includes('cuts')) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.search.all })
+      }
+
       // Audit log + operations + settings are cross-cutting — refresh on any
       // `'all'` push. Targeted entity scopes don't touch them (the audit log
       // append happens in the same transaction and is rendered by an

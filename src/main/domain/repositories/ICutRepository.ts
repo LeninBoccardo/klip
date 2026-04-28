@@ -12,6 +12,12 @@ export interface ICutRepository {
   findByVideoId(videoId: string): Cut[]
   findByTags(tags: string[]): Cut[]
   /**
+   * Active cuts whose `title` contains the (case-insensitive) query as a
+   * substring. Caller bounds the result via `limit`. Used by the global
+   * search palette.
+   */
+  searchByTitle(query: string, limit: number): Cut[]
+  /**
    * Returns every distinct tag used by an active cut, with the number of
    * active cuts that carry it. Tags are case-sensitive (the canonical form
    * is whatever was written to the JSON column).

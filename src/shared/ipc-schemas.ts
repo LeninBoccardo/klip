@@ -95,6 +95,11 @@ export const ipcSchemas = {
   'delete-cut': z.tuple([z.string()]),
   'restore-cut': z.tuple([z.string()]),
 
+  // ── Search ──
+  // Optional `limit` passes through; an XSS-driven payload that drops it can't
+  // exhaust the use case (default and per-surface caps applied there).
+  'search-all': z.union([z.tuple([z.string()]), z.tuple([z.string(), z.number()])]),
+
   // ── Tags ──
   'get-all-distinct-tags': z.tuple([]),
   'bulk-update-tags': z.tuple([bulkUpdateTagsRequestSchema]),

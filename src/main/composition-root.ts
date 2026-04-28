@@ -35,6 +35,7 @@ import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
 import type { IGetAllDistinctTags } from '@use-cases/IGetAllDistinctTags'
 import type { IBulkUpdateTags } from '@use-cases/IBulkUpdateTags'
 import type { IRenameTagGlobally } from '@use-cases/IRenameTagGlobally'
+import type { ISearchAll } from '@use-cases/ISearchAll'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -81,6 +82,7 @@ import { ResolveMediaUrl } from '@use-cases/ResolveMediaUrl'
 import { GetAllDistinctTags } from '@use-cases/GetAllDistinctTags'
 import { BulkUpdateTags } from '@use-cases/BulkUpdateTags'
 import { RenameTagGlobally } from '@use-cases/RenameTagGlobally'
+import { SearchAll } from '@use-cases/SearchAll'
 
 /**
  * Application dependency container.
@@ -127,6 +129,7 @@ export interface AppContainer {
     getAllDistinctTags: IGetAllDistinctTags
     bulkUpdateTags: IBulkUpdateTags
     renameTagGlobally: IRenameTagGlobally
+    searchAll: ISearchAll
   }
   services: {
     fileWatcher: IFileWatcher
@@ -269,6 +272,10 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const bulkUpdateTags = new BulkUpdateTags(videoRepo, cutRepo, transactionScope, notifier)
   const renameTagGlobally = new RenameTagGlobally(videoRepo, cutRepo, transactionScope, notifier)
 
+  // Search reuses the audited read methods (delegated to inner repos) and the
+  // tag aggregator so the palette stays consistent with the rest of the UI.
+  const searchAll = new SearchAll(creatorRepo, videoRepo, cutRepo, getAllDistinctTags)
+
   // ── Media protocol (entity-keyed klip-media:// resolver + handler) ──
   // The renderer references local media via klip-media://<kind>/<id>/<asset>
   // and never holds raw filesystem paths. ResolveMediaUrl maps the entity ref
@@ -334,7 +341,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       resolveMediaUrl,
       getAllDistinctTags,
       bulkUpdateTags,
-      renameTagGlobally
+      renameTagGlobally,
+      searchAll
     },
     services: {
       fileWatcher,

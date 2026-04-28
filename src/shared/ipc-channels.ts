@@ -36,6 +36,9 @@ export const IpcChannels = {
   DeleteCut: 'delete-cut',
   RestoreCut: 'restore-cut',
 
+  // ── Search ──
+  SearchAll: 'search-all',
+
   // ── Tags ──
   GetAllDistinctTags: 'get-all-distinct-tags',
   BulkUpdateTags: 'bulk-update-tags',

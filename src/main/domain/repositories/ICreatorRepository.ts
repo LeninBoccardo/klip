@@ -7,6 +7,12 @@ export interface ICreatorRepository {
   findById(id: string): Creator | null
   findByFolderName(folderName: string): Creator | null
   findByYoutubeChannelId(channelId: string): Creator | null
+  /**
+   * Active creators whose `name` contains the (case-insensitive) query as a
+   * substring. Caller bounds the result via `limit`. Used by the global
+   * search palette; the paginated grid uses `findPaginated({ search })`.
+   */
+  searchByName(query: string, limit: number): Creator[]
   upsert(creator: Creator): void
   /**
    * Same as `upsert`, but the caller passes the prior state of the entity

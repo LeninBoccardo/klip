@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import {
-  useAllDistinctTags,
-  useBulkUpdateTags,
-  useRenameTagGlobally
-} from '@/hooks/use-tags'
+import { useAllDistinctTags, useBulkUpdateTags, useRenameTagGlobally } from '@/hooks/use-tags'
 import { queryKeys } from '@/lib/query-keys'
 import { createQueryWrapper, renderMutationHook } from '../helpers/test-utils'
 
@@ -15,9 +11,7 @@ const getAllDistinctTags = vi.fn()
 beforeEach(() => {
   bulkUpdateTags.mockReset().mockResolvedValue({ updated: 1, skipped: 0 })
   renameTagGlobally.mockReset().mockResolvedValue({ videosUpdated: 1, cutsUpdated: 0 })
-  getAllDistinctTags
-    .mockReset()
-    .mockResolvedValue([{ tag: 'music', videoCount: 3, cutCount: 1 }])
+  getAllDistinctTags.mockReset().mockResolvedValue([{ tag: 'music', videoCount: 3, cutCount: 1 }])
   Object.defineProperty(window, 'api', {
     value: { bulkUpdateTags, renameTagGlobally, getAllDistinctTags },
     writable: true,

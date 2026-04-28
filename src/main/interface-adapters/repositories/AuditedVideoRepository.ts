@@ -47,6 +47,10 @@ export class AuditedVideoRepository implements IVideoRepository {
     return this.inner.findByTags(tags)
   }
 
+  searchByTitle(query: string, limit: number): Video[] {
+    return this.inner.searchByTitle(query, limit)
+  }
+
   getAllDistinctTags(): { tag: string; count: number }[] {
     return this.inner.getAllDistinctTags()
   }

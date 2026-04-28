@@ -61,6 +61,21 @@ export class SqliteCreatorRepository implements ICreatorRepository {
     return row ? mapRow(row) : null
   }
 
+  searchByName(query: string, limit: number): Creator[] {
+    const trimmed = query.trim()
+    if (trimmed.length === 0 || limit <= 0) return []
+
+    const pattern = `%${escapeLike(trimmed)}%`
+    return this.db
+      .select()
+      .from(creators)
+      .where(and(eq(creators.status, 'active'), sql`${creators.name} LIKE ${pattern} ESCAPE '\\'`))
+      .orderBy(asc(creators.name))
+      .limit(limit)
+      .all()
+      .map(mapRow)
+  }
+
   upsert(creator: Creator): void {
     this.db
       .insert(creators)

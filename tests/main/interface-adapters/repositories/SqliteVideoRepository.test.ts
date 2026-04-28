@@ -537,4 +537,58 @@ describe('SqliteVideoRepository', () => {
       expect(tags.map((t) => t.tag)).toEqual(['music'])
     })
   })
+
+  // ── searchByTitle ──
+
+  describe('searchByTitle', () => {
+    it('returns an empty array for an empty / whitespace-only query', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', title: 'Anything' }))
+      expect(videoRepo.searchByTitle('', 10)).toEqual([])
+      expect(videoRepo.searchByTitle('   ', 10)).toEqual([])
+    })
+
+    it('returns an empty array when limit ≤ 0', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', title: 'foo' }))
+      expect(videoRepo.searchByTitle('foo', 0)).toEqual([])
+      expect(videoRepo.searchByTitle('foo', -3)).toEqual([])
+    })
+
+    it('matches case-insensitive substrings of the title', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', title: 'Funny Cat Compilation' }))
+      videoRepo.upsert(makeVideo({ id: 'v-2', title: 'Cat-tastic vlog' }))
+      videoRepo.upsert(makeVideo({ id: 'v-3', title: 'Dog highlights' }))
+
+      const results = videoRepo.searchByTitle('CAT', 10)
+      expect(results.map((v) => v.id).sort()).toEqual(['v-1', 'v-2'])
+    })
+
+    it('caps results to the supplied limit', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', title: 'foo one' }))
+      videoRepo.upsert(makeVideo({ id: 'v-2', title: 'foo two' }))
+      videoRepo.upsert(makeVideo({ id: 'v-3', title: 'foo three' }))
+
+      const results = videoRepo.searchByTitle('foo', 2)
+      expect(results).toHaveLength(2)
+    })
+
+    it('skips deleted and missing videos', () => {
+      videoRepo.upsert(makeVideo({ id: 'active', title: 'foo active' }))
+      videoRepo.upsert(makeVideo({ id: 'gone', title: 'foo gone', status: 'deleted' }))
+      videoRepo.upsert(makeVideo({ id: 'missing', title: 'foo missing', status: 'missing' }))
+
+      const results = videoRepo.searchByTitle('foo', 10)
+      expect(results.map((v) => v.id)).toEqual(['active'])
+    })
+
+    it('treats LIKE wildcards in the query as literals (escapes %, _, \\)', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', title: '50% off party' }))
+      videoRepo.upsert(makeVideo({ id: 'v-2', title: 'underscore_it' }))
+      videoRepo.upsert(makeVideo({ id: 'v-3', title: 'plain title' }))
+
+      // '%' should match literal % in v-1 only — not act as a wildcard.
+      expect(videoRepo.searchByTitle('%', 10).map((v) => v.id)).toEqual(['v-1'])
+      // '_' matches the literal underscore in v-2 only.
+      expect(videoRepo.searchByTitle('_', 10).map((v) => v.id)).toEqual(['v-2'])
+    })
+  })
 })

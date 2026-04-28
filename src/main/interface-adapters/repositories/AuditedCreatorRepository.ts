@@ -41,6 +41,10 @@ export class AuditedCreatorRepository implements ICreatorRepository {
     return this.inner.findByYoutubeChannelId(channelId)
   }
 
+  searchByName(query: string, limit: number): Creator[] {
+    return this.inner.searchByName(query, limit)
+  }
+
   upsert(creator: Creator): void {
     // Caller didn't supply prior state; read it for the audit diff.
     this.upsertWithPrevious(creator, this.inner.findById(creator.id))

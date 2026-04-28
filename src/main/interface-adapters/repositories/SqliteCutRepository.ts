@@ -170,6 +170,21 @@ export class SqliteCutRepository implements ICutRepository {
     return rows.map(mapRowToCut)
   }
 
+  searchByTitle(query: string, limit: number): Cut[] {
+    const trimmed = query.trim()
+    if (trimmed.length === 0 || limit <= 0) return []
+
+    const pattern = `%${escapeLike(trimmed)}%`
+    return this.db
+      .select()
+      .from(cuts)
+      .where(and(eq(cuts.status, 'active'), sql`${cuts.title} LIKE ${pattern} ESCAPE '\\'`))
+      .orderBy(desc(cuts.createdAt))
+      .limit(limit)
+      .all()
+      .map(mapRowToCut)
+  }
+
   upsert(cut: Cut): void {
     this.db
       .insert(cuts)
