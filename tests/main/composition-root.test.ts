@@ -37,7 +37,7 @@ describe('composition-root smoke test', () => {
 
   it('wires every dependency declared on AppContainer with a non-null instance', () => {
     database = createTestDb()
-    const container = createAppContainer({ database, rootPath: '/fake/root', isDev: true })
+    const container = createAppContainer({ database, defaultRootPath: '/fake/root', isDev: true })
 
     // Repositories
     expect(container.repositories.creator).toBeDefined()
@@ -83,7 +83,7 @@ describe('composition-root smoke test', () => {
 
   it('returns the same DatabaseInstance that was passed in', () => {
     database = createTestDb()
-    const container = createAppContainer({ database, rootPath: '/fake/root', isDev: true })
+    const container = createAppContainer({ database, defaultRootPath: '/fake/root', isDev: true })
 
     expect(container.database).toBe(database)
     container.shutdown()
@@ -92,7 +92,7 @@ describe('composition-root smoke test', () => {
 
   it('exposes audited repositories for creator/video/cut (not the raw Sqlite ones)', () => {
     database = createTestDb()
-    const container = createAppContainer({ database, rootPath: '/fake/root', isDev: true })
+    const container = createAppContainer({ database, defaultRootPath: '/fake/root', isDev: true })
 
     // Audited decorators are named distinctly from raw repos; this guards
     // against a future regression where someone wires the raw repository.

@@ -25,7 +25,23 @@ export default defineConfig(
     },
     rules: {
       ...eslintPluginReactHooks.configs.recommended.rules,
-      ...eslintPluginReactRefresh.configs.vite.rules
+      ...eslintPluginReactRefresh.configs.vite.rules,
+      // TS already validates props at compile time — runtime PropTypes are redundant.
+      'react/prop-types': 'off',
+      // Honor the `_` prefix as an explicit "intentionally unused" marker.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }
+      ]
+    }
+  },
+  // Auto-generated shadcn primitives intentionally co-export hooks/variants
+  // alongside components; rewriting them would diverge from upstream and
+  // re-break on every `npx shadcn add`.
+  {
+    files: ['src/renderer/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off'
     }
   },
   eslintConfigPrettier

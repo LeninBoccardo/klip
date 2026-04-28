@@ -297,6 +297,3 @@ function ReplyRow({ comment }: { comment: VideoComment }) {
     </Item>
   )
 }
-
-// ── Helpers re-exported for tests if needed ──
-export { groupThreads, buildClipboardText }

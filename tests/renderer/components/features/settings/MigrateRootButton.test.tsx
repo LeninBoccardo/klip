@@ -11,11 +11,15 @@ const mockMigrateRoot = vi.fn()
 const mockOnMigrateRootProgress = vi.fn().mockReturnValue(() => {})
 
 beforeEach(() => {
-  ;(window as any).api = {
-    selectFolder: mockSelectFolder,
-    migrateRoot: mockMigrateRoot,
-    onMigrateRootProgress: mockOnMigrateRootProgress
-  }
+  Object.defineProperty(window, 'api', {
+    value: {
+      selectFolder: mockSelectFolder,
+      migrateRoot: mockMigrateRoot,
+      onMigrateRootProgress: mockOnMigrateRootProgress
+    },
+    writable: true,
+    configurable: true
+  })
   useAppStore.setState({ blockingOperation: null })
   mockSelectFolder.mockReset()
   mockMigrateRoot.mockReset()

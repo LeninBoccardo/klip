@@ -39,11 +39,14 @@ function UpdaterToastWatcher() {
   const { data: status } = useUpdaterStatus()
   const installUpdate = useInstallUpdate()
   const notifiedFor = useRef<string | null>(null)
-  // Hold the mutation in a ref so the effect doesn't re-run on every render.
+  // Hold the mutation in a ref so the toast effect doesn't re-run on every render.
   // TanStack Query returns a fresh mutation object each render even though
-  // `mutate` is stable.
+  // `mutate` is stable, and assigning to a ref must happen inside an effect
+  // (not during render) per React's rules-of-refs.
   const installRef = useRef(installUpdate)
-  installRef.current = installUpdate
+  useEffect(() => {
+    installRef.current = installUpdate
+  })
 
   useEffect(() => {
     if (!status) return

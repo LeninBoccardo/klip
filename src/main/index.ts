@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, protocol, net } from 'electron'
+import { app, shell, BrowserWindow, protocol, net } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { pathToFileURL } from 'url'
 import icon from '../../resources/icon.png?asset'
@@ -14,7 +14,6 @@ import { registerOperationController } from './interface-adapters/controllers/Op
 import { registerUpdaterController } from './interface-adapters/controllers/UpdaterController'
 import { join } from 'path'
 import { initializeDatabase } from './framework-drivers/database'
-import { SqliteSettingsRepository } from './interface-adapters/repositories'
 
 // ── Register custom protocol for serving local media files ──
 protocol.registerSchemesAsPrivileged([
@@ -70,9 +69,6 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
-
   // ── Custom protocol: klip-media:// serves local files for thumbnails ──
   protocol.handle('klip-media', (request) => {
     const filePath = decodeURIComponent(request.url.replace('klip-media://', ''))
@@ -83,17 +79,12 @@ app.whenReady().then(() => {
   const defaultRootPath = join(app.getPath('documents'), 'klip')
   const dbPath = join(app.getPath('userData'), 'klip.db')
 
-  // Phase 1: Open DB and resolve rootPath from settings
+  // Open DB and create the container — root-path resolution (read settings,
+  // persist default on first launch) lives inside the container so concrete
+  // repository instantiation stays out of the bootstrap.
   const database = initializeDatabase(dbPath)
-  const settingsRepo = new SqliteSettingsRepository(database.db)
-  const storedRootPath = settingsRepo.get('rootPath')
-  const rootPath = storedRootPath ?? defaultRootPath
-  if (!storedRootPath) {
-    settingsRepo.set('rootPath', rootPath)
-  }
-
-  // Phase 2: Create container with resolved rootPath and pre-opened DB
-  container = createAppContainer({ database, rootPath, isDev: is.dev })
+  container = createAppContainer({ database, defaultRootPath, isDev: is.dev })
+  const rootPath = container.rootPathRef.value
   console.log(`[klip] Container initialised (db: ${dbPath}, root: ${rootPath})`)
 
   // ── Register IPC controllers ──

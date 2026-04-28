@@ -298,12 +298,13 @@ interface AppContainer {
 
 **Wiring pattern:**
 
-1. `initializeDatabase(config.dbPath)` → `{ raw, db }`
-2. Raw Drizzle repositories: `new SqliteCreatorRepository(db)`, etc.
-3. Audited decorators: `new AuditedCreatorRepository(sqliteCreatorRepo, auditLogRepo)`
-4. Transaction scope: `new SqliteTransactionScope(raw)` (uses raw driver)
-5. Use cases receive interfaces only
-6. `AppConfig { dbPath, rootPath }` passed in from `index.ts`
+1. `initializeDatabase(dbPath)` runs in `index.ts` → `{ raw, db }`
+2. `createAppContainer({ database, defaultRootPath, isDev })` resolves the effective `rootPath` from the `settings` table (persisting the default on first launch) before constructing any path-dependent dependency.
+3. Raw Drizzle repositories: `new SqliteCreatorRepository(db)`, etc.
+4. Audited decorators: `new AuditedCreatorRepository(sqliteCreatorRepo, auditLogRepo, transactionScope)`
+5. Transaction scope: `new SqliteTransactionScope(raw)` (uses raw driver)
+6. Use cases receive interfaces only
+7. `AppConfig { database, defaultRootPath, isDev }` passed in from `index.ts`
 
 ## Path Aliases
 
@@ -376,7 +377,7 @@ All IPC channel names are defined once in `src/shared/ipc-channels.ts` as a `con
 5. **Single Source of Truth:** The UI only queries the SQLite index. The `chokidar` driver in `framework-drivers` is responsible for keeping the SQLite index in sync with the root directory (default: `app.getPath('documents')/klip`).
 6. **Dependency Injection Requirement**: Concrete infrastructure (DB, File Watcher, APIs) must never be instantiated inside Use Cases or Repositories. Always pass them as interfaces via constructors to ensure the core logic remains agnostic to the underlying technology.
 7. **Entity Lifecycle (`EntityStatus`)**: All indexed entities use `status: 'active' | 'deleted' | 'missing'`. Reconciliation marks disappeared entities as `'missing'` (never hard-deletes). Only explicit user action sets `'deleted'`. Entities with `'deleted'` status are never touched by reconciliation.
-8. **Tags JSON Serialization**: `Cut.tags` is `string[]` in the domain entity but stored as a JSON `TEXT` column in SQLite. On **write**, use `JSON.stringify(cut.tags)` when passing to Drizzle's `.values()` / `.set()`. On **read**, post-process with `.map(r => ({ ...r, tags: JSON.parse(r.tags as string) }))`. Tag-based queries use SQLite's `json_each()` via Drizzle's `sql` template for `findByTags()`.
+8. **Tags JSON Serialization**: `Cut.tags` and `Video.tags` are `string[]` in the domain entities but stored as JSON `TEXT` columns in SQLite. On **write**, use `JSON.stringify(entity.tags)` when passing to Drizzle's `.values()` / `.set()`. On **read**, post-process with `.map(r => ({ ...r, tags: JSON.parse(r.tags as string) }))` (or a `parseTags` helper that defaults to `[]` on malformed input). Tag-based queries use SQLite's `json_each()` via Drizzle's `sql` template — see `SqliteCutRepository.findByTags()`.
 9. **Sort-Column Allowlists**: Each Drizzle-based repository defines a `Record<string, SQLiteColumn>` map (camelCase UI key → Drizzle column reference) to validate `sortBy` params. Unknown keys fall back to a default column. Never interpolate user-provided sort values directly into SQL.
 10. **Audited Mutations**: All mutations on `creators`, `videos`, and `cuts` go through audited repository decorators, which automatically write to the `audit_log` table. Direct `Sqlite*Repository` instances are only used internally by the decorator — external consumers always use the audited wrapper.
 11. **Operations Safety Net**: Multi-step file system operations (folder renames, root migrations) must be tracked in the `operations` table as a persistent saga log. This enables crash recovery at startup via `RecoverOperations`.
@@ -496,7 +497,7 @@ tests/
 
 - Place test files next to their mirror in `tests/`, e.g. `src/main/interface-adapters/repositories/SqliteCreatorRepository.ts` → `tests/main/interface-adapters/repositories/SqliteCreatorRepository.test.ts`.
 - Use `createTestDb()` from `tests/main/helpers/createTestDb.ts` for all DB tests — it returns `{ raw, db }`: a fresh in-memory Drizzle + `better-sqlite3` instance with all tables created via `pushSchema()`. Always call `raw.close()` in `afterEach`.
-- Use factory functions (e.g. `makeCreator()`, `makeVideo()`, `makeCut()`) with `Partial<Entity>` overrides to build test data concisely.
+- Use factory functions (e.g. `makeCreator()`, `makeVideo()`, `makeCut()`) with `Partial<Entity>` overrides to build test data concisely. Factories may be defined locally per test file (current convention — keeps each test's defaults visible inline) or centralized in `tests/main/helpers/` when shared by ≥3 test files; pick whichever keeps the call site readable.
 - Use-case tests should mock repository interfaces (via `vi.fn()`), never instantiate real SQLite or Drizzle.
 - Renderer tests use `@testing-library/react` with `render()` / `screen` — never test implementation details.
 - Repository tests instantiate the real `Sqlite*Repository` with the Drizzle `db` from `createTestDb()`.

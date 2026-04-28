@@ -125,7 +125,11 @@ export interface AppContainer {
 
 export interface AppConfig {
   database: DatabaseInstance
-  rootPath: string
+  /**
+   * Fallback root path used only when the settings table has no `rootPath` stored
+   * (first launch). The container resolves the effective root from settings.
+   */
+  defaultRootPath: string
   /** When true, the auto-updater is replaced with a no-op `DisabledUpdater`. */
   isDev: boolean
 }
@@ -137,7 +141,18 @@ export interface AppConfig {
 export function createAppContainer(config: AppConfig): AppContainer {
   // ── Framework drivers ──
   const database = config.database
-  const rootPathRef: RootPathRef = { value: config.rootPath }
+
+  // ── Settings repository + root-path resolution ──
+  // Settings is constructed first so the container can resolve `rootPath`
+  // from persisted state before any other dependency (watcher, downloader,
+  // rootPathRef) is instantiated. On first launch, the default is persisted.
+  const settingsRepo = new SqliteSettingsRepository(database.db)
+  const storedRootPath = settingsRepo.get('rootPath')
+  const rootPath = storedRootPath ?? config.defaultRootPath
+  if (!storedRootPath) {
+    settingsRepo.set('rootPath', rootPath)
+  }
+  const rootPathRef: RootPathRef = { value: rootPath }
 
   // ── Ports / adapters ──
   const fsReader = new NodeFileSystemReader()
@@ -158,7 +173,6 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const sqliteCreatorRepo = new SqliteCreatorRepository(database.db)
   const sqliteVideoRepo = new SqliteVideoRepository(database.db)
   const sqliteCutRepo = new SqliteCutRepository(database.db)
-  const settingsRepo = new SqliteSettingsRepository(database.db)
   const operationRepo = new SqliteOperationRepository(database.db)
   const auditLogRepo = new SqliteAuditLogRepository(database.db)
 
@@ -215,7 +229,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const recoverOperations = new RecoverOperations(operationRepo, fsReader, fsWriter, pathResolver)
 
   // ── File watcher ──
-  const fileWatcher = new ChokidarWatcher(config.rootPath)
+  const fileWatcher = new ChokidarWatcher(rootPath)
   fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
 
   const fetchVideoDetail = new FetchVideoDetail(videoRepo, videoDownloader, fsReader, pathResolver)
