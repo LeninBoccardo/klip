@@ -24,12 +24,13 @@ export function useUpdaterStatus(): ReturnType<typeof useQuery<UpdaterStatus>> {
   })
 }
 
-/** Trigger a manual update check. */
+/**
+ * Trigger a manual update check. Cache stays in sync via the push subscription
+ * registered by `useUpdaterStatus`, so we don't write to the cache from here.
+ */
 export function useCheckForUpdates() {
-  const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => window.api.checkForUpdates(),
-    onSuccess: (status) => qc.setQueryData(queryKeys.updater.status, status)
+    mutationFn: () => window.api.checkForUpdates()
   })
 }
 

@@ -13,14 +13,14 @@ const electron = vi.hoisted(() => {
       on: vi.fn()
     },
     dialog: { showOpenDialog: vi.fn() },
-    browserWindow: { getFocusedWindow: vi.fn() }
+    browserWindow: { fromWebContents: vi.fn() }
   }
 })
 
 vi.mock('electron', () => ({
   ipcMain: electron.ipcMain,
   dialog: electron.dialog,
-  BrowserWindow: { getFocusedWindow: electron.browserWindow.getFocusedWindow }
+  BrowserWindow: { fromWebContents: electron.browserWindow.fromWebContents }
 }))
 
 import { registerSettingsController } from '@main/interface-adapters/controllers/SettingsController'
@@ -41,10 +41,13 @@ function makeMocks(): {
   }
 }
 
+/** A minimal stub for the IPC invoke event passed to handlers. */
+const stubEvent = { sender: { id: 1 } as unknown }
+
 async function invoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T> {
   const handler = electron.handlers.get(channel)
   if (!handler) throw new Error(`No handler for "${channel}"`)
-  return (await handler({}, ...args)) as T
+  return (await handler(stubEvent, ...args)) as T
 }
 
 describe('SettingsController', () => {
@@ -52,7 +55,7 @@ describe('SettingsController', () => {
     electron.handlers.clear()
     electron.ipcMain.handle.mockClear()
     electron.dialog.showOpenDialog.mockReset()
-    electron.browserWindow.getFocusedWindow.mockReset()
+    electron.browserWindow.fromWebContents.mockReset()
   })
 
   it('registers all five settings channels', () => {
@@ -83,12 +86,20 @@ describe('SettingsController', () => {
     expect(result).toBe('/some/path')
   })
 
-  it('"set-setting" forwards key + value to repository', async () => {
+  it('"set-setting" rejects rootPath writes — must go through migrate-root', async () => {
     const { settingsRepo, migrateRootFolder } = makeMocks()
     registerSettingsController(settingsRepo, migrateRootFolder)
 
-    await invoke('set-setting', 'rootPath', '/new')
-    expect(settingsRepo.set).toHaveBeenCalledWith('rootPath', '/new')
+    await expect(invoke('set-setting', 'rootPath', '/new')).rejects.toThrow(/migrate-root/)
+    expect(settingsRepo.set).not.toHaveBeenCalled()
+  })
+
+  it('"set-setting" rejects unknown keys not in the allowlist', async () => {
+    const { settingsRepo, migrateRootFolder } = makeMocks()
+    registerSettingsController(settingsRepo, migrateRootFolder)
+
+    await expect(invoke('set-setting', 'arbitrary', 'value')).rejects.toThrow(/not user-writable/)
+    expect(settingsRepo.set).not.toHaveBeenCalled()
   })
 
   it('"migrate-root" calls migrateRootFolder.execute with the new path', async () => {
@@ -100,19 +111,20 @@ describe('SettingsController', () => {
     expect(result).toEqual({ success: true, movedCount: 0 })
   })
 
-  it('"select-folder" returns null when no window is focused', async () => {
+  it('"select-folder" returns null when the sender has no window', async () => {
     const { settingsRepo, migrateRootFolder } = makeMocks()
-    electron.browserWindow.getFocusedWindow.mockReturnValue(null)
+    electron.browserWindow.fromWebContents.mockReturnValue(null)
     registerSettingsController(settingsRepo, migrateRootFolder)
 
     const result = await invoke('select-folder')
     expect(result).toBeNull()
+    expect(electron.browserWindow.fromWebContents).toHaveBeenCalledWith(stubEvent.sender)
     expect(electron.dialog.showOpenDialog).not.toHaveBeenCalled()
   })
 
   it('"select-folder" returns null when the dialog is canceled', async () => {
     const { settingsRepo, migrateRootFolder } = makeMocks()
-    electron.browserWindow.getFocusedWindow.mockReturnValue({} as unknown)
+    electron.browserWindow.fromWebContents.mockReturnValue({} as unknown)
     electron.dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
     registerSettingsController(settingsRepo, migrateRootFolder)
 
@@ -122,7 +134,7 @@ describe('SettingsController', () => {
 
   it('"select-folder" returns the first selected path on success', async () => {
     const { settingsRepo, migrateRootFolder } = makeMocks()
-    electron.browserWindow.getFocusedWindow.mockReturnValue({} as unknown)
+    electron.browserWindow.fromWebContents.mockReturnValue({} as unknown)
     electron.dialog.showOpenDialog.mockResolvedValue({
       canceled: false,
       filePaths: ['/picked/folder', '/ignored/second']

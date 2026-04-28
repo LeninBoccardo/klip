@@ -39,6 +39,11 @@ function UpdaterToastWatcher() {
   const { data: status } = useUpdaterStatus()
   const installUpdate = useInstallUpdate()
   const notifiedFor = useRef<string | null>(null)
+  // Hold the mutation in a ref so the effect doesn't re-run on every render.
+  // TanStack Query returns a fresh mutation object each render even though
+  // `mutate` is stable.
+  const installRef = useRef(installUpdate)
+  installRef.current = installUpdate
 
   useEffect(() => {
     if (!status) return
@@ -51,13 +56,13 @@ function UpdaterToastWatcher() {
         duration: Infinity,
         action: {
           label: 'Restart now',
-          onClick: () => installUpdate.mutate()
+          onClick: () => installRef.current.mutate()
         }
       })
     } else if (status.state !== 'ready') {
       notifiedFor.current = null
     }
-  }, [status, installUpdate])
+  }, [status])
 
   return null
 }

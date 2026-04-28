@@ -12,7 +12,8 @@ import type {
   IPathResolver,
   IFileWatcher,
   INotifier,
-  IIdGenerator
+  IIdGenerator,
+  ITransactionScope
 } from '@domain/ports'
 import type { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
@@ -80,12 +81,12 @@ function createMocks() {
   }
   const fileWatcher: IFileWatcher = {
     start: vi.fn(),
-    stop: vi.fn(),
-    restart: vi.fn(),
+    stop: vi.fn().mockResolvedValue(undefined),
+    restart: vi.fn().mockResolvedValue(undefined),
     onEvent: vi.fn()
   }
   const processNotifications = {
-    suspend: vi.fn(),
+    suspend: vi.fn().mockResolvedValue(undefined),
     resume: vi.fn().mockResolvedValue(undefined),
     handleEvent: vi.fn()
   } as unknown as ProcessFileNotifications
@@ -122,7 +123,8 @@ function createMocks() {
     reconcile,
     idGenerator,
     notifier,
-    rootPathRef: { value: '/old/root' }
+    rootPathRef: { value: '/old/root' },
+    transaction: { run: vi.fn(<T>(fn: () => T) => fn()) } as ITransactionScope
   }
 }
 
@@ -140,7 +142,8 @@ function createUseCase(mocks: ReturnType<typeof createMocks>) {
     mocks.reconcile,
     mocks.idGenerator,
     mocks.notifier,
-    mocks.rootPathRef
+    mocks.rootPathRef,
+    mocks.transaction
   )
 }
 
@@ -213,9 +216,15 @@ describe('MigrateRootFolder', () => {
     // Settings updated
     expect(mocks.settingsRepo.set).toHaveBeenCalledWith('rootPath', '/new/root')
 
-    // Operation lifecycle
-    expect(mocks.operationRepo.create).toHaveBeenCalled()
-    expect(mocks.operationRepo.updateStatus).toHaveBeenCalledWith('op-123', 'in_progress')
+    // Operation lifecycle: created with status='in_progress' + startedAt,
+    // then transitioned to 'completed' on success.
+    expect(mocks.operationRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'op-123',
+        status: 'in_progress',
+        startedAt: expect.any(String)
+      })
+    )
     expect(mocks.operationRepo.updateStatus).toHaveBeenCalledWith('op-123', 'completed')
 
     // Watcher restarted on new root

@@ -1,5 +1,5 @@
 import type { IOperationRepository } from '@domain/repositories'
-import type { IFileSystemReader } from '@domain/ports'
+import type { IFileSystemReader, IFileSystemWriter, IPathResolver } from '@domain/ports'
 import type { Operation } from '@domain/entities'
 import type { IRecoverOperations, RecoverResult } from './IRecoverOperations'
 
@@ -12,13 +12,18 @@ import type { IRecoverOperations, RecoverResult } from './IRecoverOperations'
  * For each stale operation (status = 'pending' or 'in_progress'):
  *   - `rename_folder`: check if the new path exists → mark completed;
  *     else if old path exists → mark rolled_back.
- *   - `migrate_root`: always mark rolled_back (partial migrations are unsafe).
+ *   - `migrate_root`: replay `payload.movedSoFar` in reverse and physically move
+ *     each folder back from new root → old root, then mark rolled_back. Best-effort
+ *     per folder; failures are logged and the list of stranded folders is recorded
+ *     in the operation's `error` field for the user.
  *   - `bulk_import`: always mark rolled_back (no partial recovery).
  */
 export class RecoverOperations implements IRecoverOperations {
   constructor(
     private operationRepo: IOperationRepository,
-    private fsReader: IFileSystemReader
+    private fsReader: IFileSystemReader,
+    private fsWriter: IFileSystemWriter,
+    private pathResolver: IPathResolver
   ) {}
 
   execute(): RecoverResult {
@@ -60,6 +65,12 @@ export class RecoverOperations implements IRecoverOperations {
     }
   }
 
+  /**
+   * NOTE: forward-looking placeholder — no use case currently creates
+   * `rename_folder` operations. The branch is kept so a future rename feature
+   * has a recovery path that can disambiguate "rename completed" vs.
+   * "rename never happened" by inspecting which path exists on disk.
+   */
   private recoverRenameFolderOp(op: Operation): boolean {
     try {
       const payload = JSON.parse(op.payload) as { oldPath?: string; newPath?: string }
@@ -92,13 +103,58 @@ export class RecoverOperations implements IRecoverOperations {
   }
 
   private recoverMigrateRootOp(op: Operation): boolean {
-    // Partial root migrations are unsafe to resume — always roll back
-    this.markRolledBack(op.id, 'Root migration interrupted — rolled back for safety')
+    // Read what was moved before the crash
+    let payload: { oldRoot?: string; newRoot?: string; movedSoFar?: string[] }
+    try {
+      payload = JSON.parse(op.payload) as typeof payload
+    } catch {
+      this.markRolledBack(op.id, 'Failed to parse migrate_root payload — manual cleanup required')
+      return false
+    }
+
+    const { oldRoot, newRoot, movedSoFar } = payload
+    if (!oldRoot || !newRoot || !Array.isArray(movedSoFar)) {
+      this.markRolledBack(
+        op.id,
+        'Malformed migrate_root payload (missing oldRoot/newRoot/movedSoFar)'
+      )
+      return false
+    }
+
+    // Replay moves in reverse. Skip folders that were never moved or whose
+    // source no longer exists at newRoot (already rolled back manually, or
+    // never made it in the first place).
+    const stranded: string[] = []
+    for (const folder of movedSoFar) {
+      const src = this.pathResolver.join(newRoot, folder)
+      const dest = this.pathResolver.join(oldRoot, folder)
+      try {
+        if (!this.fsReader.directoryExists(src)) {
+          // Nothing to move — folder may already be back at oldRoot.
+          continue
+        }
+        this.fsWriter.moveDirectory(src, dest)
+      } catch (err) {
+        console.error(`[klip] migrate_root rollback failed for "${folder}":`, err)
+        stranded.push(folder)
+      }
+    }
+
+    const errorMsg =
+      stranded.length === 0
+        ? 'Root migration interrupted — folders moved back to original root'
+        : `Root migration interrupted — folders moved back, but these are stranded at new root: ${stranded.join(', ')}`
+    this.markRolledBack(op.id, errorMsg)
     return false
   }
 
+  /**
+   * NOTE: forward-looking placeholder — no use case currently creates
+   * `bulk_import` operations. Kept as a defensive default so future bulk-
+   * import work has a recovery hook. If a stale row of this type does appear
+   * (e.g. left over from a future build), mark it rolled back.
+   */
   private recoverBulkImportOp(op: Operation): boolean {
-    // No partial recovery for bulk imports — always roll back
     this.markRolledBack(op.id, 'Bulk import interrupted — rolled back for safety')
     return false
   }

@@ -13,6 +13,7 @@ import type {
   CutQueryParams,
   VideoDetailWithTranscript,
   EnrichVideosResult,
+  EnrichProgress,
   VideoCommentsResult,
   UpdaterStatus
 } from './types'
@@ -107,12 +108,17 @@ export interface IpcContract {
   'download-progress': { params: [data: DownloadProgress]; result: void }
   'migrate-root-progress': { params: [data: MigrateRootProgress]; result: void }
   'updater-status': { params: [data: UpdaterStatus]; result: void }
+  'enrich-progress': { params: [data: EnrichProgress]; result: void }
 }
 
 /** Channels that use ipcMain.handle (request/response pattern) */
 export type InvokeChannel = Exclude<
   keyof IpcContract,
-  'db-updated' | 'download-progress' | 'migrate-root-progress' | 'updater-status'
+  | 'db-updated'
+  | 'download-progress'
+  | 'migrate-root-progress'
+  | 'updater-status'
+  | 'enrich-progress'
 >
 
 /** Channels that use webContents.send (push pattern) */
@@ -121,6 +127,7 @@ export type PushChannel =
   | 'download-progress'
   | 'migrate-root-progress'
   | 'updater-status'
+  | 'enrich-progress'
 
 /** Extract the result type for a given channel */
 export type IpcResult<C extends keyof IpcContract> = IpcContract[C]['result']

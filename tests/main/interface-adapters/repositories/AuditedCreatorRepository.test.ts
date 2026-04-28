@@ -6,6 +6,7 @@ import {
 } from '@main/interface-adapters/repositories'
 import type { Creator } from '@domain/entities'
 import type { DatabaseInstance } from '@main/framework-drivers/database'
+import { SqliteTransactionScope } from '@main/framework-drivers/database'
 import { createTestDb } from '../../helpers/createTestDb'
 
 function makeCreator(overrides: Partial<Creator> = {}): Creator {
@@ -32,7 +33,8 @@ describe('AuditedCreatorRepository', () => {
     database = createTestDb()
     innerRepo = new SqliteCreatorRepository(database.db)
     auditLogRepo = new SqliteAuditLogRepository(database.db)
-    repo = new AuditedCreatorRepository(innerRepo, auditLogRepo)
+    const transactionScope = new SqliteTransactionScope(database.raw)
+    repo = new AuditedCreatorRepository(innerRepo, auditLogRepo, transactionScope)
   })
 
   afterEach(() => {

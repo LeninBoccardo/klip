@@ -29,3 +29,18 @@ export interface EnrichVideosResult {
   failed: number
   skipped: number
 }
+
+/**
+ * Progress event pushed during a batch `EnrichAllVideos` run.
+ * `phase: 'starting'` fires once at the beginning so the renderer can show
+ * a determinate progress bar; `phase: 'progress'` fires after each video;
+ * `phase: 'done'` fires once at the end with the final tallies.
+ */
+export interface EnrichProgress {
+  phase: 'starting' | 'progress' | 'done'
+  current: number
+  total: number
+  enriched: number
+  failed: number
+  skipped: number
+}

@@ -1,7 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IpcChannels } from '@shared/ipc-channels'
-import type { DownloadProgress, MigrateRootProgress, UpdaterStatus } from '@shared/types'
+import type {
+  DownloadProgress,
+  EnrichProgress,
+  MigrateRootProgress,
+  UpdaterStatus
+} from '@shared/types'
 import { createTypedInvoker } from './create-typed-invoker'
 
 // Custom APIs for renderer
@@ -87,6 +92,12 @@ const api = {
     ipcRenderer.on(IpcChannels.UpdaterStatus, callback)
     return (): void => {
       ipcRenderer.removeListener(IpcChannels.UpdaterStatus, callback)
+    }
+  },
+  onEnrichProgress: (callback: (_event: unknown, data: EnrichProgress) => void): (() => void) => {
+    ipcRenderer.on(IpcChannels.EnrichProgress, callback)
+    return (): void => {
+      ipcRenderer.removeListener(IpcChannels.EnrichProgress, callback)
     }
   }
 }

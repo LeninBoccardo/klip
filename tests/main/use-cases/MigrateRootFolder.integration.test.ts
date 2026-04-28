@@ -22,7 +22,7 @@ import type {
 } from '@domain/ports'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
 import type { ProcessFileNotifications } from '@use-cases/ProcessFileNotifications'
-import type { DatabaseInstance } from '@main/framework-drivers/database'
+import { SqliteTransactionScope, type DatabaseInstance } from '@main/framework-drivers/database'
 import { createTestDb } from '../helpers/createTestDb'
 
 // ── factories ──
@@ -129,8 +129,9 @@ describe('MigrateRootFolder (integration)', () => {
     settingsRepo = new SqliteSettingsRepository(database.db)
     operationRepo = new SqliteOperationRepository(database.db)
     auditLogRepo = new SqliteAuditLogRepository(database.db)
-    videoRepo = new AuditedVideoRepository(rawVideoRepo, auditLogRepo)
-    cutRepo = new AuditedCutRepository(rawCutRepo, auditLogRepo)
+    const transactionScope = new SqliteTransactionScope(database.raw)
+    videoRepo = new AuditedVideoRepository(rawVideoRepo, auditLogRepo, transactionScope)
+    cutRepo = new AuditedCutRepository(rawCutRepo, auditLogRepo, transactionScope)
     rootPathRef = { value: '/old/root' }
 
     fsReader = {
@@ -150,12 +151,12 @@ describe('MigrateRootFolder (integration)', () => {
     }
     fileWatcher = {
       start: vi.fn(),
-      stop: vi.fn(),
-      restart: vi.fn(),
+      stop: vi.fn().mockResolvedValue(undefined),
+      restart: vi.fn().mockResolvedValue(undefined),
       onEvent: vi.fn()
     }
     processNotifications = {
-      suspend: vi.fn(),
+      suspend: vi.fn().mockResolvedValue(undefined),
       resume: vi.fn().mockResolvedValue(undefined),
       handleEvent: vi.fn()
     } as unknown as ProcessFileNotifications
@@ -188,7 +189,8 @@ describe('MigrateRootFolder (integration)', () => {
       reconcile,
       new NodeIdGenerator(),
       notifier,
-      rootPathRef
+      rootPathRef,
+      new SqliteTransactionScope(database.raw)
     )
   })
 

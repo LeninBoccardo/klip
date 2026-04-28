@@ -14,6 +14,7 @@ import type {
   CutQueryParams,
   VideoDetailWithTranscript,
   EnrichVideosResult,
+  EnrichProgress,
   VideoCommentsResult,
   UpdaterStatus
 } from '@shared/types'
@@ -82,6 +83,8 @@ interface KlipAPI {
   onMigrateRootProgress(callback: (event: unknown, data: MigrateRootProgress) => void): () => void
   /** Subscribe to auto-updater status changes; returns an unsubscribe function */
   onUpdaterStatus(callback: (event: unknown, data: UpdaterStatus) => void): () => void
+  /** Subscribe to batch-enrich progress events; returns an unsubscribe function */
+  onEnrichProgress(callback: (event: unknown, data: EnrichProgress) => void): () => void
 }
 
 declare global {

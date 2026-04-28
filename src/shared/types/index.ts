@@ -22,6 +22,11 @@ export type {
 export type { ProbeStatus } from './probe-status'
 export type { ChannelInfo } from './channel-info'
 export type { MigrateRootProgress, MigrateRootResult } from './migrate-root'
-export type { VideoDetail, VideoDetailWithTranscript, EnrichVideosResult } from './video-detail'
+export type {
+  VideoDetail,
+  VideoDetailWithTranscript,
+  EnrichVideosResult,
+  EnrichProgress
+} from './video-detail'
 export type { VideoComment, VideoCommentsResult } from './video-comments'
 export type { UpdaterState, UpdaterStatus } from './updater'

@@ -7,6 +7,7 @@ import {
 } from '@main/interface-adapters/repositories'
 import type { Creator, Video } from '@domain/entities'
 import type { DatabaseInstance } from '@main/framework-drivers/database'
+import { SqliteTransactionScope } from '@main/framework-drivers/database'
 import { createTestDb } from '../../helpers/createTestDb'
 
 function makeCreator(overrides: Partial<Creator> = {}): Creator {
@@ -71,7 +72,8 @@ describe('AuditedVideoRepository', () => {
     creatorRepo = new SqliteCreatorRepository(database.db)
     innerRepo = new SqliteVideoRepository(database.db)
     auditLogRepo = new SqliteAuditLogRepository(database.db)
-    repo = new AuditedVideoRepository(innerRepo, auditLogRepo)
+    const transactionScope = new SqliteTransactionScope(database.raw)
+    repo = new AuditedVideoRepository(innerRepo, auditLogRepo, transactionScope)
 
     creatorRepo.upsert(makeCreator())
   })

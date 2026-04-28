@@ -60,7 +60,7 @@ export class ChokidarWatcher implements IFileWatcher {
     this.ensureRootAndWatch()
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.stopped = true
 
     if (this.retryTimer !== null) {
@@ -68,14 +68,18 @@ export class ChokidarWatcher implements IFileWatcher {
       this.retryTimer = null
     }
 
+    // Await close so callers can be sure no more events will fire after stop()
+    // resolves. Without this, restart() can spin up a new watcher while the old
+    // one is still emitting events from a stale root.
     if (this.watcher) {
-      void this.watcher.close()
+      const old = this.watcher
       this.watcher = null
+      await old.close()
     }
   }
 
-  restart(newRootPath: string): void {
-    this.stop()
+  async restart(newRootPath: string): Promise<void> {
+    await this.stop()
     this.rootPath = newRootPath
     this.start()
   }

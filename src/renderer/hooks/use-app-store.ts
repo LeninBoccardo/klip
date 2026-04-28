@@ -47,7 +47,17 @@ export const useAppStore = create<AppState>((set) => ({
   clearDownloads: () => set({ activeDownloads: {} }),
 
   startBlockingOperation: (title, description) =>
-    set({ blockingOperation: { title, description } }),
+    set((state) => {
+      // Don't clobber an in-flight blocking operation. The caller is responsible
+      // for serialising user actions; this guard is defense in depth.
+      if (state.blockingOperation !== null) {
+        console.warn(
+          `[klip] startBlockingOperation("${title}") ignored — already running: ${state.blockingOperation.title}`
+        )
+        return state
+      }
+      return { blockingOperation: { title, description } }
+    }),
 
   updateBlockingProgress: (progress) =>
     set((state) => ({

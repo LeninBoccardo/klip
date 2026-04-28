@@ -40,8 +40,10 @@ export class FetchVideoDetail implements IFetchVideoDetail {
         const raw = this.fsReader.readTextFile(transcriptPath)
         transcriptText = raw ? parseVtt(raw) : null
       }
-    } catch {
-      // Transcript fetch is best-effort — leave null on failure
+    } catch (err) {
+      // Transcript fetch is best-effort — log and leave null on failure so the
+      // detail enrichment still commits.
+      console.warn(`[klip] Transcript fetch failed for video ${video.id}:`, err)
       transcriptPath = null
       transcriptText = null
     }

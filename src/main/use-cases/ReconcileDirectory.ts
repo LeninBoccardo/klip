@@ -253,7 +253,11 @@ export class ReconcileDirectory implements IReconcileDirectory {
     const files = this.fs.listFiles(videoDir)
 
     const mediaFile = files.find((f) => /\.(mp4|mkv|webm)$/i.test(f)) ?? null
-    const thumbFile = files.find((f) => /^thumbnail\.(jpg|jpeg|png|webp)$/i.test(f)) ?? null
+    // Accept either the literal `thumbnail.<ext>` (manual sideload convention) or
+    // any image alongside the media file as long as it isn't yt-dlp's `.info.json`
+    // sidecar (e.g. `<videoId>.jpg` written by `--write-thumbnail --convert-thumbnails jpg`).
+    const thumbFile =
+      files.find((f) => /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.includes('.info.')) ?? null
 
     const now = new Date().toISOString()
     const newVideo: Video = {
@@ -348,7 +352,11 @@ export class ReconcileDirectory implements IReconcileDirectory {
     const files = this.fs.listFiles(cutDir)
 
     const mediaFile = files.find((f) => /\.(mp4|mkv|webm)$/i.test(f)) ?? null
-    const thumbFile = files.find((f) => /^thumbnail\.(jpg|jpeg|png|webp)$/i.test(f)) ?? null
+    // Accept either the literal `thumbnail.<ext>` (manual sideload convention) or
+    // any image alongside the media file as long as it isn't yt-dlp's `.info.json`
+    // sidecar (e.g. `<videoId>.jpg` written by `--write-thumbnail --convert-thumbnails jpg`).
+    const thumbFile =
+      files.find((f) => /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.includes('.info.')) ?? null
 
     const now = new Date().toISOString()
     const newCut: Cut = {

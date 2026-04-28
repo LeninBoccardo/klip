@@ -101,9 +101,24 @@ export class DownloadVideo implements IDownloadVideo {
       )
       this.fsWriter.ensureDirectory(outputDir)
 
-      // 5. Download with progress relay
+      // 5. Download with progress relay (throttled at ~5 events/sec to keep
+      // IPC traffic predictable across N concurrent downloads). Terminal
+      // states (queued/processing/complete/error/cancelled) bypass the
+      // throttle so the UI flips state immediately.
+      const TERMINAL: DownloadProgress['status'][] = [
+        'queued',
+        'processing',
+        'complete',
+        'error',
+        'cancelled'
+      ]
+      let lastEmitMs = 0
       const onProgress = (progress: DownloadProgress): void => {
-        this.notifier.notify('download-progress', progress)
+        const now = Date.now()
+        if (TERMINAL.includes(progress.status) || now - lastEmitMs >= 200) {
+          lastEmitMs = now
+          this.notifier.notify('download-progress', progress)
+        }
       }
 
       const result = await this.downloader.download(
@@ -184,17 +199,29 @@ export class DownloadVideo implements IDownloadVideo {
         updatedAt: now
       }
       this.creatorRepo.upsert(creator)
-    } else if (existing.status === 'missing') {
-      this.creatorRepo.updateStatus(folderName, 'active', null)
-    } else if (!existing.youtubeChannelId && info.channelId) {
-      // Backfill YouTube metadata on existing creator that lacks it
-      this.creatorRepo.upsert({
-        ...existing,
-        youtubeChannelId: info.channelId,
-        youtubeChannelUrl: info.channelUrl ?? existing.youtubeChannelUrl,
-        subscriberCount: info.subscriberCount ?? existing.subscriberCount,
-        updatedAt: new Date().toISOString()
-      })
+      return
     }
+
+    // For an existing creator we may need to: (a) recover from `missing`,
+    // (b) backfill YouTube metadata, or both. A creator that disappeared and
+    // is now reappearing via a download should also pick up any newly-available
+    // metadata in the same upsert.
+    const needsRecovery = existing.status === 'missing'
+    const needsBackfill =
+      (!existing.youtubeChannelId && !!info.channelId) ||
+      (!existing.youtubeChannelUrl && !!info.channelUrl) ||
+      (existing.subscriberCount === null && info.subscriberCount != null)
+
+    if (!needsRecovery && !needsBackfill) return
+
+    this.creatorRepo.upsert({
+      ...existing,
+      status: needsRecovery ? 'active' : existing.status,
+      deletedAt: needsRecovery ? null : existing.deletedAt,
+      youtubeChannelId: existing.youtubeChannelId ?? info.channelId ?? null,
+      youtubeChannelUrl: existing.youtubeChannelUrl ?? info.channelUrl ?? null,
+      subscriberCount: existing.subscriberCount ?? info.subscriberCount ?? null,
+      updatedAt: new Date().toISOString()
+    })
   }
 }

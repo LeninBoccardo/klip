@@ -60,7 +60,8 @@ export const IpcChannels = {
   DbUpdated: 'db-updated',
   DownloadProgress: 'download-progress',
   MigrateRootProgress: 'migrate-root-progress',
-  UpdaterStatus: 'updater-status'
+  UpdaterStatus: 'updater-status',
+  EnrichProgress: 'enrich-progress'
 } as const
 
 /** Union of all IPC channel name values */

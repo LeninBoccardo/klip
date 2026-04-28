@@ -249,7 +249,7 @@ describe('DownloadVideo', () => {
     )
   })
 
-  it('should recover a missing creator instead of creating a new one', async () => {
+  it('should recover a missing creator (status → active) and backfill metadata', async () => {
     const missingCreator: Creator = {
       id: 'testcreator',
       folderName: 'testcreator',
@@ -260,7 +260,7 @@ describe('DownloadVideo', () => {
       subscriberCount: null,
       avatarUrl: null,
       status: 'missing',
-      deletedAt: null,
+      deletedAt: '2025-01-02T00:00:00.000Z',
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z'
     }
@@ -269,8 +269,17 @@ describe('DownloadVideo', () => {
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
 
-    expect(creatorRepo.updateStatus).toHaveBeenCalledWith('testcreator', 'active', null)
-    expect(creatorRepo.upsert).not.toHaveBeenCalled()
+    // Single upsert that flips status to active AND clears deletedAt — no
+    // separate updateStatus call. (Backfill merges any newly-available YT
+    // channel metadata at the same time.)
+    expect(creatorRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'testcreator',
+        status: 'active',
+        deletedAt: null
+      })
+    )
+    expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
   })
 
   it('should create the output directory', async () => {

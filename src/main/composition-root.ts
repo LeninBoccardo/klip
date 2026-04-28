@@ -163,9 +163,13 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const auditLogRepo = new SqliteAuditLogRepository(database.db)
 
   // ── Audited repository decorators ──
-  const creatorRepo = new AuditedCreatorRepository(sqliteCreatorRepo, auditLogRepo)
-  const videoRepo = new AuditedVideoRepository(sqliteVideoRepo, auditLogRepo)
-  const cutRepo = new AuditedCutRepository(sqliteCutRepo, auditLogRepo)
+  const creatorRepo = new AuditedCreatorRepository(
+    sqliteCreatorRepo,
+    auditLogRepo,
+    transactionScope
+  )
+  const videoRepo = new AuditedVideoRepository(sqliteVideoRepo, auditLogRepo, transactionScope)
+  const cutRepo = new AuditedCutRepository(sqliteCutRepo, auditLogRepo, transactionScope)
 
   // ── Use cases ──
   const reconcile = new ReconcileDirectory(
@@ -208,7 +212,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const probeMediaFile = new ProbeMediaFile(mediaProbe)
 
-  const recoverOperations = new RecoverOperations(operationRepo, fsReader)
+  const recoverOperations = new RecoverOperations(operationRepo, fsReader, fsWriter, pathResolver)
 
   // ── File watcher ──
   const fileWatcher = new ChokidarWatcher(config.rootPath)
@@ -216,7 +220,16 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const fetchVideoDetail = new FetchVideoDetail(videoRepo, videoDownloader, fsReader, pathResolver)
 
-  const enrichAllVideos = new EnrichAllVideos(videoRepo, fetchVideoDetail, downloadQueue, notifier)
+  // Dedicated queue (concurrency 1) keeps batch enrichment from competing with
+  // user-triggered downloads for slots in the shared download queue and bounds
+  // YouTube rate-limit pressure regardless of user activity.
+  const enrichmentQueue = new PQueueDownloadQueue(1)
+  const enrichAllVideos = new EnrichAllVideos(
+    videoRepo,
+    fetchVideoDetail,
+    enrichmentQueue,
+    notifier
+  )
 
   const fetchVideoComments = new FetchVideoComments(videoRepo, videoDownloader)
 
@@ -233,7 +246,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
     reconcile,
     idGenerator,
     notifier,
-    rootPathRef
+    rootPathRef,
+    transactionScope
   )
 
   return {
@@ -279,7 +293,9 @@ export function createAppContainer(config: AppConfig): AppContainer {
     },
     rootPathRef,
     shutdown(): void {
-      fileWatcher.stop()
+      // Process is exiting; the OS will reclaim the chokidar file handles
+      // synchronously even if close() hasn't fully resolved. Don't block quit.
+      void fileWatcher.stop()
       debouncer.cancel()
       downloadQueue.clear()
       database.raw.close()

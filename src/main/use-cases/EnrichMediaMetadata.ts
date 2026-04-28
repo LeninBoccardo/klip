@@ -38,7 +38,8 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
           updatedAt: new Date().toISOString()
         })
         result.videosProbed++
-      } catch {
+      } catch (err) {
+        console.error(`[klip] ffprobe failed for video ${video.id} (${video.filePath}):`, err)
         this.videoRepo.updateProbeStatus(video.id, 'failed')
         result.failures++
       }
@@ -58,7 +59,8 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
           updatedAt: new Date().toISOString()
         })
         result.cutsProbed++
-      } catch {
+      } catch (err) {
+        console.error(`[klip] ffprobe failed for cut ${cut.id} (${cut.filePath}):`, err)
         this.cutRepo.updateProbeStatus(cut.id, 'failed')
         result.failures++
       }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RecoverOperations } from '@use-cases/RecoverOperations'
 import type { IOperationRepository } from '@domain/repositories'
-import type { IFileSystemReader } from '@domain/ports'
+import type { IFileSystemReader, IFileSystemWriter, IPathResolver } from '@domain/ports'
 import type { Operation } from '@domain/entities'
 
 // ── Mock builders ──
@@ -29,6 +29,24 @@ function mockFsReader(overrides: Partial<IFileSystemReader> = {}): IFileSystemRe
   }
 }
 
+function mockFsWriter(overrides: Partial<IFileSystemWriter> = {}): IFileSystemWriter {
+  return {
+    ensureDirectory: vi.fn(),
+    writeFile: vi.fn(),
+    renameDirectory: vi.fn(),
+    moveDirectory: vi.fn(),
+    isDirectoryEmpty: vi.fn().mockReturnValue(true),
+    ...overrides
+  }
+}
+
+function mockPathResolver(): IPathResolver {
+  return {
+    join: vi.fn((...parts: string[]) => parts.join('/')),
+    dirname: vi.fn((p: string) => p.split('/').slice(0, -1).join('/') || '/')
+  }
+}
+
 function makeOperation(overrides: Partial<Operation> = {}): Operation {
   return {
     id: 'op-1',
@@ -48,12 +66,16 @@ function makeOperation(overrides: Partial<Operation> = {}): Operation {
 describe('RecoverOperations', () => {
   let operationRepo: IOperationRepository
   let fsReader: IFileSystemReader
+  let fsWriter: IFileSystemWriter
+  let pathResolver: IPathResolver
   let useCase: RecoverOperations
 
   beforeEach(() => {
     operationRepo = mockOperationRepo()
     fsReader = mockFsReader()
-    useCase = new RecoverOperations(operationRepo, fsReader)
+    fsWriter = mockFsWriter()
+    pathResolver = mockPathResolver()
+    useCase = new RecoverOperations(operationRepo, fsReader, fsWriter, pathResolver)
   })
 
   it('should return zero counts when no stale operations exist', () => {
@@ -172,24 +194,139 @@ describe('RecoverOperations', () => {
 
   // ── migrate_root recovery ──
 
-  it('should always roll back migrate_root operations', () => {
+  it('should physically move folders back from new root to old root for migrate_root', () => {
     const op = makeOperation({
       id: 'op-migrate-1',
       type: 'migrate_root',
       status: 'in_progress',
-      payload: JSON.stringify({ movedSoFar: ['creator-a'] })
+      payload: JSON.stringify({
+        oldRoot: '/old/root',
+        newRoot: '/new/root',
+        folders: ['creator-a', 'creator-b', 'creator-c'],
+        movedSoFar: ['creator-a', 'creator-b']
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [op] : []
+    )
+    // Both moved folders are still at the new root
+    vi.mocked(fsReader.directoryExists).mockReturnValue(true)
+
+    const result = useCase.execute()
+
+    expect(result).toEqual({ completed: 0, rolledBack: 1, total: 1 })
+    expect(fsWriter.moveDirectory).toHaveBeenCalledTimes(2)
+    expect(fsWriter.moveDirectory).toHaveBeenNthCalledWith(
+      1,
+      '/new/root/creator-a',
+      '/old/root/creator-a'
+    )
+    expect(fsWriter.moveDirectory).toHaveBeenNthCalledWith(
+      2,
+      '/new/root/creator-b',
+      '/old/root/creator-b'
+    )
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-migrate-1',
+      'rolled_back',
+      'Root migration interrupted — folders moved back to original root'
+    )
+  })
+
+  it('should skip folders no longer at new root during migrate_root rollback', () => {
+    const op = makeOperation({
+      id: 'op-migrate-skip',
+      type: 'migrate_root',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        oldRoot: '/old/root',
+        newRoot: '/new/root',
+        folders: ['a', 'b'],
+        movedSoFar: ['a', 'b']
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [op] : []
+    )
+    // Only 'a' is still at the new root; 'b' has been manually moved already
+    vi.mocked(fsReader.directoryExists).mockImplementation((p) => p === '/new/root/a')
+
+    useCase.execute()
+
+    expect(fsWriter.moveDirectory).toHaveBeenCalledTimes(1)
+    expect(fsWriter.moveDirectory).toHaveBeenCalledWith('/new/root/a', '/old/root/a')
+  })
+
+  it('should record stranded folders in error message when individual moves fail', () => {
+    const op = makeOperation({
+      id: 'op-migrate-strand',
+      type: 'migrate_root',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        oldRoot: '/old/root',
+        newRoot: '/new/root',
+        folders: ['a', 'b'],
+        movedSoFar: ['a', 'b']
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [op] : []
+    )
+    vi.mocked(fsReader.directoryExists).mockReturnValue(true)
+    // First move succeeds, second throws
+    let calls = 0
+    vi.mocked(fsWriter.moveDirectory).mockImplementation(() => {
+      calls++
+      if (calls === 2) throw new Error('disk full')
+    })
+
+    useCase.execute()
+
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-migrate-strand',
+      'rolled_back',
+      'Root migration interrupted — folders moved back, but these are stranded at new root: b'
+    )
+  })
+
+  it('should mark migrate_root rolled_back with malformed-payload message when fields are missing', () => {
+    const op = makeOperation({
+      id: 'op-migrate-bad',
+      type: 'migrate_root',
+      status: 'in_progress',
+      payload: JSON.stringify({ movedSoFar: ['x'] }) // no oldRoot/newRoot
     })
     vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
       status === 'in_progress' ? [op] : []
     )
 
-    const result = useCase.execute()
+    useCase.execute()
 
-    expect(result).toEqual({ completed: 0, rolledBack: 1, total: 1 })
+    expect(fsWriter.moveDirectory).not.toHaveBeenCalled()
     expect(operationRepo.updateStatus).toHaveBeenCalledWith(
-      'op-migrate-1',
+      'op-migrate-bad',
       'rolled_back',
-      'Root migration interrupted — rolled back for safety'
+      'Malformed migrate_root payload (missing oldRoot/newRoot/movedSoFar)'
+    )
+  })
+
+  it('should mark migrate_root rolled_back with parse-error message when payload is not JSON', () => {
+    const op = makeOperation({
+      id: 'op-migrate-parse',
+      type: 'migrate_root',
+      status: 'in_progress',
+      payload: 'not-json'
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [op] : []
+    )
+
+    useCase.execute()
+
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-migrate-parse',
+      'rolled_back',
+      'Failed to parse migrate_root payload — manual cleanup required'
     )
   })
 
@@ -229,7 +366,12 @@ describe('RecoverOperations', () => {
       id: 'op-m1',
       type: 'migrate_root',
       status: 'in_progress',
-      payload: JSON.stringify({})
+      payload: JSON.stringify({
+        oldRoot: '/old/root',
+        newRoot: '/new/root',
+        folders: [],
+        movedSoFar: []
+      })
     })
     const importOp = makeOperation({
       id: 'op-i1',

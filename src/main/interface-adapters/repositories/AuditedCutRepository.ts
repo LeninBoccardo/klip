@@ -1,17 +1,22 @@
 import type { Cut } from '@domain/entities'
 import type { ICutRepository, CutQueryParams } from '@domain/repositories'
 import type { IAuditLogRepository } from '@domain/repositories'
+import type { ITransactionScope } from '@domain/ports'
 import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
 import { diffObjects } from './diff-objects'
 
 /**
  * Decorator that wraps an ICutRepository and writes audit log entries
  * for every mutation. Reads are delegated directly.
+ *
+ * Each mutation runs inside an `ITransactionScope.run(...)` so the inner write
+ * and the audit append are committed atomically.
  */
 export class AuditedCutRepository implements ICutRepository {
   constructor(
     private inner: ICutRepository,
-    private auditLog: IAuditLogRepository
+    private auditLog: IAuditLogRepository,
+    private transaction: ITransactionScope
   ) {}
 
   findAll(): Cut[] {
@@ -43,75 +48,83 @@ export class AuditedCutRepository implements ICutRepository {
   }
 
   upsert(cut: Cut): void {
-    const existing = this.inner.findById(cut.id)
-    this.inner.upsert(cut)
+    this.transaction.run(() => {
+      const existing = this.inner.findById(cut.id)
+      this.inner.upsert(cut)
 
-    const now = new Date().toISOString()
-    if (!existing) {
-      this.auditLog.append({
-        entityType: 'cut',
-        entityId: cut.id,
-        action: 'created',
-        changes: null,
-        createdAt: now
-      })
-    } else {
-      const changes = diffObjects(
-        existing as unknown as Record<string, unknown>,
-        cut as unknown as Record<string, unknown>
-      )
-      if (changes) {
+      const now = new Date().toISOString()
+      if (!existing) {
         this.auditLog.append({
           entityType: 'cut',
           entityId: cut.id,
-          action: 'updated',
-          changes,
+          action: 'created',
+          changes: null,
           createdAt: now
         })
+      } else {
+        const changes = diffObjects(
+          existing as unknown as Record<string, unknown>,
+          cut as unknown as Record<string, unknown>
+        )
+        if (changes) {
+          this.auditLog.append({
+            entityType: 'cut',
+            entityId: cut.id,
+            action: 'updated',
+            changes,
+            createdAt: now
+          })
+        }
       }
-    }
+    })
   }
 
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void {
-    const existing = this.inner.findById(id)
-    this.inner.updateStatus(id, status, deletedAt)
+    this.transaction.run(() => {
+      const existing = this.inner.findById(id)
+      this.inner.updateStatus(id, status, deletedAt)
 
-    this.auditLog.append({
-      entityType: 'cut',
-      entityId: id,
-      action: 'status_changed',
-      changes: JSON.stringify({
-        status: { old: existing?.status ?? null, new: status },
-        deletedAt: { old: existing?.deletedAt ?? null, new: deletedAt }
-      }),
-      createdAt: new Date().toISOString()
+      this.auditLog.append({
+        entityType: 'cut',
+        entityId: id,
+        action: 'status_changed',
+        changes: JSON.stringify({
+          status: { old: existing?.status ?? null, new: status },
+          deletedAt: { old: existing?.deletedAt ?? null, new: deletedAt }
+        }),
+        createdAt: new Date().toISOString()
+      })
     })
   }
 
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void {
-    const existing = this.inner.findById(id)
-    this.inner.updateProbeStatus(id, probeStatus)
+    this.transaction.run(() => {
+      const existing = this.inner.findById(id)
+      this.inner.updateProbeStatus(id, probeStatus)
 
-    this.auditLog.append({
-      entityType: 'cut',
-      entityId: id,
-      action: 'probe_status_changed',
-      changes: JSON.stringify({
-        probeStatus: { old: existing?.probeStatus ?? null, new: probeStatus }
-      }),
-      createdAt: new Date().toISOString()
+      this.auditLog.append({
+        entityType: 'cut',
+        entityId: id,
+        action: 'probe_status_changed',
+        changes: JSON.stringify({
+          probeStatus: { old: existing?.probeStatus ?? null, new: probeStatus }
+        }),
+        createdAt: new Date().toISOString()
+      })
     })
   }
 
   delete(id: string): void {
-    this.inner.delete(id)
+    this.transaction.run(() => {
+      this.inner.delete(id)
 
-    this.auditLog.append({
-      entityType: 'cut',
-      entityId: id,
-      action: 'deleted',
-      changes: null,
-      createdAt: new Date().toISOString()
+      this.auditLog.append({
+        entityType: 'cut',
+        entityId: id,
+        action: 'deleted',
+        changes: null,
+        createdAt: new Date().toISOString()
+      })
     })
   }
 
@@ -120,14 +133,16 @@ export class AuditedCutRepository implements ICutRepository {
   }
 
   updateFilePathPrefix(oldPrefix: string, newPrefix: string): void {
-    this.inner.updateFilePathPrefix(oldPrefix, newPrefix)
+    this.transaction.run(() => {
+      this.inner.updateFilePathPrefix(oldPrefix, newPrefix)
 
-    this.auditLog.append({
-      entityType: 'cut',
-      entityId: '*',
-      action: 'bulk_path_update',
-      changes: JSON.stringify({ oldPrefix, newPrefix }),
-      createdAt: new Date().toISOString()
+      this.auditLog.append({
+        entityType: 'cut',
+        entityId: '*',
+        action: 'bulk_path_update',
+        changes: JSON.stringify({ oldPrefix, newPrefix }),
+        createdAt: new Date().toISOString()
+      })
     })
   }
 }

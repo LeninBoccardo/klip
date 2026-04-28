@@ -1,6 +1,6 @@
 /** Progress event pushed to the renderer during root migration */
 export interface MigrateRootProgress {
-  phase: 'moving' | 'updating_db' | 'reconciling'
+  phase: 'moving' | 'updating_db' | 'reconciling' | 'rolling_back'
   current: number
   total: number
   currentFolder?: string

@@ -42,7 +42,10 @@ function mergeResults(a: ReconcileResult, b: ReconcileResult): ReconcileResult {
  * events arriving during flush are captured for the next cycle.
  */
 export class ProcessFileNotifications {
-  private flushing = false
+  /** Tracks the in-flight flush promise, if any. Null when no flush is running. */
+  private flushPromise: Promise<void> | null = null
+  /** Tracks the in-flight enrichMedia promise, if any. Prevents concurrent enrich runs. */
+  private enrichPromise: Promise<unknown> | null = null
   private suspended = false
 
   constructor(
@@ -60,11 +63,19 @@ export class ProcessFileNotifications {
 
   /**
    * Suspend event processing. Events arriving while suspended are silently dropped.
-   * Cancels any pending debounced flush.
+   * Cancels any pending debounced flush AND awaits any in-flight flush so callers
+   * can rely on no DB mutations being in progress when this resolves.
    */
-  suspend(): void {
+  async suspend(): Promise<void> {
     this.suspended = true
     this.debouncer.cancel()
+    if (this.flushPromise) {
+      try {
+        await this.flushPromise
+      } catch {
+        // Errors are already logged inside flush(); we just need to wait it out.
+      }
+    }
   }
 
   /**
@@ -90,17 +101,27 @@ export class ProcessFileNotifications {
   handleEvent(event: FileEvent): void {
     if (this.suspended) return
     this.queue.enqueue(event)
-    if (!this.flushing) {
+    if (!this.flushPromise) {
       this.debouncer.schedule(() => this.flush(), this.config.debounceMs)
     }
   }
 
   /**
    * Drain the buffer, collapse events, and apply DB changes.
-   * Called by the debouncer when the quiet period expires.
+   * Stores its own promise on `this.flushPromise` so `suspend()` can await
+   * any in-flight work. Returns the same promise so callers (and the
+   * debouncer) can also await if they wish. Never rejects — internal errors
+   * are logged.
    */
-  private async flush(): Promise<void> {
-    this.flushing = true
+  private flush(): Promise<void> {
+    if (this.flushPromise) return this.flushPromise
+    this.flushPromise = this.runFlush().finally(() => {
+      this.flushPromise = null
+    })
+    return this.flushPromise
+  }
+
+  private async runFlush(): Promise<void> {
     try {
       const raw = await this.queue.drain()
       const collapsed = collapseEvents(raw)
@@ -115,15 +136,22 @@ export class ProcessFileNotifications {
 
       this.notifier.notify('db-updated')
 
-      // Enrich metadata for newly discovered entities (non-blocking)
-      this.enrichMedia?.execute().catch((err) => console.error('[klip] Enrichment failed:', err))
+      // Enrich metadata for newly discovered entities (non-blocking, deduped).
+      // If a previous enrichment is still running, skip — it'll pick up any
+      // newly-pending entities in its own findByProbeStatus query.
+      if (this.enrichMedia && !this.enrichPromise) {
+        this.enrichPromise = this.enrichMedia
+          .execute()
+          .catch((err) => console.error('[klip] Enrichment failed:', err))
+          .finally(() => {
+            this.enrichPromise = null
+          })
+      }
     } catch (error) {
       console.error('[klip] Notification flush failed:', error)
     } finally {
-      this.flushing = false
-
       // Double-buffer: check if new events arrived during this flush
-      if (this.queue.size() > 0) {
+      if (this.queue.size() > 0 && !this.suspended) {
         this.debouncer.schedule(() => this.flush(), this.config.debounceMs)
       }
     }
