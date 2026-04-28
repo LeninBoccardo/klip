@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import { formatDuration, formatFileSize, mediaUrl, formatCount } from '@/lib/format'
 import { useState } from 'react'
 import { CommentsTab } from '@components/features/videos/CommentsTab'
+import { EditableTagsCard } from '@components/features/videos/EditableTagsCard'
 
 export const Route = createFileRoute('/videos/$videoId')({
   component: VideoDetailPage
@@ -147,22 +148,19 @@ function VideoDetailPage(): React.ReactElement {
             </CardContent>
           </Card>
 
-          {(video.category || video.tags.length > 0 || video.isShort) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Tags</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-2">
-                {video.isShort && <Badge variant="destructive">Short</Badge>}
-                {video.category && <Badge variant="secondary">{video.category}</Badge>}
-                {video.tags.map((t) => (
-                  <Badge key={t} variant="outline">
-                    {t}
-                  </Badge>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          <EditableTagsCard
+            entityKind="video"
+            entityId={video.id}
+            tags={video.tags}
+            readOnlyExtras={
+              video.isShort || video.category ? (
+                <>
+                  {video.isShort && <Badge variant="destructive">Short</Badge>}
+                  {video.category && <Badge variant="secondary">{video.category}</Badge>}
+                </>
+              ) : undefined
+            }
+          />
 
           {video.description && (
             <Card>

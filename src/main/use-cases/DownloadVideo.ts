@@ -173,8 +173,9 @@ export class DownloadVideo implements IDownloadVideo {
       }
       this.videoRepo.upsert(video)
 
-      // 7. Notify UI to refresh
-      this.notifier.notify('db-updated')
+      // 7. Notify UI to refresh — both creators (a new creator may have been
+      //    auto-created in step 2) and videos.
+      this.notifier.notify('db-updated', { scope: ['creators', 'videos'] })
     } catch (error) {
       // If it's a cancellation, the progress event was already sent by the driver
       if (error instanceof Error && error.message === 'Download cancelled') {

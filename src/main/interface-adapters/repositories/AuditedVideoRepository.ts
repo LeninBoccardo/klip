@@ -43,6 +43,14 @@ export class AuditedVideoRepository implements IVideoRepository {
     return this.inner.findNeedingDetail()
   }
 
+  findByTags(tags: string[]): Video[] {
+    return this.inner.findByTags(tags)
+  }
+
+  getAllDistinctTags(): { tag: string; count: number }[] {
+    return this.inner.getAllDistinctTags()
+  }
+
   upsert(video: Video): void {
     // Caller didn't supply prior state; read it for the audit diff.
     this.upsertWithPrevious(video, this.inner.findById(video.id))

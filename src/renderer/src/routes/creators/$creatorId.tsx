@@ -3,18 +3,22 @@ import { useState } from 'react'
 import { useCreatorById } from '@/hooks/use-creators'
 import { useVideosPaginated, useDeleteVideo, useRestoreVideo } from '@/hooks/use-videos'
 import { useCutsPaginated, useDeleteCut, useRestoreCut } from '@/hooks/use-cuts'
+import { useMultiSelect } from '@/hooks/use-multi-select'
 import { CreatorHeader } from '@components/features/creators/CreatorHeader'
 import {
   PageContainer,
   MediaCard,
   ResponsiveGrid,
   PaginationControls,
-  EntityContextMenu
+  EntityContextMenu,
+  SelectableEntity,
+  BulkActionsBar
 } from '@/components/shared'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
 import { Skeleton } from '@ui/skeleton'
+import { Button } from '@ui/button'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
-import { Film, Scissors } from 'lucide-react'
+import { Film, Scissors, CheckSquare, Square } from 'lucide-react'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/creators/$creatorId')({
@@ -68,6 +72,8 @@ function CreatorDetailPage(): React.ReactElement {
 function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
+  const [selectMode, setSelectMode] = useState(false)
+  const selection = useMultiSelect()
   const { data, isLoading } = useVideosPaginated({ page, pageSize: 20, creatorId })
   const deleteVideo = useDeleteVideo()
   const restoreVideo = useRestoreVideo()
@@ -96,26 +102,42 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
     )
   }
 
+  const exitSelectMode = (): void => {
+    setSelectMode(false)
+    selection.clear()
+  }
+
   return (
     <div className="space-y-4">
-      <ResponsiveGrid>
-        {data.data.map((video) => (
-          <EntityContextMenu
-            key={video.id}
-            status={video.status}
-            onDelete={() =>
-              deleteVideo.mutate(video.id, {
-                onSuccess: () => toast.success(`"${video.title}" deleted`),
-                onError: (err) => toast.error(err.message)
-              })
-            }
-            onRestore={() =>
-              restoreVideo.mutate(video.id, {
-                onSuccess: () => toast.success(`"${video.title}" restored`),
-                onError: (err) => toast.error(err.message)
-              })
-            }
+      <div className="flex items-center justify-between">
+        {selectMode ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => selection.selectAll(data.data.map((v) => v.id))}
           >
+            <CheckSquare className="mr-2 size-4" />
+            Select all on this page
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setSelectMode(true)}>
+            <Square className="mr-2 size-4" />
+            Select
+          </Button>
+        )}
+      </div>
+
+      {selectMode && selection.hasSelection && (
+        <BulkActionsBar
+          entityKind="video"
+          selectedIds={[...selection.selectedIds]}
+          onClear={exitSelectMode}
+        />
+      )}
+
+      <ResponsiveGrid>
+        {data.data.map((video) => {
+          const card = (
             <MediaCard
               entityKind="video"
               entityId={video.id}
@@ -133,9 +155,50 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
                 })
               }
             />
-          </EntityContextMenu>
-        ))}
+          )
+
+          if (selectMode) {
+            return (
+              <SelectableEntity
+                key={video.id}
+                selectable
+                selected={selection.selectedIds.has(video.id)}
+                onToggle={() => selection.toggle(video.id)}
+              >
+                {card}
+              </SelectableEntity>
+            )
+          }
+
+          return (
+            <EntityContextMenu
+              key={video.id}
+              status={video.status}
+              onDelete={() =>
+                deleteVideo.mutate(video.id, {
+                  onSuccess: () => toast.success(`"${video.title}" deleted`),
+                  onError: (err) => toast.error(err.message)
+                })
+              }
+              onRestore={() =>
+                restoreVideo.mutate(video.id, {
+                  onSuccess: () => toast.success(`"${video.title}" restored`),
+                  onError: (err) => toast.error(err.message)
+                })
+              }
+            >
+              {card}
+            </EntityContextMenu>
+          )
+        })}
       </ResponsiveGrid>
+
+      {selectMode && (
+        <Button size="sm" variant="ghost" onClick={exitSelectMode}>
+          Done
+        </Button>
+      )}
+
       <PaginationControls page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
     </div>
   )
@@ -143,6 +206,8 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
 
 function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
   const [page, setPage] = useState(1)
+  const [selectMode, setSelectMode] = useState(false)
+  const selection = useMultiSelect()
   const { data, isLoading } = useCutsPaginated({ page, pageSize: 20, creatorId })
   const deleteCut = useDeleteCut()
   const restoreCut = useRestoreCut()
@@ -173,26 +238,42 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
     )
   }
 
+  const exitSelectMode = (): void => {
+    setSelectMode(false)
+    selection.clear()
+  }
+
   return (
     <div className="space-y-4">
-      <ResponsiveGrid>
-        {data.data.map((cut) => (
-          <EntityContextMenu
-            key={cut.id}
-            status={cut.status}
-            onDelete={() =>
-              deleteCut.mutate(cut.id, {
-                onSuccess: () => toast.success(`"${cut.title}" deleted`),
-                onError: (err) => toast.error(err.message)
-              })
-            }
-            onRestore={() =>
-              restoreCut.mutate(cut.id, {
-                onSuccess: () => toast.success(`"${cut.title}" restored`),
-                onError: (err) => toast.error(err.message)
-              })
-            }
+      <div className="flex items-center justify-between">
+        {selectMode ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => selection.selectAll(data.data.map((c) => c.id))}
           >
+            <CheckSquare className="mr-2 size-4" />
+            Select all on this page
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setSelectMode(true)}>
+            <Square className="mr-2 size-4" />
+            Select
+          </Button>
+        )}
+      </div>
+
+      {selectMode && selection.hasSelection && (
+        <BulkActionsBar
+          entityKind="cut"
+          selectedIds={[...selection.selectedIds]}
+          onClear={exitSelectMode}
+        />
+      )}
+
+      <ResponsiveGrid>
+        {data.data.map((cut) => {
+          const card = (
             <MediaCard
               entityKind="cut"
               entityId={cut.id}
@@ -203,9 +284,50 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
               resolution={cut.resolution}
               fileSize={cut.fileSize}
             />
-          </EntityContextMenu>
-        ))}
+          )
+
+          if (selectMode) {
+            return (
+              <SelectableEntity
+                key={cut.id}
+                selectable
+                selected={selection.selectedIds.has(cut.id)}
+                onToggle={() => selection.toggle(cut.id)}
+              >
+                {card}
+              </SelectableEntity>
+            )
+          }
+
+          return (
+            <EntityContextMenu
+              key={cut.id}
+              status={cut.status}
+              onDelete={() =>
+                deleteCut.mutate(cut.id, {
+                  onSuccess: () => toast.success(`"${cut.title}" deleted`),
+                  onError: (err) => toast.error(err.message)
+                })
+              }
+              onRestore={() =>
+                restoreCut.mutate(cut.id, {
+                  onSuccess: () => toast.success(`"${cut.title}" restored`),
+                  onError: (err) => toast.error(err.message)
+                })
+              }
+            >
+              {card}
+            </EntityContextMenu>
+          )
+        })}
       </ResponsiveGrid>
+
+      {selectMode && (
+        <Button size="sm" variant="ghost" onClick={exitSelectMode}>
+          Done
+        </Button>
+      )}
+
       <PaginationControls page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
     </div>
   )

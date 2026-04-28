@@ -191,7 +191,7 @@ export class MigrateRootFolder implements IMigrateRootFolder {
       })
       this.reconcile.execute(newRootPath)
 
-      this.notifier.notify('db-updated')
+      this.notifier.notify('db-updated', { scope: ['all'] })
 
       return { success: true, movedCount: folders.length }
     } finally {

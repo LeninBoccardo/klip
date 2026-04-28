@@ -78,7 +78,7 @@ export class EnrichAllVideos implements IEnrichAllVideos {
       failed: result.failed,
       skipped: result.skipped
     })
-    this.notifier.notify('db-updated')
+    this.notifier.notify('db-updated', { scope: ['videos'] })
     return result
   }
 }

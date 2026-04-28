@@ -5,7 +5,8 @@ import type {
   DownloadProgress,
   EnrichProgress,
   MigrateRootProgress,
-  UpdaterStatus
+  UpdaterStatus,
+  DbUpdatedPayload
 } from '@shared/types'
 import { createTypedInvoker } from './create-typed-invoker'
 
@@ -44,6 +45,11 @@ const api = {
   deleteCut: createTypedInvoker('delete-cut'),
   restoreCut: createTypedInvoker('restore-cut'),
 
+  // ── Tags ──
+  getAllDistinctTags: createTypedInvoker('get-all-distinct-tags'),
+  bulkUpdateTags: createTypedInvoker('bulk-update-tags'),
+  renameTagGlobally: createTypedInvoker('rename-tag-globally'),
+
   // ── Settings ──
   getSettings: createTypedInvoker('get-settings'),
   getSetting: createTypedInvoker('get-setting'),
@@ -73,11 +79,10 @@ const api = {
       ipcRenderer.removeListener(IpcChannels.DownloadProgress, callback)
     }
   },
-  onDbUpdated: (callback: () => void): (() => void) => {
-    const handler = (): void => callback()
-    ipcRenderer.on(IpcChannels.DbUpdated, handler)
+  onDbUpdated: (callback: (_event: unknown, data: DbUpdatedPayload) => void): (() => void) => {
+    ipcRenderer.on(IpcChannels.DbUpdated, callback)
     return (): void => {
-      ipcRenderer.removeListener(IpcChannels.DbUpdated, handler)
+      ipcRenderer.removeListener(IpcChannels.DbUpdated, callback)
     }
   },
   onMigrateRootProgress: (

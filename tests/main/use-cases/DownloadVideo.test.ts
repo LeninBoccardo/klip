@@ -340,7 +340,9 @@ describe('DownloadVideo', () => {
   it('should notify db-updated after successful download', async () => {
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
-    expect(notifier.notify).toHaveBeenCalledWith('db-updated')
+    expect(notifier.notify).toHaveBeenCalledWith('db-updated', {
+      scope: ['creators', 'videos']
+    })
   })
 
   it('should throw if URL is empty', async () => {

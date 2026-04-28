@@ -8,6 +8,7 @@ import { registerDownloadController } from './interface-adapters/controllers/Dow
 import { registerCreatorController } from './interface-adapters/controllers/CreatorController'
 import { registerVideoController } from './interface-adapters/controllers/VideoController'
 import { registerCutController } from './interface-adapters/controllers/CutController'
+import { registerTagController } from './interface-adapters/controllers/TagController'
 import { registerSettingsController } from './interface-adapters/controllers/SettingsController'
 import { registerAuditLogController } from './interface-adapters/controllers/AuditLogController'
 import { registerOperationController } from './interface-adapters/controllers/OperationController'
@@ -115,6 +116,11 @@ app.whenReady().then(() => {
     container.ports.fsReader
   )
   registerCutController(container.repositories.cut)
+  registerTagController(
+    container.useCases.getAllDistinctTags,
+    container.useCases.bulkUpdateTags,
+    container.useCases.renameTagGlobally
+  )
   registerSettingsController(container.repositories.settings, container.useCases.migrateRootFolder)
   registerAuditLogController(container.repositories.auditLog)
   registerOperationController(container.repositories.operation)

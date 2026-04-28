@@ -73,9 +73,13 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
       }
     }
 
-    // Notify UI if anything changed
+    // Notify UI if anything changed — narrow the scope to the entity tables
+    // that actually saw a probe-status change.
     if (result.videosProbed > 0 || result.cutsProbed > 0) {
-      this.notifier.notify('db-updated')
+      const scope: ('videos' | 'cuts')[] = []
+      if (result.videosProbed > 0) scope.push('videos')
+      if (result.cutsProbed > 0) scope.push('cuts')
+      this.notifier.notify('db-updated', { scope })
     }
 
     return result

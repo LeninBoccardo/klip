@@ -467,4 +467,74 @@ describe('SqliteVideoRepository', () => {
       expect(other.thumbnailPath).toBe('/some/other/path/thumb.jpg')
     })
   })
+
+  // ── findByTags ──
+
+  describe('findByTags', () => {
+    it('returns an empty array when called with no tags', () => {
+      videoRepo.upsert(makeVideo({ tags: ['music'] }))
+      expect(videoRepo.findByTags([])).toEqual([])
+    })
+
+    it('returns active videos that match any of the requested tags (OR semantics)', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', tags: ['music', 'live'] }))
+      videoRepo.upsert(makeVideo({ id: 'v-2', tags: ['vlog'] }))
+      videoRepo.upsert(makeVideo({ id: 'v-3', tags: ['live', 'concert'] }))
+      videoRepo.upsert(makeVideo({ id: 'v-4', tags: [] }))
+
+      const results = videoRepo.findByTags(['live'])
+      expect(results.map((v) => v.id).sort()).toEqual(['v-1', 'v-3'])
+    })
+
+    it('does not return deleted or missing videos even when their tag matches', () => {
+      videoRepo.upsert(makeVideo({ id: 'active', tags: ['music'] }))
+      videoRepo.upsert(makeVideo({ id: 'deleted', tags: ['music'], status: 'deleted' }))
+      videoRepo.upsert(makeVideo({ id: 'missing', tags: ['music'], status: 'missing' }))
+
+      const results = videoRepo.findByTags(['music'])
+      expect(results.map((v) => v.id)).toEqual(['active'])
+    })
+
+    it('deduplicates rows even when multiple requested tags match the same video', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', tags: ['music', 'live', 'concert'] }))
+      const results = videoRepo.findByTags(['music', 'live'])
+      expect(results).toHaveLength(1)
+    })
+  })
+
+  // ── getAllDistinctTags ──
+
+  describe('getAllDistinctTags', () => {
+    it('returns an empty array when no active videos have tags', () => {
+      videoRepo.upsert(makeVideo({ tags: [] }))
+      expect(videoRepo.getAllDistinctTags()).toEqual([])
+    })
+
+    it('aggregates per-tag counts across active videos', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', tags: ['music', 'live'] }))
+      videoRepo.upsert(makeVideo({ id: 'v-2', tags: ['music'] }))
+      videoRepo.upsert(makeVideo({ id: 'v-3', tags: ['live', 'concert'] }))
+
+      const tags = videoRepo.getAllDistinctTags()
+      const byTag = Object.fromEntries(tags.map((t) => [t.tag, t.count]))
+      expect(byTag).toEqual({ music: 2, live: 2, concert: 1 })
+    })
+
+    it('orders by count desc then tag asc', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1', tags: ['music', 'live', 'concert'] }))
+      videoRepo.upsert(makeVideo({ id: 'v-2', tags: ['music'] }))
+
+      const tags = videoRepo.getAllDistinctTags()
+      // music=2, then concert/live tied at 1 (alpha: concert, live)
+      expect(tags.map((t) => t.tag)).toEqual(['music', 'concert', 'live'])
+    })
+
+    it('excludes tags carried only by non-active videos', () => {
+      videoRepo.upsert(makeVideo({ id: 'active', tags: ['music'] }))
+      videoRepo.upsert(makeVideo({ id: 'deleted', tags: ['gone'], status: 'deleted' }))
+
+      const tags = videoRepo.getAllDistinctTags()
+      expect(tags.map((t) => t.tag)).toEqual(['music'])
+    })
+  })
 })

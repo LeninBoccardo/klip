@@ -76,7 +76,7 @@ describe('EnrichAllVideos', () => {
     const result = await useCase.execute()
     expect(result).toEqual({ total: 0, enriched: 0, failed: 0, skipped: 0 })
     expect(fetchDetail.execute).not.toHaveBeenCalled()
-    expect(notifier.notify).toHaveBeenCalledWith('db-updated')
+    expect(notifier.notify).toHaveBeenCalledWith('db-updated', { scope: ['videos'] })
   })
 
   it('enriches all candidates and counts successes', async () => {

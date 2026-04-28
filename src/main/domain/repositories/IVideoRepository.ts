@@ -12,6 +12,14 @@ export interface IVideoRepository {
   findByProbeStatus(status: ProbeStatus): Video[]
   /** Active videos with a URL but detail metadata never fetched (detailFetchedAt IS NULL) */
   findNeedingDetail(): Video[]
+  /** Active videos that have at least one of the given tags. */
+  findByTags(tags: string[]): Video[]
+  /**
+   * Returns every distinct tag used by an active video, with the number of
+   * active videos that carry it. Tags are case-sensitive (the canonical form
+   * is whatever was written to the JSON column).
+   */
+  getAllDistinctTags(): { tag: string; count: number }[]
   upsert(video: Video): void
   /** See {@link ICreatorRepository.upsertWithPrevious} — same semantics. */
   upsertWithPrevious(video: Video, previous: Video | null): void

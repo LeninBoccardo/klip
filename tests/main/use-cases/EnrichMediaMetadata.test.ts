@@ -211,7 +211,7 @@ describe('EnrichMediaMetadata', () => {
 
     await useCase.execute()
 
-    expect(notifier.notify).toHaveBeenCalledWith('db-updated')
+    expect(notifier.notify).toHaveBeenCalledWith('db-updated', { scope: ['videos'] })
   })
 
   it('does NOT send db-updated when nothing to probe', async () => {

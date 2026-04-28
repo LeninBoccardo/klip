@@ -2,8 +2,13 @@ import type {
   DownloadProgress,
   EnrichProgress,
   MigrateRootProgress,
-  UpdaterStatus
+  UpdaterStatus,
+  DbUpdatedPayload
 } from '@shared/types'
+
+// Re-export the canonical scope/payload types from `@shared/types` so domain
+// callers can keep importing from `@domain/types`.
+export type { DbUpdateScope, DbUpdatedPayload } from '@shared/types'
 
 /**
  * Typed event map for renderer notifications.
@@ -16,7 +21,7 @@ import type {
  *   3. Add a matching listener in the preload/renderer layer
  */
 export interface NotificationEventMap {
-  'db-updated': void
+  'db-updated': DbUpdatedPayload
   'download-progress': DownloadProgress
   'migrate-root-progress': MigrateRootProgress
   'updater-status': UpdaterStatus

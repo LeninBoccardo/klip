@@ -32,6 +32,9 @@ import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
 import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
+import type { IGetAllDistinctTags } from '@use-cases/IGetAllDistinctTags'
+import type { IBulkUpdateTags } from '@use-cases/IBulkUpdateTags'
+import type { IRenameTagGlobally } from '@use-cases/IRenameTagGlobally'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -75,6 +78,9 @@ import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
 import { EnrichAllVideos } from '@use-cases/EnrichAllVideos'
 import { FetchVideoComments } from '@use-cases/FetchVideoComments'
 import { ResolveMediaUrl } from '@use-cases/ResolveMediaUrl'
+import { GetAllDistinctTags } from '@use-cases/GetAllDistinctTags'
+import { BulkUpdateTags } from '@use-cases/BulkUpdateTags'
+import { RenameTagGlobally } from '@use-cases/RenameTagGlobally'
 
 /**
  * Application dependency container.
@@ -118,6 +124,9 @@ export interface AppContainer {
     enrichAllVideos: IEnrichAllVideos
     fetchVideoComments: IFetchVideoComments
     resolveMediaUrl: IResolveMediaUrl
+    getAllDistinctTags: IGetAllDistinctTags
+    bulkUpdateTags: IBulkUpdateTags
+    renameTagGlobally: IRenameTagGlobally
   }
   services: {
     fileWatcher: IFileWatcher
@@ -252,6 +261,14 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const fetchVideoComments = new FetchVideoComments(videoRepo, videoDownloader)
 
+  // ── Tag aggregation + bulk + global rename use cases ──
+  // Repos here are the audited decorators, so per-entity audit log entries
+  // get written automatically by upsertWithPrevious. The notifier emits a
+  // single, scope-narrowed `db-updated` push at the end of each batch.
+  const getAllDistinctTags = new GetAllDistinctTags(videoRepo, cutRepo)
+  const bulkUpdateTags = new BulkUpdateTags(videoRepo, cutRepo, transactionScope, notifier)
+  const renameTagGlobally = new RenameTagGlobally(videoRepo, cutRepo, transactionScope, notifier)
+
   // ── Media protocol (entity-keyed klip-media:// resolver + handler) ──
   // The renderer references local media via klip-media://<kind>/<id>/<asset>
   // and never holds raw filesystem paths. ResolveMediaUrl maps the entity ref
@@ -314,7 +331,10 @@ export function createAppContainer(config: AppConfig): AppContainer {
       fetchVideoDetail,
       enrichAllVideos,
       fetchVideoComments,
-      resolveMediaUrl
+      resolveMediaUrl,
+      getAllDistinctTags,
+      bulkUpdateTags,
+      renameTagGlobally
     },
     services: {
       fileWatcher,

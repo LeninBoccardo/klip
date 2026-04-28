@@ -36,5 +36,9 @@ export const queryKeys = {
   },
   updater: {
     status: ['updater', 'status'] as const
+  },
+  tags: {
+    all: ['tags'] as const,
+    distinct: ['tags', 'distinct'] as const
   }
 } as const

@@ -84,6 +84,40 @@ export class SqliteVideoRepository implements IVideoRepository {
       .map(mapRow)
   }
 
+  findByTags(tags: string[]): Video[] {
+    if (tags.length === 0) return []
+
+    const tagValues = sql.join(
+      tags.map((t) => sql`${t}`),
+      sql`, `
+    )
+
+    const rows = this.db.all(
+      sql`SELECT DISTINCT v.*
+          FROM videos v, json_each(v.tags) AS t
+          WHERE v.status = 'active' AND t.value IN (${tagValues})
+          ORDER BY v.created_at DESC`
+    ) as VideoRow[]
+
+    return rows.map(mapRow)
+  }
+
+  getAllDistinctTags(): { tag: string; count: number }[] {
+    // SQLite's json_each emits one row per tag in each video's JSON array.
+    // Grouping by the tag value gives a per-tag count of *videos*; multiple
+    // occurrences inside the same row would inflate the count, but `parseTags`
+    // deduplicates on read so the schema invariant is "no duplicates per row".
+    const rows = this.db.all(
+      sql`SELECT t.value AS tag, COUNT(DISTINCT v.id) AS count
+          FROM videos v, json_each(v.tags) AS t
+          WHERE v.status = 'active'
+          GROUP BY t.value
+          ORDER BY count DESC, tag ASC`
+    ) as Array<{ tag: string; count: number }>
+
+    return rows
+  }
+
   upsert(video: Video): void {
     this.db
       .insert(videos)

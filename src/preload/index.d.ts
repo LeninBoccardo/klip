@@ -5,6 +5,7 @@ import type {
   FetchChannelInfoResult,
   VideoInfo,
   DownloadProgress,
+  DbUpdatedPayload,
   MigrateRootProgress,
   MigrateRootResult,
   MediaProbeResult,
@@ -16,7 +17,11 @@ import type {
   EnrichVideosResult,
   EnrichProgress,
   VideoCommentsResult,
-  UpdaterStatus
+  UpdaterStatus,
+  TagAggregation,
+  BulkUpdateTagsRequest,
+  BulkUpdateTagsResult,
+  RenameTagGloballyResult
 } from '@shared/types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from '@shared/dtos'
 
@@ -54,6 +59,11 @@ interface KlipAPI {
   deleteCut(id: string): Promise<void>
   restoreCut(id: string): Promise<void>
 
+  // ── Tags ──
+  getAllDistinctTags(): Promise<TagAggregation[]>
+  bulkUpdateTags(request: BulkUpdateTagsRequest): Promise<BulkUpdateTagsResult>
+  renameTagGlobally(oldTag: string, newTag: string): Promise<RenameTagGloballyResult>
+
   // ── Settings ──
   getSettings(): Promise<Record<string, string>>
   getSetting(key: string): Promise<string | null>
@@ -78,7 +88,7 @@ interface KlipAPI {
   /** Subscribe to download progress events; returns an unsubscribe function */
   onDownloadProgress(callback: (event: unknown, data: DownloadProgress) => void): () => void
   /** Subscribe to db-updated events; returns an unsubscribe function */
-  onDbUpdated(callback: () => void): () => void
+  onDbUpdated(callback: (event: unknown, data: DbUpdatedPayload) => void): () => void
   /** Subscribe to migrate-root progress events; returns an unsubscribe function */
   onMigrateRootProgress(callback: (event: unknown, data: MigrateRootProgress) => void): () => void
   /** Subscribe to auto-updater status changes; returns an unsubscribe function */

@@ -30,3 +30,11 @@ export type {
 } from './video-detail'
 export type { VideoComment, VideoCommentsResult } from './video-comments'
 export type { UpdaterState, UpdaterStatus } from './updater'
+export type {
+  TagEntityKind,
+  TagAggregation,
+  BulkUpdateTagsRequest,
+  BulkUpdateTagsResult,
+  RenameTagGloballyResult
+} from './tags'
+export type { DbUpdateScope, DbUpdatedPayload } from './notification-events'

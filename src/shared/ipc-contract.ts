@@ -15,7 +15,12 @@ import type {
   EnrichVideosResult,
   EnrichProgress,
   VideoCommentsResult,
-  UpdaterStatus
+  UpdaterStatus,
+  DbUpdatedPayload,
+  TagAggregation,
+  BulkUpdateTagsRequest,
+  BulkUpdateTagsResult,
+  RenameTagGloballyResult
 } from './types'
 import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
 
@@ -71,6 +76,17 @@ export interface IpcContract {
   'delete-cut': { params: [id: string]; result: void }
   'restore-cut': { params: [id: string]; result: void }
 
+  // ── Tags ──
+  'get-all-distinct-tags': { params: []; result: TagAggregation[] }
+  'bulk-update-tags': {
+    params: [request: BulkUpdateTagsRequest]
+    result: BulkUpdateTagsResult
+  }
+  'rename-tag-globally': {
+    params: [oldTag: string, newTag: string]
+    result: RenameTagGloballyResult
+  }
+
   // ── Settings ──
   'get-settings': { params: []; result: Record<string, string> }
   'get-setting': { params: [key: string]; result: string | null }
@@ -104,7 +120,7 @@ export interface IpcContract {
   'get-updater-status': { params: []; result: UpdaterStatus }
 
   // ── Push events (main → renderer) ──
-  'db-updated': { params: []; result: void }
+  'db-updated': { params: [data: DbUpdatedPayload]; result: void }
   'download-progress': { params: [data: DownloadProgress]; result: void }
   'migrate-root-progress': { params: [data: MigrateRootProgress]; result: void }
   'updater-status': { params: [data: UpdaterStatus]; result: void }

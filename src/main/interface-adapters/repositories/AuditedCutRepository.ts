@@ -43,6 +43,10 @@ export class AuditedCutRepository implements ICutRepository {
     return this.inner.findByTags(tags)
   }
 
+  getAllDistinctTags(): { tag: string; count: number }[] {
+    return this.inner.getAllDistinctTags()
+  }
+
   findByProbeStatus(status: ProbeStatus): Cut[] {
     return this.inner.findByProbeStatus(status)
   }

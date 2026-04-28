@@ -118,7 +118,7 @@ export class ProcessFileNotifications {
         this.processGranular(collapsed)
       }
 
-      this.notifier.notify('db-updated')
+      this.notifier.notify('db-updated', { scope: ['all'] })
 
       // Enrich metadata for newly discovered entities (non-blocking, deduped).
       // If a previous enrichment is still running, skip — it'll pick up any

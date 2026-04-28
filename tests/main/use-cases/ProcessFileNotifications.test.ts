@@ -119,7 +119,7 @@ describe('ProcessFileNotifications', () => {
       await triggerFlush()
 
       expect(mockNotifier.notify).toHaveBeenCalledTimes(1)
-      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated')
+      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated', { scope: ['all'] })
     })
 
     it('does NOT call reconcile or notify when all events collapse to IGNORE', async () => {
@@ -286,7 +286,7 @@ describe('ProcessFileNotifications', () => {
 
       expect(suspendResolved).toBe(true)
       // The flush still ran to completion: notify fired, granular processing kicked in.
-      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated')
+      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated', { scope: ['all'] })
       expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'c')
     })
   })
@@ -405,7 +405,7 @@ describe('ProcessFileNotifications', () => {
 
       // No reconcile should run, but notify fires since collapsed is not empty
       expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
-      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated')
+      expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated', { scope: ['all'] })
     })
   })
 })

@@ -40,6 +40,26 @@ const cutQueryParamsSchema = paginationParamsSchema.extend({
   tags: z.array(z.string()).optional()
 })
 
+// Cap incoming arrays to defend the use-case against accidental DoS via a
+// renderer XSS that drives an oversized batch. 5K matches the documented
+// scaling baseline (audit 03) and is well above any legitimate UI selection.
+const tagSchema = z.string().min(1).max(64)
+const idArraySchema = z.array(z.string().min(1)).max(5000)
+const tagArraySchema = z.array(tagSchema).max(64)
+
+const bulkUpdateTagsRequestSchema = z
+  .object({
+    entityKind: z.enum(['video', 'cut']),
+    ids: idArraySchema,
+    addTags: tagArraySchema.optional(),
+    removeTags: tagArraySchema.optional()
+  })
+  .refine(
+    (req) =>
+      (req.addTags && req.addTags.length > 0) || (req.removeTags && req.removeTags.length > 0),
+    { message: 'addTags and removeTags cannot both be empty' }
+  )
+
 export const ipcSchemas = {
   // ── Reconcile / Download / Probe ──
   reconcile: z.tuple([]),
@@ -74,6 +94,11 @@ export const ipcSchemas = {
   'get-cuts-by-tags': z.tuple([z.array(z.string())]),
   'delete-cut': z.tuple([z.string()]),
   'restore-cut': z.tuple([z.string()]),
+
+  // ── Tags ──
+  'get-all-distinct-tags': z.tuple([]),
+  'bulk-update-tags': z.tuple([bulkUpdateTagsRequestSchema]),
+  'rename-tag-globally': z.tuple([tagSchema, tagSchema]),
 
   // ── Settings ──
   'get-settings': z.tuple([]),

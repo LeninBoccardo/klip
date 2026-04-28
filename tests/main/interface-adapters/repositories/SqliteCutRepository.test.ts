@@ -597,4 +597,40 @@ describe('SqliteCutRepository', () => {
       expect(other.thumbnailPath).toBe('/some/other/path/thumb.png')
     })
   })
+
+  // ── getAllDistinctTags ──
+
+  describe('getAllDistinctTags', () => {
+    it('returns an empty array when no active cuts have tags', () => {
+      cutRepo.upsert(makeCut({ tags: [] }))
+      expect(cutRepo.getAllDistinctTags()).toEqual([])
+    })
+
+    it('aggregates per-tag counts across active cuts', () => {
+      cutRepo.upsert(makeCut({ id: 'c-1', tags: ['funny', 'highlight'] }))
+      cutRepo.upsert(makeCut({ id: 'c-2', tags: ['funny'] }))
+      cutRepo.upsert(makeCut({ id: 'c-3', tags: ['highlight', 'reaction'] }))
+
+      const tags = cutRepo.getAllDistinctTags()
+      const byTag = Object.fromEntries(tags.map((t) => [t.tag, t.count]))
+      expect(byTag).toEqual({ funny: 2, highlight: 2, reaction: 1 })
+    })
+
+    it('orders by count desc then tag asc', () => {
+      cutRepo.upsert(makeCut({ id: 'c-1', tags: ['funny', 'wholesome', 'reaction'] }))
+      cutRepo.upsert(makeCut({ id: 'c-2', tags: ['funny'] }))
+
+      const tags = cutRepo.getAllDistinctTags()
+      // funny=2, then reaction/wholesome tied at 1 (alpha: reaction, wholesome)
+      expect(tags.map((t) => t.tag)).toEqual(['funny', 'reaction', 'wholesome'])
+    })
+
+    it('excludes tags carried only by non-active cuts', () => {
+      cutRepo.upsert(makeCut({ id: 'active', tags: ['funny'] }))
+      cutRepo.upsert(makeCut({ id: 'deleted', tags: ['gone'], status: 'deleted' }))
+
+      const tags = cutRepo.getAllDistinctTags()
+      expect(tags.map((t) => t.tag)).toEqual(['funny'])
+    })
+  })
 })

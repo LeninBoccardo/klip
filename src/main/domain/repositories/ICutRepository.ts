@@ -11,6 +11,12 @@ export interface ICutRepository {
   findByCreatorId(creatorId: string): Cut[]
   findByVideoId(videoId: string): Cut[]
   findByTags(tags: string[]): Cut[]
+  /**
+   * Returns every distinct tag used by an active cut, with the number of
+   * active cuts that carry it. Tags are case-sensitive (the canonical form
+   * is whatever was written to the JSON column).
+   */
+  getAllDistinctTags(): { tag: string; count: number }[]
   findByProbeStatus(status: ProbeStatus): Cut[]
   upsert(cut: Cut): void
   /** See {@link ICreatorRepository.upsertWithPrevious} — same semantics. */

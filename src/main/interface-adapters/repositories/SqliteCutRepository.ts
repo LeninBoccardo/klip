@@ -114,6 +114,19 @@ export class SqliteCutRepository implements ICutRepository {
       .map(mapRowToCut)
   }
 
+  getAllDistinctTags(): { tag: string; count: number }[] {
+    // See SqliteVideoRepository.getAllDistinctTags for the same pattern.
+    const rows = this.db.all(
+      sql`SELECT t.value AS tag, COUNT(DISTINCT c.id) AS count
+          FROM cuts c, json_each(c.tags) AS t
+          WHERE c.status = 'active'
+          GROUP BY t.value
+          ORDER BY count DESC, tag ASC`
+    ) as Array<{ tag: string; count: number }>
+
+    return rows
+  }
+
   findByTags(tags: string[]): Cut[] {
     if (tags.length === 0) return []
 
