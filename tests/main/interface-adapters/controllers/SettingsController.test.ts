@@ -102,6 +102,22 @@ describe('SettingsController', () => {
     expect(settingsRepo.set).not.toHaveBeenCalled()
   })
 
+  it('"set-setting" allows playbackOnNavigate with a valid value', async () => {
+    const { settingsRepo, migrateRootFolder } = makeMocks()
+    registerSettingsController(settingsRepo, migrateRootFolder)
+
+    await invoke('set-setting', 'playbackOnNavigate', 'floating')
+    expect(settingsRepo.set).toHaveBeenCalledWith('playbackOnNavigate', 'floating')
+  })
+
+  it('"set-setting" rejects an out-of-range playbackOnNavigate value', async () => {
+    const { settingsRepo, migrateRootFolder } = makeMocks()
+    registerSettingsController(settingsRepo, migrateRootFolder)
+
+    await expect(invoke('set-setting', 'playbackOnNavigate', 'bogus')).rejects.toThrow(/invalid/)
+    expect(settingsRepo.set).not.toHaveBeenCalled()
+  })
+
   it('"migrate-root" calls migrateRootFolder.execute with the new path', async () => {
     const { settingsRepo, migrateRootFolder } = makeMocks()
     registerSettingsController(settingsRepo, migrateRootFolder)

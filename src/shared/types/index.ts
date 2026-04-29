@@ -39,3 +39,10 @@ export type {
 } from './tags'
 export type { DbUpdateScope, DbUpdatedPayload } from './notification-events'
 export type { SearchAllResult } from './search'
+export type { PlaybackOnNavigate } from './playback'
+export {
+  PLAYBACK_ON_NAVIGATE_VALUES,
+  DEFAULT_PLAYBACK_ON_NAVIGATE,
+  SETTING_KEYS,
+  isPlaybackOnNavigate
+} from './playback'

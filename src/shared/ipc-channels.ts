@@ -39,6 +39,9 @@ export const IpcChannels = {
   // ── Search ──
   SearchAll: 'search-all',
 
+  // ── Shell ──
+  OpenMediaExternally: 'open-media-externally',
+
   // ── Tags ──
   GetAllDistinctTags: 'get-all-distinct-tags',
   BulkUpdateTags: 'bulk-update-tags',

@@ -7,6 +7,7 @@ import { MigrateRootButton } from '@components/features/settings/MigrateRootButt
 import { ReconcileButton } from '@components/features/settings/ReconcileButton'
 import { EnrichVideosButton } from '@components/features/settings/EnrichVideosButton'
 import { UpdatesCard } from '@components/features/settings/UpdatesCard'
+import { PlaybackSettings } from '@components/features/settings/PlaybackSettings'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
@@ -63,6 +64,18 @@ function SettingsPage(): React.ReactElement {
         </CardHeader>
         <CardContent>
           <EnrichVideosButton disabled={isBlocking} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Playback</CardTitle>
+          <CardDescription>
+            What happens to the player when you navigate away from a video.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PlaybackSettings />
         </CardContent>
       </Card>
 

@@ -63,6 +63,9 @@ interface KlipAPI {
   // ── Search ──
   searchAll(query: string, limit?: number): Promise<SearchAllResult>
 
+  // ── Shell ──
+  openMediaExternally(kind: 'video' | 'cut', id: string): Promise<{ ok: boolean; error?: string }>
+
   // ── Tags ──
   getAllDistinctTags(): Promise<TagAggregation[]>
   bulkUpdateTags(request: BulkUpdateTagsRequest): Promise<BulkUpdateTagsResult>

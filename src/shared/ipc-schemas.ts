@@ -100,6 +100,11 @@ export const ipcSchemas = {
   // exhaust the use case (default and per-surface caps applied there).
   'search-all': z.union([z.tuple([z.string()]), z.tuple([z.string(), z.number()])]),
 
+  // ── Shell ──
+  // Kind allowlist mirrors the contract; the controller maps these to
+  // ResolveMediaUrl(kind, id, asset='file').
+  'open-media-externally': z.tuple([z.enum(['video', 'cut']), z.string().min(1)]),
+
   // ── Tags ──
   'get-all-distinct-tags': z.tuple([]),
   'bulk-update-tags': z.tuple([bulkUpdateTagsRequestSchema]),

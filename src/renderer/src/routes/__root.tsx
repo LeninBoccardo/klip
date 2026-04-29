@@ -23,12 +23,15 @@ import { toast } from 'sonner'
 import { AppSidebar } from '@components/features/layout/AppSidebar'
 import { BlockingOperationDialog } from '@/components/shared'
 import { CommandPalette } from '@/components/features/search/CommandPalette'
+import { PersistentPlayer } from '@/components/features/player/PersistentPlayer'
+import { usePlaybackSettingMirror } from '@/hooks/use-playback-setting'
 import { Button } from '@ui/button'
 import { Search } from 'lucide-react'
 
 function GlobalListeners(): React.ReactElement {
   useDbListener()
   useDownloadProgressListener()
+  usePlaybackSettingMirror()
   return <UpdaterToastWatcher />
 }
 
@@ -199,6 +202,7 @@ const RootLayout = (): React.ReactElement => (
         </SidebarProvider>
         <Toaster richColors closeButton />
         <BlockingOperationDialog />
+        <PersistentPlayer />
         <GlobalListeners />
         <TanStackRouterDevtools />
       </TooltipProvider>

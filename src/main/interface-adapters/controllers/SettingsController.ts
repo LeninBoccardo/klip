@@ -1,6 +1,7 @@
 import { dialog, BrowserWindow } from 'electron'
 import type { ISettingsRepository } from '@domain/repositories'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
+import { isPlaybackOnNavigate, SETTING_KEYS } from '@shared/types'
 import { createTypedHandler } from './create-typed-handler'
 
 /**
@@ -14,9 +15,17 @@ import { createTypedHandler } from './create-typed-handler'
  *
  * Add new keys here as they are introduced.
  */
-const SETTABLE_KEYS = new Set<string>([
-  // No keys are settable yet via this generic endpoint. Add as needed.
-])
+const SETTABLE_KEYS = new Set<string>([SETTING_KEYS.playbackOnNavigate])
+
+/**
+ * Per-key value validators for keys that have constrained ranges. Keys not
+ * listed here accept any string. The validator runs after the allowlist check
+ * — if it returns false the write is rejected with a typed error, matching
+ * the IPC schema's "no malformed payloads reach the use case" invariant.
+ */
+const VALUE_VALIDATORS: Record<string, (value: string) => boolean> = {
+  [SETTING_KEYS.playbackOnNavigate]: isPlaybackOnNavigate
+}
 
 /**
  * IPC controller for application settings.
@@ -46,6 +55,10 @@ export function registerSettingsController(
         `Setting "${key}" is not user-writable via set-setting. ` +
           `(rootPath: use migrate-root instead.)`
       )
+    }
+    const validate = VALUE_VALIDATORS[key]
+    if (validate && !validate(value)) {
+      throw new Error(`Setting "${key}" rejected: invalid value "${value}".`)
     }
     settingsRepo.set(key, value)
   })

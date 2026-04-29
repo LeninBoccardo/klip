@@ -83,6 +83,16 @@ export interface IpcContract {
     result: SearchAllResult
   }
 
+  // ── Shell ──
+  // Open the resolved file for a (kind, id) pair in the OS default app.
+  // Kind is restricted to 'video' | 'cut'; the main process resolves to the
+  // canonical path via ResolveMediaUrl so the renderer never holds the raw
+  // filesystem path. Returns the OS error string (empty on success).
+  'open-media-externally': {
+    params: [kind: 'video' | 'cut', id: string]
+    result: { ok: boolean; error?: string }
+  }
+
   // ── Tags ──
   'get-all-distinct-tags': { params: []; result: TagAggregation[] }
   'bulk-update-tags': {

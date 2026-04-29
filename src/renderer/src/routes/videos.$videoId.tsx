@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useVideoById, useFetchVideoDetail, useTranscript } from '@/hooks/use-videos'
+import { usePlayerStore } from '@/hooks/use-player-store'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
@@ -7,7 +8,6 @@ import { Badge } from '@ui/badge'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
 import { ScrollArea } from '@ui/scroll-area'
-import { AspectRatio } from '@ui/aspect-ratio'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
 import {
   Eye,
@@ -16,14 +16,16 @@ import {
   MessageSquare,
   RefreshCw,
   Loader2,
-  Film,
+  Play,
+  ExternalLink,
   Copy
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatDuration, formatFileSize, mediaUrl, formatCount } from '@/lib/format'
-import { useState } from 'react'
+import { formatDuration, formatFileSize, formatCount } from '@/lib/format'
+import { useEffect, useState } from 'react'
 import { CommentsTab } from '@components/features/videos/CommentsTab'
 import { EditableTagsCard } from '@components/features/videos/EditableTagsCard'
+import { DetailPlayerSlot } from '@components/features/player/DetailPlayerSlot'
 
 export const Route = createFileRoute('/videos/$videoId')({
   component: VideoDetailPage
@@ -35,6 +37,19 @@ function VideoDetailPage(): React.ReactElement {
   const fetchDetail = useFetchVideoDetail()
   const transcriptQuery = useTranscript(videoId)
   const [tab, setTab] = useState('info')
+  const play = usePlayerStore((s) => s.play)
+  const setMode = usePlayerStore((s) => s.setMode)
+  const activeVideoId = usePlayerStore((s) => s.videoId)
+  const playerMode = usePlayerStore((s) => s.mode)
+
+  // If the user navigates to this page while the same video is in mini /
+  // paused mode, promote the player back to in-page detail attachment so the
+  // floating dock disappears and the placeholder takes over.
+  useEffect(() => {
+    if (activeVideoId === videoId && playerMode !== 'detail' && playerMode !== 'idle') {
+      setMode('detail')
+    }
+  }, [activeVideoId, videoId, playerMode, setMode])
 
   const handleRefresh = (): void => {
     fetchDetail.mutate(videoId, {
@@ -70,8 +85,18 @@ function VideoDetailPage(): React.ReactElement {
     )
   }
 
-  const thumb = video.hasThumbnail ? mediaUrl('video', video.id, 'thumbnail') : undefined
   const everEnriched = video.detailFetchedAt !== null
+  const isPlayingThis =
+    activeVideoId === video.id && (playerMode === 'detail' || playerMode === 'mini')
+
+  const handlePlay = (): void => {
+    play({ videoId: video.id, title: video.title, mode: 'detail' })
+  }
+
+  const handleOpenExternal = async (): Promise<void> => {
+    const result = await window.api.openMediaExternally('video', video.id)
+    if (!result.ok) toast.error(result.error ?? 'Failed to open file.')
+  }
 
   return (
     <PageContainer>
@@ -79,30 +104,36 @@ function VideoDetailPage(): React.ReactElement {
         title={video.title}
         description={video.uploadDate ? `Uploaded ${video.uploadDate}` : undefined}
         actions={
-          <Button onClick={handleRefresh} disabled={fetchDetail.isPending} variant="outline">
-            {fetchDetail.isPending ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 size-4" />
-            )}
-            {everEnriched ? 'Refresh metadata' : 'Fetch metadata'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleOpenExternal}>
+              <ExternalLink className="mr-2 size-4" />
+              Open externally
+            </Button>
+            <Button onClick={handleRefresh} disabled={fetchDetail.isPending} variant="outline">
+              {fetchDetail.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 size-4" />
+              )}
+              {everEnriched ? 'Refresh metadata' : 'Fetch metadata'}
+            </Button>
+          </div>
         }
       />
 
-      <Card>
-        <CardContent className="p-0">
-          <AspectRatio ratio={16 / 9} className="bg-muted">
-            {thumb ? (
-              <img src={thumb} alt={video.title} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                <Film className="size-12" />
-              </div>
-            )}
-          </AspectRatio>
-        </CardContent>
-      </Card>
+      <div className="relative">
+        <DetailPlayerSlot />
+        {!isPlayingThis && (
+          <button
+            type="button"
+            onClick={handlePlay}
+            aria-label={`Play ${video.title}`}
+            className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 text-white transition-colors hover:bg-black/55"
+          >
+            <Play className="size-12 fill-white" />
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatTile

@@ -48,6 +48,9 @@ const api = {
   // ── Search ──
   searchAll: createTypedInvoker('search-all'),
 
+  // ── Shell ──
+  openMediaExternally: createTypedInvoker('open-media-externally'),
+
   // ── Tags ──
   getAllDistinctTags: createTypedInvoker('get-all-distinct-tags'),
   bulkUpdateTags: createTypedInvoker('bulk-update-tags'),
