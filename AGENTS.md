@@ -37,7 +37,10 @@ Klip is an Electron desktop app built with **electron-vite**, **React 19**, and 
 
 The renderer accesses Electron APIs exclusively through `window.electron` (typed in `src/preload/index.d.ts`). Custom APIs are exposed via `window.api`—add new IPC handlers in `src/preload/index.ts` and register them in `src/main/index.ts` with `ipcMain`.
 
-**Renderer Process:** Flattened for clarity. Features are grouped by domain (e.g., `/components/features/creators`).
+**Renderer Process:** Flattened for clarity. Features are grouped by domain (e.g., `/components/features/creators`, `/components/features/collections`, `/components/features/player`, `/components/features/search`). Two cross-cutting renderer subsystems sit in the root layout (`src/renderer/src/routes/__root.tsx`):
+
+- **Command palette** — A `cmdk`-based `<CommandPalette>` is rendered globally and toggled by `Ctrl/Cmd+K` or `/`. The handler in `__root.tsx` filters out `/` when a text input has focus to avoid hijacking typing. Search results are fetched via the `search-all` IPC channel and grouped by entity kind.
+- **Persistent player** — A single `<video>` DOM node lives in a `createPortal(..., document.body)` mount inside `<PersistentPlayer>`. Detail mode tracks a route-owned slot rect via `ResizeObserver` + capture-phase scroll listeners; mini mode pins to a fixed bottom-right corner. The same DOM node survives route changes so buffered video, decoder state, and audio context are preserved without a re-load. Playback state lives in `usePlayerStore` (zustand): `mediaKind`, `videoId`, `mode`, `resumeAt`, plus a `queue` slice for "Play all" advance.
 
 ## Data Management & Sync Pattern
 
@@ -55,21 +58,53 @@ To ensure high performance when filtering large amounts of media, strictly follo
 
 - **ffprobe**: Used to extract metadata (duration, resolution, file size) when new local files are detected by the file watcher.
 
+## Local Media Protocol (`klip-media://`)
+
+Local media is served to the renderer through a custom Electron protocol registered in `src/main/index.ts` (`protocol.registerSchemesAsPrivileged([{ scheme: 'klip-media', privileges: { secure: true, supportFetchAPI: true } }])`) and handled in `src/main/framework-drivers/electron/KlipMediaProtocolHandler.ts`.
+
+**URL format:** `klip-media://<kind>/<id>/<asset>`
+
+| Kind      | Asset                | Resolves to                                |
+| --------- | -------------------- | ------------------------------------------ |
+| `video`   | `file` / `thumbnail` | `videos.filePath` / `videos.thumbnailPath` |
+| `cut`     | `file` / `thumbnail` | `cuts.filePath` / `cuts.thumbnailPath`     |
+| `creator` | `avatar`             | `creators.profileImagePath`                |
+
+**Why entity-keyed rather than path-based:** the renderer never holds a raw filesystem path. A poisoned comment or metadata field cannot construct a working `<img src="klip-media:///etc/passwd">` URL — the parser rejects anything that doesn't match the `<kind>/<id>/<asset>` shape with a 400 before any FS access happens.
+
+**Resolution pipeline:**
+
+1. `parseKlipMediaUrl` extracts `(kind, id, asset)` or returns 400.
+2. `IResolveMediaUrl.resolve` looks the entity up in the repository and returns the canonical path or 404.
+3. `checkPathInsideRoot` does a realpath/prefix containment check against `rootPathRef.value` as defence-in-depth and returns 403 on escape.
+4. The handler streams the file via `net.fetch(pathToFileURL(...))`.
+
+The renderer helper `mediaUrl(kind, id, asset)` (in `src/renderer/lib/format.ts`) builds these URLs from DTO fields. DTOs intentionally do **not** expose `filePath` / `thumbnailPath` / `profileImagePath` — only `hasThumbnail` / `hasFile` flags so the UI can short-circuit broken-image cases without learning paths.
+
+**CSP:** `klip-media:` is allow-listed in the `img-src` directive at `src/renderer/index.html`. The rendered `<video>` element reads from `klip-media://video/<id>/file` (handled as a privileged secure scheme rather than via `media-src`).
+
 ## Clean Architecture Guidelines (Main Process)
 
 The Main process must adhere to SOLID principles and isolate business logic from framework tools. Structure src/main/ accordingly:
 
 - `domain/`: Core entities (Creator, Video, Cut, Operation, AuditEntry, AppSetting), repository interfaces (e.g., `IVideoRepository`, `IOperationRepository`, `IAuditLogRepository`, `ISettingsRepository`), and port interfaces (e.g., `IFileSystemReader`, `IFileSystemWriter`, `IPathResolver`, `ITransactionScope` in `domain/ports/`). No external deps.
 
-- `use-cases/`: Application rules (e.g., `ReconcileDirectory`, `ProcessFileNotifications`, `DownloadVideo`, `FetchVideoInfo`, `ProbeMediaFile`, `RecoverOperations`). Each use case receives its dependencies (repositories, ports) via constructor injection. Use-case interfaces (e.g., `IReconcileDirectory`) live alongside their implementations.
+- `use-cases/`: Application rules. Each use case receives its dependencies (repositories, ports) via constructor injection, and each implementation has a sibling interface file (`I*.ts`) that domain consumers depend on. Grouped roughly:
+  - **Sync / reconciliation:** `ReconcileDirectory`, `ProcessFileNotifications`, `EnrichMediaMetadata`, `EnrichAllVideos`, `RecoverOperations`
+  - **Downloads / fetch:** `DownloadVideo`, `FetchVideoInfo`, `FetchChannelInfo`, `FetchVideoDetail`, `FetchVideoComments`, `ProbeMediaFile`
+  - **Filesystem operations:** `MigrateRootFolder`
+  - **Tags + search:** `GetAllDistinctTags`, `BulkUpdateTags`, `RenameTagGlobally`, `SearchAll`
+  - **Collections:** `CreateCollection`, `RenameCollection`, `DeleteCollection`, `AddToCollection`, `RemoveFromCollection`, `ReorderCollection`, `GetCollectionItems`, `GetCollectionById`, `GetCollectionsPaginated`
+  - **Media protocol:** `ResolveMediaUrl` (entity-keyed `klip-media://<kind>/<id>/<asset>` resolver consumed by `KlipMediaProtocolHandler`)
 
 - `interface-adapters/`: Four subdirectories:
-  - `controllers/` — IPC handlers (e.g., `ReconcileController.ts`, `DownloadController.ts`, `CreatorController.ts`, `VideoController.ts`, `CutController.ts`, `SettingsController.ts`)
-  - `repositories/` — Drizzle ORM implementations (e.g., `SqliteCreatorRepository`) and audited decorators (e.g., `AuditedCreatorRepository`)
-  - `file-system/` — Port implementations (e.g., `NodeFileSystemReader`, `NodeFileSystemWriter`, `NodePathResolver`)
+  - `controllers/` — IPC handlers: `ReconcileController`, `DownloadController`, `CreatorController`, `VideoController`, `CutController`, `TagController`, `SearchController`, `CollectionController`, `ShellController`, `SettingsController`, `AuditLogController`, `OperationController`, `UpdaterController`. All handlers go through `createTypedHandler` so payloads are zod-validated against `src/shared/ipc-schemas.ts` before reaching the use case.
+  - `repositories/` — Drizzle ORM implementations (`SqliteCreatorRepository`, `SqliteVideoRepository`, `SqliteCutRepository`, `SqliteCollectionRepository`, `SqliteSettingsRepository`, `SqliteOperationRepository`, `SqliteAuditLogRepository`) and audited decorators (`AuditedCreatorRepository`, `AuditedVideoRepository`, `AuditedCutRepository`, `AuditedCollectionRepository`)
+  - `file-system/` — Port implementations (`NodeFileSystemReader`, `NodeFileSystemWriter`, `NodePathResolver`)
   - `queue/` — Queue implementations (`PQueueNotificationQueue`, `PQueueDownloadQueue`)
+  - `crypto/` — `NodeIdGenerator` (UUID-backed `IIdGenerator` impl)
 
-- `framework-drivers/`: Drizzle DB initialization (`database/database.ts`), Drizzle schema definition (`database/schema.ts`), Drizzle migrations (`database/migrations/`), transaction scope (`database/SqliteTransactionScope.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`, `electron/ElectronBinaryResolver.ts`), file-system watcher (`file-system/ChokidarWatcher.ts`), yt-dlp driver (`yt-dlp/YtDlpDownloader.ts`), ffprobe driver (`ffprobe/FfprobeMediaProbe.ts`), and window management.
+- `framework-drivers/`: Drizzle DB initialization (`database/database.ts`), Drizzle schema definition (`database/schema.ts`), Drizzle migrations (`database/migrations/`), transaction scope (`database/SqliteTransactionScope.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`, `electron/ElectronBinaryResolver.ts`, `electron/ElectronAutoUpdater.ts`, `electron/KlipMediaProtocolHandler.ts`, `electron/klip-media-protocol.ts`), file-system watcher (`file-system/ChokidarWatcher.ts`), yt-dlp driver (`yt-dlp/YtDlpDownloader.ts`), ffprobe driver (`ffprobe/FfprobeMediaProbe.ts`), and window management.
 
 - `composition-root.ts` (`src/main/composition-root.ts`): Creates and wires all concrete dependencies into an `AppContainer`. The `index.ts` entry point calls `createAppContainer()` and uses the returned container — no module-level mutable singletons.
 
@@ -79,16 +114,21 @@ The data layer uses **Drizzle ORM** on top of `better-sqlite3`. Raw SQL is never
 
 ### Schema
 
-Defined in `src/main/framework-drivers/database/schema.ts` using Drizzle's `sqliteTable` API. **6 tables** total:
+Defined in `src/main/framework-drivers/database/schema.ts` using Drizzle's `sqliteTable` API. **9 tables** total:
 
-| Table        | Purpose                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------- |
-| `creators`   | Indexed creator profiles. Has `folder_name` (unique, slugified) + display `name`.           |
-| `videos`     | Indexed source videos. FK → `creators(id)` with `ON DELETE CASCADE`.                        |
-| `cuts`       | Indexed video cuts. FK → `creators(id)` CASCADE, FK → `videos(id)` SET NULL.                |
-| `settings`   | App configuration key-value store (e.g., `rootPath`).                                       |
-| `operations` | Persistent saga log for crash-safe multi-step FS operations (rename, migrate, bulk import). |
-| `audit_log`  | Immutable mutation history for all entity changes.                                          |
+| Table               | Purpose                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| `creators`          | Indexed creator profiles. Has `folder_name` (unique, slugified) + display `name`.                  |
+| `videos`            | Indexed source videos. FK → `creators(id)` with `ON DELETE CASCADE`.                               |
+| `cuts`              | Indexed video cuts. FK → `creators(id)` CASCADE, FK → `videos(id)` SET NULL.                       |
+| `settings`          | App configuration key-value store (`rootPath`, `playbackOnNavigate`).                              |
+| `operations`        | Persistent saga log for crash-safe multi-step FS operations (rename, migrate, bulk import).        |
+| `collections`       | Manual playlists. `kind = 'manual'` for v1; `'smart'` reserved for future saved-query collections. |
+| `collection_videos` | Join table: `(collection_id, video_id, position, added_at)`, FK CASCADE both sides.                |
+| `collection_cuts`   | Join table: `(collection_id, cut_id, position, added_at)`, FK CASCADE both sides.                  |
+| `audit_log`         | Immutable mutation history for all entity changes.                                                 |
+
+**Unified position invariant for collections.** `position` is unique across the union of `collection_videos ∪ collection_cuts` for a given `collection_id`. SQLite cannot express that as a DB constraint (no cross-table uniqueness), so the invariant is enforced in the use case layer (`AddToCollection`, `ReorderCollection`) inside `transactionScope.run()`, with a defensive renumber-on-read in `getItems`.
 
 **Column naming convention:** Drizzle schema keys are camelCase (matching domain entities), while SQL column names use `snake_case` via `text('snake_case')`. Drizzle handles the mapping automatically — no manual `mapRowToEntity` functions needed.
 
@@ -146,13 +186,14 @@ this.db.select().from(creators).where(eq(creators.status, 'active')).orderBy(asc
 
 ### Audited Repository Decorators
 
-Three decorator classes wrap the core entity repositories to automatically write audit trail entries:
+Four decorator classes wrap the core entity repositories to automatically write audit trail entries:
 
 - `AuditedCreatorRepository` wraps `ICreatorRepository`
 - `AuditedVideoRepository` wraps `IVideoRepository`
 - `AuditedCutRepository` wraps `ICutRepository`
+- `AuditedCollectionRepository` wraps `ICollectionRepository` — audits both collection-level edits (create / rename / delete) and per-item edits (`item_added`, `item_removed`, `reordered`)
 
-Each delegates reads directly to the inner repository and intercepts mutations (`upsert`, `updateStatus`, `delete`) to append entries to the `audit_log` table via `IAuditLogRepository`. Decorators are wired in `composition-root.ts` — external consumers (use-cases, controllers) always receive the audited wrapper.
+Each delegates reads directly to the inner repository and intercepts mutations to append entries to the `audit_log` table via `IAuditLogRepository`. Every mutation method wraps `inner.<op>` + `auditLog.append` in `this.transaction.run(...)` so the index write and the audit row land atomically. Decorators are wired in `composition-root.ts` — external consumers (use-cases, controllers) always receive the audited wrapper.
 
 ### Transaction Scope
 
@@ -162,14 +203,16 @@ Each delegates reads directly to the inner repository and intercepts mutations (
 
 All entity interfaces live in `src/main/domain/entities/`. They are pure TypeScript interfaces with no external dependencies.
 
-| Entity       | File            | Key Fields                                                                                                          |
-| ------------ | --------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `Creator`    | `Creator.ts`    | `id`, `folderName` (slugified, unique), `name` (display), `profileImagePath`, `status`, `deletedAt`, timestamps     |
-| `Video`      | `Video.ts`      | `id`, `creatorId`, `title`, `url`, `duration`, `resolution`, `fileSize`, `filePath`, `thumbnailPath`, `status`, …   |
-| `Cut`        | `Cut.ts`        | `id`, `creatorId`, `videoId?`, `title`, `tags: string[]`, `startTimestamp`, `endTimestamp`, `filePath`, `status`, … |
-| `Operation`  | `Operation.ts`  | `id`, `type`, `status`, `payload` (JSON), `error`, `startedAt`, `completedAt`, `createdAt`                          |
-| `AuditEntry` | `AuditEntry.ts` | `id`, `entityType`, `entityId`, `action`, `changes` (JSON diff), `createdAt`                                        |
-| `AppSetting` | `AppSetting.ts` | `key`, `value`, `updatedAt`                                                                                         |
+| Entity           | File            | Key Fields                                                                                                          |
+| ---------------- | --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `Creator`        | `Creator.ts`    | `id`, `folderName` (slugified, unique), `name` (display), `profileImagePath`, `status`, `deletedAt`, timestamps     |
+| `Video`          | `Video.ts`      | `id`, `creatorId`, `title`, `url`, `tags: string[]`, `duration`, `filePath`, `thumbnailPath`, `status`, …           |
+| `Cut`            | `Cut.ts`        | `id`, `creatorId`, `videoId?`, `title`, `tags: string[]`, `startTimestamp`, `endTimestamp`, `filePath`, `status`, … |
+| `Operation`      | `Operation.ts`  | `id`, `type`, `status`, `payload` (JSON), `error`, `startedAt`, `completedAt`, `createdAt`                          |
+| `AuditEntry`     | `AuditEntry.ts` | `id`, `entityType`, `entityId`, `action`, `changes` (JSON diff), `createdAt`                                        |
+| `AppSetting`     | `AppSetting.ts` | `key`, `value`, `updatedAt`                                                                                         |
+| `Collection`     | `Collection.ts` | `id`, `name`, `description`, `kind` (`'manual' \| 'smart'`), `smartQuery`, timestamps                               |
+| `CollectionItem` | `Collection.ts` | `kind` (`'video' \| 'cut'`), `id`, `position`, `addedAt` — value type from `getItems`                               |
 
 ### Entity Lifecycle (`EntityStatus`)
 
@@ -190,33 +233,37 @@ Operations use `status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'ro
 
 All repository interfaces live in `src/main/domain/repositories/`:
 
-| Interface              | Key Methods                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| `ICreatorRepository`   | `findById`, `findByFolderName`, `findAllActive`, `findPaginated`, `upsert`, `updateStatus`, … |
-| `IVideoRepository`     | `findById`, `findByCreatorId`, `findPaginated`, `upsert`, `updateStatus`, …                   |
-| `ICutRepository`       | `findById`, `findByCreatorId`, `findByTags`, `findPaginated`, `upsert`, `updateStatus`, …     |
-| `ISettingsRepository`  | `get(key)`, `set(key, value)`, `getAll()`                                                     |
-| `IOperationRepository` | `create`, `updateStatus`, `updatePayload`, `findById`, `findByStatus`                         |
-| `IAuditLogRepository`  | `append(entry)`, `findByEntity(type, id)`, `findRecent(limit)`                                |
+| Interface               | Key Methods                                                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `ICreatorRepository`    | `findById`, `findByFolderName`, `findAllActive`, `findPaginated`, `upsert`, `updateStatus`, …                                            |
+| `IVideoRepository`      | `findById`, `findByCreatorId`, `findByTags`, `findPaginated`, `getDistinctTags`, `upsert`, `updateStatus`, …                             |
+| `ICutRepository`        | `findById`, `findByCreatorId`, `findByTags`, `findPaginated`, `getDistinctTags`, `upsert`, `updateStatus`, …                             |
+| `ICollectionRepository` | `findById`, `findAll`, `findPaginated`, `upsert`, `delete`, `getItems`, `addVideo`, `addCut`, `removeVideo`, `removeCut`, `reorderItems` |
+| `ISettingsRepository`   | `get(key)`, `set(key, value)`, `getAll()`                                                                                                |
+| `IOperationRepository`  | `create`, `updateStatus`, `updatePayload`, `findById`, `findByStatus`                                                                    |
+| `IAuditLogRepository`   | `append(entry)`, `findByEntity(type, id)`, `findRecent(limit)`                                                                           |
 
 ## Port Interfaces
 
 All port interfaces live in `src/main/domain/ports/`:
 
-| Port                 | Purpose                                                       |
-| -------------------- | ------------------------------------------------------------- |
-| `IFileSystemReader`  | Read directories, check file existence, read JSON files       |
-| `IFileSystemWriter`  | Write files, create directories, `renameDirectory()`          |
-| `IPathResolver`      | Path joining, extraction — no direct `path` module imports    |
-| `ITransactionScope`  | Wrap operations in a SQLite transaction                       |
-| `INotifier`          | Push events to renderer (`webContents.send`)                  |
-| `IDebouncer`         | Debounce file watcher notifications                           |
-| `INotificationQueue` | Queue file change events for batch processing                 |
-| `IDownloadQueue`     | Concurrency-limited queue for yt-dlp downloads                |
-| `IBinaryResolver`    | Resolve paths to bundled binaries (yt-dlp, ffprobe)           |
-| `IVideoDownloader`   | Download videos and fetch info via yt-dlp                     |
-| `IMediaProbe`        | Extract media metadata via ffprobe                            |
-| `IFileWatcher`       | Start/stop/restart file system watching, `onEvent()` callback |
+| Port                 | Purpose                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `IFileSystemReader`  | Read directories, check file existence, read JSON files                                           |
+| `IFileSystemWriter`  | Write files, create directories, `renameDirectory()`                                              |
+| `IPathResolver`      | Path joining, extraction — no direct `path` module imports                                        |
+| `ITransactionScope`  | Wrap operations in a SQLite transaction (raw `better-sqlite3` `db.transaction()` under the hood)  |
+| `INotifier`          | Push events to renderer (`webContents.send`); `db-updated` carries a `DbUpdateScope[]`            |
+| `IDebouncer`         | Debounce file watcher notifications                                                               |
+| `INotificationQueue` | Queue file change events for batch processing                                                     |
+| `IDownloadQueue`     | Concurrency-limited queue for yt-dlp downloads                                                    |
+| `IBinaryResolver`    | Resolve paths to bundled binaries (yt-dlp, ffprobe)                                               |
+| `IVideoDownloader`   | Download videos and fetch info via yt-dlp                                                         |
+| `IMediaProbe`        | Extract media metadata via ffprobe                                                                |
+| `IFileWatcher`       | Start/stop/restart file system watching, `onEvent()` callback                                     |
+| `IIdGenerator`       | Generate opaque ids (UUID-backed via `NodeIdGenerator`) for collections, downloads, operations    |
+| `IUpdater`           | Auto-update lifecycle (`check`, `download`, `install`, status events). `DisabledUpdater` in dev   |
+| `RootPathRef`        | Mutable holder so `migrate-root` can re-point the protocol handler / downloader without re-wiring |
 
 ## Watcher Suspension (Guard Pattern)
 
@@ -267,6 +314,7 @@ interface AppContainer {
     creator: ICreatorRepository // AuditedCreatorRepository
     video: IVideoRepository // AuditedVideoRepository
     cut: ICutRepository // AuditedCutRepository
+    collection: ICollectionRepository // AuditedCollectionRepository
     settings: ISettingsRepository
     operation: IOperationRepository
     auditLog: IAuditLogRepository
@@ -282,29 +330,63 @@ interface AppContainer {
     videoDownloader
     mediaProbe
     downloadQueue
+    idGenerator
+    updater
   }
   useCases: {
-    reconcile: IReconcileDirectory
-    processNotifications: ProcessFileNotifications // exposed concretely for suspend/resume
-    fetchVideoInfo: IFetchVideoInfo
-    downloadVideo: IDownloadVideo
-    probeMediaFile: IProbeMediaFile
-    recoverOperations: IRecoverOperations
+    // Sync / reconciliation
+    reconcile
+    processNotifications /* concrete for suspend/resume */
+    enrichMedia
+    enrichAllVideos
+    recoverOperations
+    // Downloads / fetch
+    fetchVideoInfo
+    downloadVideo
+    fetchChannelInfo
+    fetchVideoDetail
+    fetchVideoComments
+    probeMediaFile
+    // Filesystem operations
+    migrateRootFolder
+    // Tags + search
+    getAllDistinctTags
+    bulkUpdateTags
+    renameTagGlobally
+    searchAll
+    // Collections
+    createCollection
+    renameCollection
+    deleteCollection
+    addToCollection
+    removeFromCollection
+    reorderCollection
+    getCollectionItems
+    getCollectionById
+    getCollectionsPaginated
+    // Media protocol resolver
+    resolveMediaUrl
   }
-  services: { fileWatcher: IFileWatcher }
+  services: {
+    fileWatcher: IFileWatcher
+    klipMediaProtocol: KlipMediaProtocolHandler
+  }
+  rootPathRef: RootPathRef
   shutdown(): void // stops watcher, cancels debouncer, clears queue, closes DB
 }
 ```
 
 **Wiring pattern:**
 
-1. `initializeDatabase(dbPath)` runs in `index.ts` → `{ raw, db }`
+1. `initializeDatabase(dbPath)` runs in `index.ts` → `{ raw, db }`.
 2. `createAppContainer({ database, defaultRootPath, isDev })` resolves the effective `rootPath` from the `settings` table (persisting the default on first launch) before constructing any path-dependent dependency.
-3. Raw Drizzle repositories: `new SqliteCreatorRepository(db)`, etc.
-4. Audited decorators: `new AuditedCreatorRepository(sqliteCreatorRepo, auditLogRepo, transactionScope)`
-5. Transaction scope: `new SqliteTransactionScope(raw)` (uses raw driver)
-6. Use cases receive interfaces only
-7. `AppConfig { database, defaultRootPath, isDev }` passed in from `index.ts`
+3. `RootPathRef = { value: rootPath }` is constructed and shared by every dependency that needs the live root (downloader, watcher, `KlipMediaProtocolHandler`). `migrate-root` mutates `.value` so consumers re-point without re-wiring.
+4. Raw Drizzle repositories: `new SqliteCreatorRepository(db)`, etc.
+5. Audited decorators: `new AuditedCreatorRepository(sqliteCreatorRepo, auditLogRepo, transactionScope)`.
+6. Transaction scope: `new SqliteTransactionScope(raw)` (uses raw driver).
+7. Use cases receive interfaces only.
+8. `klipMediaProtocol.register()` is called from `index.ts` after `app.whenReady()`; the `protocol.registerSchemesAsPrivileged([{ scheme: 'klip-media', ... }])` call must be made _before_ `whenReady` (Electron requirement) and lives at the top of `src/main/index.ts`.
+9. `AppConfig { database, defaultRootPath, isDev }` passed in from `index.ts`.
 
 ## Path Aliases
 
@@ -333,17 +415,24 @@ src/shared/
 ├── index.ts              # Barrel re-export
 ├── ipc-channels.ts       # IpcChannels constant object (single source of truth for channel names)
 ├── ipc-contract.ts       # IpcContract interface mapping channels → { params, result }
+├── ipc-schemas.ts        # Zod schemas per channel; consumed by createTypedHandler for runtime validation
 ├── types/                # Types that cross the IPC boundary
 │   ├── entity-status.ts  # EntityStatus
 │   ├── pagination.ts     # PaginationParams, PaginatedResult, SortDirection
 │   ├── download.ts       # DownloadStatus, DownloadRequest, DownloadProgress, DownloadResult, VideoInfo
 │   ├── media-probe.ts    # MediaProbeResult
-│   ├── use-case-results.ts # ReconcileResult, DownloadVideoResult
+│   ├── use-case-results.ts  # ReconcileResult, DownloadVideoResult, …
+│   ├── notification-events.ts  # DbUpdateScope, DbUpdatedPayload, UpdaterStatus, etc.
+│   ├── playback.ts       # PlaybackOnNavigate, SETTING_KEYS, isPlaybackOnNavigate
+│   ├── collections.ts    # Create/Rename/Add/Remove/Reorder request types
+│   ├── search.ts         # SearchAllResult, SearchSection
+│   ├── tags.ts           # BulkUpdateTagsRequest, RenameTagRequest, DistinctTag
 │   └── index.ts
-└── dtos/                 # Renderer-facing Data Transfer Objects
+└── dtos/                 # Renderer-facing Data Transfer Objects (paths stripped)
     ├── CreatorDto.ts
     ├── VideoDto.ts
     ├── CutDto.ts
+    ├── CollectionDto.ts  # CollectionDto (with itemCount) + CollectionItemDto discriminated union
     └── index.ts
 ```
 
@@ -363,10 +452,35 @@ All IPC channel names are defined once in `src/shared/ipc-channels.ts` as a `con
 
 1. Add the channel name to `IpcChannels` in `src/shared/ipc-channels.ts`
 2. Add the channel entry to `IpcContract` in `src/shared/ipc-contract.ts`
-3. If new types are needed, add them to `src/shared/types/`
-4. Create the IPC handler in `src/main/interface-adapters/controllers/`
-5. Add the preload method in `src/preload/index.ts` using the channel constant
-6. Add the type declaration in `src/preload/index.d.ts` importing from `@shared/types`
+3. Add a zod schema for the params in `src/shared/ipc-schemas.ts` (used by `createTypedHandler` to reject malformed payloads before they reach the use case)
+4. If new types are needed, add them to `src/shared/types/`
+5. Create the IPC handler in `src/main/interface-adapters/controllers/` via `createTypedHandler`
+6. Add the preload method in `src/preload/index.ts` using the channel constant
+7. Add the type declaration in `src/preload/index.d.ts` importing from `@shared/types`
+
+### Settings Allowlist (`set-setting`)
+
+`SettingsController` only writes keys present in a hard-coded `SETTABLE_KEYS` allowlist. Currently:
+
+- `playbackOnNavigate` — `'floating' | 'pause' | 'stop'`, validated by `isPlaybackOnNavigate` (defined in `src/shared/types/playback.ts`)
+
+`rootPath` is intentionally **excluded** from `SETTABLE_KEYS`. Changing the root requires the `MigrateRootFolder` saga (file moves + DB path rewrites + watcher restart) — a bare value swap would silently desync every entity's `filePath` from disk and re-point the watcher to an empty directory. The renderer must call the `migrate-root` channel instead.
+
+When adding a new user-writable setting, register the key in `SETTING_KEYS` (`src/shared/types/playback.ts`), add it to `SETTABLE_KEYS` in `SettingsController`, and add a `VALUE_VALIDATORS` entry if its values are constrained.
+
+### Targeted Query Invalidation (`DbUpdateScope`)
+
+`webContents.send('db-updated', { scope: DbUpdateScope[] })` carries an explicit list of trees that the renderer should re-fetch. The renderer's `useDbListener` hook maps each scope to a `queryKeys.<entity>.all` invalidation:
+
+| Scope           | What it invalidates                                                           |
+| --------------- | ----------------------------------------------------------------------------- |
+| `'all'`         | Every scoped tree (full reconcile path)                                       |
+| `'creators'`    | `queryKeys.creators.all`                                                      |
+| `'videos'`      | `queryKeys.videos.all` + `queryKeys.collections.all` (item DTOs embed videos) |
+| `'cuts'`        | `queryKeys.cuts.all` + `queryKeys.collections.all` (item DTOs embed cuts)     |
+| `'collections'` | `queryKeys.collections.all`                                                   |
+
+Every batch use case (`BulkUpdateTags`, `RenameTagGlobally`, the collections suite) must emit a single scoped push at the end of its transaction, never per-row.
 
 ## Coding Conventions
 
@@ -508,6 +622,48 @@ tests/
 - `src/main/use-cases/`: 90% lines / 80% branches, enforced per-glob via `coverage.thresholds['src/main/use-cases/**/*.ts']` in `vitest.config.ts`.
 - Excluded from coverage: `src/main/index.ts`, `src/main/composition-root.ts`, barrel `index.ts` files, domain entity interfaces (`src/main/domain/entities/**`), repository interfaces (`src/main/domain/repositories/I*.ts`), port interfaces (`src/main/domain/ports/I*.ts`), pure type-only files (`entity-status.ts`, `file-event.ts`, `notification-events.ts`, `download.ts`, `media-probe.ts`), use-case interfaces (`src/main/use-cases/I*.ts`), IPC controllers (`src/main/interface-adapters/controllers/**`), file-system adapters (`src/main/interface-adapters/file-system/**`), Electron-dependent drivers (`src/main/framework-drivers/electron/**`), file-system drivers (`src/main/framework-drivers/file-system/**`), yt-dlp drivers (`src/main/framework-drivers/yt-dlp/**`), ffprobe drivers (`src/main/framework-drivers/ffprobe/**`), Drizzle schema (`src/main/framework-drivers/database/schema.ts`), Drizzle migrations (`src/main/framework-drivers/database/migrations/**`), `src/shared/**` (DTOs, IPC contract, type-only re-exports), `src/renderer/components/ui/` (auto-generated shadcn), and `src/renderer/src/env.d.ts`.
 
+## Validation Pipeline
+
+The four pre-existing checks (`format:check`, `lint`, `typecheck`, `test`) plus a new boot-smoke step are bundled into single-command lanes for tight loops, pre-push gates, and CI.
+
+### Lanes
+
+| Command              | What it runs                                                                   | Use when                          | Rough duration |
+| -------------------- | ------------------------------------------------------------------------------ | --------------------------------- | -------------- |
+| `npm run check`      | `format:check` → `lint` → `typecheck` → `test` (chained `&&`)                  | Pre-commit / tight feedback loops | ~15–25 s       |
+| `npm run smoke`      | Rebuilds `better-sqlite3` for Electron's ABI, then runs `scripts/smoke-dev.ts` | Verify the app actually boots     | ~30–60 s       |
+| `npm run check:full` | `check && smoke`                                                               | Pre-push, CI, `/ultrareview`      | ~50–90 s       |
+
+Each lane short-circuits on the first failure with a non-zero exit code.
+
+### Boot smoke (`scripts/smoke-dev.ts`)
+
+Spawns `electron-vite dev` directly via `process.execPath` (bypassing the `npm run dev` wrapper to avoid Windows `.cmd` / non-TTY quirks), pipes stdio, and watches for the four ready markers main process logs at startup:
+
+- `[klip] Container initialised`
+- `[klip] IPC controllers registered`
+- `[klip] Initial reconciliation complete`
+- `[klip] File watcher started`
+
+It fails fast on `Unable to load preload script`, `[klip] preload-error`, or unhandled rejections, and times out after 60 s if the markers don't arrive. Smoke catches what unit tests can't — vitest mocks IPC, the database, and the file watcher, so nothing exercises the real composition-root → migration → controller-registration → preload-bridge chain. The recent `module not found: @electron-toolkit/preload` regression slipped past 921 passing tests for exactly this reason.
+
+**Why `npm run rebuild` is part of the smoke script:** `npm run check` runs `npm rebuild better-sqlite3` (via `pretest`), which builds the native binding against the system Node ABI. Electron uses a different ABI, so booting straight after `check` would fail with a `NODE_MODULE_VERSION` mismatch. The smoke script's leading `rebuild` step targets Electron's ABI before launch.
+
+**Watch out for `ELECTRON_RUN_AS_NODE`.** If that env var is set in the parent shell, every Electron launch runs as a bare Node interpreter (no `app` object) and crashes immediately on `electron.app.isPackaged`. The smoke script strips it from the inherited env before spawning. If you spawn Electron from anything else (one-off Bash, a custom script), do the same.
+
+### Renderer log streaming (`is.dev`-gated)
+
+In dev, [src/main/index.ts](src/main/index.ts) attaches two `webContents` listeners on the main `BrowserWindow`:
+
+- `webContents.on('console-message', (details) => …)` — every renderer-side `console.log` / warn / error lands in the `npm run dev` terminal, prefixed with `[renderer:<level>] <sourceId>:<lineNumber>`. Uses the **non-deprecated** `(details: WebContentsConsoleMessageEventParams) => void` overload — Electron 41 emits a deprecation warning for the legacy `(_event, level, message, line, sourceId)` form.
+- `webContents.on('preload-error', (_event, preloadPath, error) => …)` — fires when Electron rejects the preload script, with the underlying error. Without this, preload-load failures (like the recent `module not found: @electron-toolkit/preload`) are effectively invisible from the terminal — they only surface in the renderer DevTools console, which can be filtered or not yet attached.
+
+Both are gated by `is.dev` so production builds ship neither. Don't move them out of the gate.
+
+### Prettier scope
+
+`format:check` runs `prettier --check .` (no `--write`). The auto-generated `src/renderer/src/routeTree.gen.ts` is in `.prettierignore` because TanStack Router rewrites it on every dev build and would otherwise constantly trip the check.
+
 ## CI Pipeline
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
@@ -516,24 +672,28 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 2. `npm run typecheck`
 3. `npm run test:coverage`
 
-Coverage reports are uploaded as artifacts (14-day retention).
+Coverage reports are uploaded as artifacts (14-day retention). The single-command alternative for local pre-push is `npm run check:full`, which extends this with `format:check` and the boot smoke (CI doesn't yet run smoke because spinning up Electron in headless GH runners would need xvfb / a display server — pending separate setup).
 
 ## Key Commands
 
 ```bash
-npm run dev           # Start Electron with HMR (renderer hot-reloads, main restarts)
-npm run build:win     # Typecheck + build + package for Windows (NSIS installer)
-npm run typecheck     # Run both node and web typechecks
-npm run lint          # ESLint (flat config in eslint.config.mjs)
-npm run format        # Prettier
-npm run test          # Run all tests (main + renderer)
-npm run test:watch    # Run tests in watch mode
-npm run test:main     # Run only main-process tests
-npm run test:renderer # Run only renderer tests
-npm run test:coverage # Run all tests with coverage report
-npm run db:generate   # Drizzle Kit — generate migration SQL from schema changes
-npm run db:migrate    # Drizzle Kit — apply pending migrations
-npm run db:studio     # Drizzle Kit — open visual DB browser
+npm run dev            # Start Electron with HMR (renderer hot-reloads, main restarts)
+npm run build:win      # Typecheck + build + package for Windows (NSIS installer)
+npm run typecheck      # Run both node and web typechecks
+npm run lint           # ESLint (flat config in eslint.config.mjs)
+npm run format         # Prettier — write
+npm run format:check   # Prettier — check only (no writes)
+npm run test           # Run all tests (main + renderer)
+npm run test:watch     # Run tests in watch mode
+npm run test:main      # Run only main-process tests
+npm run test:renderer  # Run only renderer tests
+npm run test:coverage  # Run all tests with coverage report
+npm run check          # format:check → lint → typecheck → test (aggregate)
+npm run smoke          # Rebuild for Electron ABI + boot-smoke via scripts/smoke-dev.ts
+npm run check:full     # check + smoke
+npm run db:generate    # Drizzle Kit — generate migration SQL from schema changes
+npm run db:migrate     # Drizzle Kit — apply pending migrations
+npm run db:studio      # Drizzle Kit — open visual DB browser
 ```
 
 `npm run build` runs typecheck first—fix type errors before building. Platform builds (`build:mac`, `build:linux`) call `electron-vite build` directly without typecheck.

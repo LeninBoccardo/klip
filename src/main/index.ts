@@ -53,6 +53,23 @@ function createWindow(): void {
     mainWindow.show()
   })
 
+  // Stream renderer-side console messages and preload-script errors to the
+  // main-process terminal in dev. Without this, renderer logs only show up in
+  // DevTools, which makes preload-load failures (and any pre-DevTools-ready
+  // error) effectively invisible from the npm run dev terminal. Using the
+  // non-deprecated `(details) => …` overload — Electron 41 emits a deprecation
+  // warning for the legacy `(_event, level, message, line, sourceId)` form.
+  if (is.dev) {
+    mainWindow.webContents.on('console-message', (details) => {
+      console.log(
+        `[renderer:${details.level}] ${details.sourceId}:${details.lineNumber} ${details.message}`
+      )
+    })
+    mainWindow.webContents.on('preload-error', (_event, preloadPath, error) => {
+      console.error(`[klip] preload-error at ${preloadPath}:`, error)
+    })
+  }
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }

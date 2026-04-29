@@ -128,9 +128,11 @@ const api = {
 // Electron-41 default). The non-isolated fallback was deleted alongside the
 // `sandbox: true` flip — under sandbox + isolation, `process.contextIsolated`
 // is always true here and the alternate `window.electron = …` path is dead.
-try {
-  contextBridge.exposeInMainWorld('electron', electronAPI)
-  contextBridge.exposeInMainWorld('api', api)
-} catch (error) {
-  console.error(error)
-}
+//
+// No try/catch around exposeInMainWorld: the previous wrapper silently swallowed
+// real preload exceptions and left the renderer with `window.api === undefined`,
+// which then produced opaque "Cannot read properties of undefined" errors at
+// every IPC call site. Letting it throw makes the failure visible in the
+// terminal running `npm run dev`.
+contextBridge.exposeInMainWorld('electron', electronAPI)
+contextBridge.exposeInMainWorld('api', api)

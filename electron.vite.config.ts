@@ -43,6 +43,16 @@ export default defineConfig({
         '@preload': resolve('src/preload'),
         '@shared': resolve('src/shared')
       }
+    },
+    build: {
+      // Sandboxed preload (`sandbox: true`) cannot resolve modules from
+      // node_modules at runtime — Electron's sandbox preload runtime only
+      // exposes a limited set of built-ins. Bundle @electron-toolkit/preload
+      // inline so the require() doesn't fail at startup with
+      //   "module not found: @electron-toolkit/preload"
+      externalizeDeps: {
+        exclude: ['@electron-toolkit/preload']
+      }
     }
   },
   renderer: {

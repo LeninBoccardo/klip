@@ -18,6 +18,12 @@ export function useDbListener(): void {
   const queryClient = useQueryClient()
 
   useEffect(() => {
+    if (!window.api) {
+      // The preload bridge didn't expose `window.api`. Either the preload
+      // script failed to load, or it threw before reaching `exposeInMainWorld`.
+      // Check the terminal running `npm run dev` for the underlying error.
+      throw new Error('Preload bridge missing: window.api is undefined.')
+    }
     const unsubscribe = window.api.onDbUpdated((_event: unknown, data: DbUpdatedPayload) => {
       const scopes = new Set<DbUpdateScope>(data?.scope ?? ['all'])
       const includes = (s: DbUpdateScope): boolean => scopes.has('all') || scopes.has(s)
