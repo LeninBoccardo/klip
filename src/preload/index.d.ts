@@ -22,9 +22,23 @@ import type {
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
   RenameTagGloballyResult,
-  SearchAllResult
+  SearchAllResult,
+  CreateCollectionRequest,
+  RenameCollectionRequest,
+  AddToCollectionRequest,
+  AddToCollectionResult,
+  RemoveFromCollectionRequest,
+  ReorderCollectionRequest
 } from '@shared/types'
-import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from '@shared/dtos'
+import type {
+  CreatorDto,
+  VideoDto,
+  CutDto,
+  AuditEntryDto,
+  OperationDto,
+  CollectionDto,
+  CollectionItemDto
+} from '@shared/dtos'
 
 interface KlipAPI {
   // ── Reconciliation ──
@@ -59,6 +73,17 @@ interface KlipAPI {
   getCutsByTags(tags: string[]): Promise<CutDto[]>
   deleteCut(id: string): Promise<void>
   restoreCut(id: string): Promise<void>
+
+  // ── Collections ──
+  getCollectionsPaginated(params: PaginationParams): Promise<PaginatedResult<CollectionDto>>
+  getCollectionById(id: string): Promise<CollectionDto | null>
+  getCollectionItems(collectionId: string): Promise<CollectionItemDto[]>
+  createCollection(request: CreateCollectionRequest): Promise<CollectionDto>
+  renameCollection(request: RenameCollectionRequest): Promise<CollectionDto>
+  deleteCollection(id: string): Promise<{ deleted: boolean }>
+  addToCollection(request: AddToCollectionRequest): Promise<AddToCollectionResult>
+  removeFromCollection(request: RemoveFromCollectionRequest): Promise<{ removed: boolean }>
+  reorderCollection(request: ReorderCollectionRequest): Promise<{ reordered: number }>
 
   // ── Search ──
   searchAll(query: string, limit?: number): Promise<SearchAllResult>

@@ -6,6 +6,11 @@ export type AuditAction =
   | 'probe_status_changed'
   | 'deleted'
   | 'bulk_path_update'
+  // Collection-item actions: collection-level audit row whose `entityId` is
+  // the collection id and whose `changes` JSON describes the affected item.
+  | 'item_added'
+  | 'item_removed'
+  | 'reordered'
 
 /**
  * Immutable record of a single entity mutation.

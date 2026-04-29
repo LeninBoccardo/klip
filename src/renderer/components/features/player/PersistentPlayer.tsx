@@ -5,7 +5,7 @@ import { usePlayerStore } from '@/hooks/use-player-store'
 import { usePlayerSlot } from './player-slot-ref'
 import { mediaUrl } from '@/lib/format'
 import { Button } from '@ui/button'
-import { Maximize2, X, ExternalLink } from 'lucide-react'
+import { Maximize2, X, ExternalLink, SkipBack, SkipForward } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -28,11 +28,15 @@ const MINI_OFFSET = 24
  */
 export function PersistentPlayer(): React.ReactElement | null {
   const videoId = usePlayerStore((s) => s.videoId)
+  const mediaKind = usePlayerStore((s) => s.mediaKind)
   const title = usePlayerStore((s) => s.title)
   const mode = usePlayerStore((s) => s.mode)
   const setMode = usePlayerStore((s) => s.setMode)
   const stop = usePlayerStore((s) => s.stop)
   const reportTime = usePlayerStore((s) => s.reportTime)
+  const queue = usePlayerStore((s) => s.queue)
+  const next = usePlayerStore((s) => s.next)
+  const previous = usePlayerStore((s) => s.previous)
 
   const slotEl = usePlayerSlot((s) => s.element)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -125,19 +129,45 @@ export function PersistentPlayer(): React.ReactElement | null {
 
   if (!mounted || !videoId) return null
 
-  const src = mediaUrl('video', videoId, 'file')
+  const src = mediaUrl(mediaKind, videoId, 'file')
 
   const handleOpenExternally = async (): Promise<void> => {
     if (!videoId) return
-    const result = await window.api.openMediaExternally('video', videoId)
+    const result = await window.api.openMediaExternally(mediaKind, videoId)
     if (!result.ok) toast.error(result.error ?? 'Failed to open file.')
   }
 
   const handleExpand = (): void => {
     if (!videoId) return
+    // Cuts have no dedicated detail route yet — surface them through their
+    // parent creator's page. The router-state effect on the creator route
+    // will accept a `?cut=…` deep-link in a follow-up.
+    if (mediaKind === 'cut') {
+      const queueItem = queue?.items[queue.index]
+      if (queueItem?.creatorId) {
+        navigate({ to: '/creators/$creatorId', params: { creatorId: queueItem.creatorId } })
+      }
+      setMode('detail')
+      return
+    }
     navigate({ to: '/videos/$videoId', params: { videoId } })
     setMode('detail')
   }
+
+  /**
+   * `onEnded` advances the queue. Reading queue state from the store at the
+   * call site (instead of closing over `queue`) avoids a stale snapshot
+   * inside the long-lived `<video>` element listener.
+   */
+  const handleEnded = (): void => {
+    const current = usePlayerStore.getState()
+    if (!current.queue) return
+    next()
+  }
+
+  const hasQueue = queue !== null
+  const atQueueStart = hasQueue && queue.index === 0
+  const atQueueEnd = hasQueue && queue.index >= queue.items.length - 1
 
   return createPortal(
     <div
@@ -154,18 +184,28 @@ export function PersistentPlayer(): React.ReactElement | null {
       ) : (
         <video
           ref={videoRef}
+          // Force a fresh element when the (kind, id) pair changes so the
+          // browser cleanly tears down the old MediaSource and starts the
+          // next item in the queue without a state-leak race.
+          key={`${mediaKind}:${videoId}`}
           src={src}
           controls={mode === 'detail'}
           autoPlay
           playsInline
           className="h-full w-full bg-black"
           onError={() => setErroredId(videoId)}
+          onEnded={handleEnded}
         />
       )}
 
       {mode === 'mini' && !errored && (
         <MiniOverlay
           title={title}
+          showQueueControls={hasQueue}
+          atQueueStart={atQueueStart}
+          atQueueEnd={atQueueEnd}
+          onPrevious={previous}
+          onNext={next}
           onExpand={handleExpand}
           onClose={stop}
           onOpenExternally={handleOpenExternally}
@@ -178,11 +218,21 @@ export function PersistentPlayer(): React.ReactElement | null {
 
 function MiniOverlay({
   title,
+  showQueueControls,
+  atQueueStart,
+  atQueueEnd,
+  onPrevious,
+  onNext,
   onExpand,
   onClose,
   onOpenExternally
 }: {
   title: string | null
+  showQueueControls: boolean
+  atQueueStart: boolean
+  atQueueEnd: boolean
+  onPrevious: () => void
+  onNext: () => void
   onExpand: () => void
   onClose: () => void
   onOpenExternally: () => void
@@ -190,6 +240,30 @@ function MiniOverlay({
   return (
     <>
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-gradient-to-t from-black/80 to-transparent px-2 pb-1 pt-6">
+        {showQueueControls && (
+          <>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Previous in queue"
+              disabled={atQueueStart}
+              className="size-6 text-white hover:bg-white/10 hover:text-white"
+              onClick={onPrevious}
+            >
+              <SkipBack className="size-3" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Next in queue"
+              disabled={atQueueEnd}
+              className="size-6 text-white hover:bg-white/10 hover:text-white"
+              onClick={onNext}
+            >
+              <SkipForward className="size-3" />
+            </Button>
+          </>
+        )}
         <span className="flex-1 truncate text-xs text-white">{title ?? 'Playing'}</span>
         <Button
           size="icon"

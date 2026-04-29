@@ -42,6 +42,17 @@ export const IpcChannels = {
   // ── Shell ──
   OpenMediaExternally: 'open-media-externally',
 
+  // ── Collections ──
+  CollectionsPaginated: 'collections-paginated',
+  CollectionById: 'collection-by-id',
+  CollectionGetItems: 'collection-get-items',
+  CollectionCreate: 'collection-create',
+  CollectionRename: 'collection-rename',
+  CollectionDelete: 'collection-delete',
+  CollectionAddItem: 'collection-add-item',
+  CollectionRemoveItem: 'collection-remove-item',
+  CollectionReorder: 'collection-reorder',
+
   // ── Tags ──
   GetAllDistinctTags: 'get-all-distinct-tags',
   BulkUpdateTags: 'bulk-update-tags',

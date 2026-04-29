@@ -31,6 +31,9 @@ export function useDbListener(): void {
       if (includes('cuts')) {
         queryClient.invalidateQueries({ queryKey: queryKeys.cuts.all })
       }
+      if (includes('collections')) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.collections.all })
+      }
       // Tag aggregation derives from videos+cuts, so any video/cut/all-scoped
       // push must also refresh the tag distinct-set used by autocomplete and
       // any future tag-management page.
@@ -42,6 +45,11 @@ export function useDbListener(): void {
       // push invalidates the global palette cache to keep results fresh.
       if (includes('creators') || includes('videos') || includes('cuts')) {
         queryClient.invalidateQueries({ queryKey: queryKeys.search.all })
+      }
+      // Collection item DTOs embed video/cut DTOs — refresh items when those
+      // upstream entities change so tombstones re-render with current status.
+      if (includes('videos') || includes('cuts')) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.collections.all })
       }
 
       // Audit log + operations + settings are cross-cutting — refresh on any

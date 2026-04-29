@@ -10,10 +10,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem
 } from '@/components/ui/sidebar'
-import { LayoutGrid, Download, Settings, Clapperboard, Info } from 'lucide-react'
+import { LayoutGrid, Download, Settings, Clapperboard, Info, ListMusic } from 'lucide-react'
 
 const navItems = [
   { label: 'Library', to: '/', icon: LayoutGrid },
+  { label: 'Collections', to: '/collections', icon: ListMusic },
   { label: 'Downloads', to: '/downloads', icon: Download },
   { label: 'Settings', to: '/settings', icon: Settings },
   { label: 'About', to: '/about', icon: Info }

@@ -1,4 +1,9 @@
-import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
+import type {
+  ICreatorRepository,
+  IVideoRepository,
+  ICutRepository,
+  ICollectionRepository
+} from '@domain/repositories'
 import type {
   IOperationRepository,
   IAuditLogRepository,
@@ -36,6 +41,15 @@ import type { IGetAllDistinctTags } from '@use-cases/IGetAllDistinctTags'
 import type { IBulkUpdateTags } from '@use-cases/IBulkUpdateTags'
 import type { IRenameTagGlobally } from '@use-cases/IRenameTagGlobally'
 import type { ISearchAll } from '@use-cases/ISearchAll'
+import type { ICreateCollection } from '@use-cases/ICreateCollection'
+import type { IRenameCollection } from '@use-cases/IRenameCollection'
+import type { IDeleteCollection } from '@use-cases/IDeleteCollection'
+import type { IAddToCollection } from '@use-cases/IAddToCollection'
+import type { IRemoveFromCollection } from '@use-cases/IRemoveFromCollection'
+import type { IReorderCollection } from '@use-cases/IReorderCollection'
+import type { IGetCollectionItems } from '@use-cases/IGetCollectionItems'
+import type { IGetCollectionById } from '@use-cases/IGetCollectionById'
+import type { IGetCollectionsPaginated } from '@use-cases/IGetCollectionsPaginated'
 import { type DatabaseInstance, SqliteTransactionScope } from './framework-drivers/database'
 import {
   SqliteCreatorRepository,
@@ -44,9 +58,11 @@ import {
   SqliteSettingsRepository,
   SqliteOperationRepository,
   SqliteAuditLogRepository,
+  SqliteCollectionRepository,
   AuditedCreatorRepository,
   AuditedVideoRepository,
-  AuditedCutRepository
+  AuditedCutRepository,
+  AuditedCollectionRepository
 } from './interface-adapters/repositories'
 import {
   NodeFileSystemReader,
@@ -83,6 +99,15 @@ import { GetAllDistinctTags } from '@use-cases/GetAllDistinctTags'
 import { BulkUpdateTags } from '@use-cases/BulkUpdateTags'
 import { RenameTagGlobally } from '@use-cases/RenameTagGlobally'
 import { SearchAll } from '@use-cases/SearchAll'
+import { CreateCollection } from '@use-cases/CreateCollection'
+import { RenameCollection } from '@use-cases/RenameCollection'
+import { DeleteCollection } from '@use-cases/DeleteCollection'
+import { AddToCollection } from '@use-cases/AddToCollection'
+import { RemoveFromCollection } from '@use-cases/RemoveFromCollection'
+import { ReorderCollection } from '@use-cases/ReorderCollection'
+import { GetCollectionItems } from '@use-cases/GetCollectionItems'
+import { GetCollectionById } from '@use-cases/GetCollectionById'
+import { GetCollectionsPaginated } from '@use-cases/GetCollectionsPaginated'
 
 /**
  * Application dependency container.
@@ -94,6 +119,7 @@ export interface AppContainer {
     creator: ICreatorRepository
     video: IVideoRepository
     cut: ICutRepository
+    collection: ICollectionRepository
     settings: ISettingsRepository
     operation: IOperationRepository
     auditLog: IAuditLogRepository
@@ -130,6 +156,15 @@ export interface AppContainer {
     bulkUpdateTags: IBulkUpdateTags
     renameTagGlobally: IRenameTagGlobally
     searchAll: ISearchAll
+    createCollection: ICreateCollection
+    renameCollection: IRenameCollection
+    deleteCollection: IDeleteCollection
+    addToCollection: IAddToCollection
+    removeFromCollection: IRemoveFromCollection
+    reorderCollection: IReorderCollection
+    getCollectionItems: IGetCollectionItems
+    getCollectionById: IGetCollectionById
+    getCollectionsPaginated: IGetCollectionsPaginated
   }
   services: {
     fileWatcher: IFileWatcher
@@ -190,6 +225,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const sqliteCreatorRepo = new SqliteCreatorRepository(database.db)
   const sqliteVideoRepo = new SqliteVideoRepository(database.db)
   const sqliteCutRepo = new SqliteCutRepository(database.db)
+  const sqliteCollectionRepo = new SqliteCollectionRepository(database.db)
   const operationRepo = new SqliteOperationRepository(database.db)
   const auditLogRepo = new SqliteAuditLogRepository(database.db)
 
@@ -201,6 +237,11 @@ export function createAppContainer(config: AppConfig): AppContainer {
   )
   const videoRepo = new AuditedVideoRepository(sqliteVideoRepo, auditLogRepo, transactionScope)
   const cutRepo = new AuditedCutRepository(sqliteCutRepo, auditLogRepo, transactionScope)
+  const collectionRepo = new AuditedCollectionRepository(
+    sqliteCollectionRepo,
+    auditLogRepo,
+    transactionScope
+  )
 
   // ── Use cases ──
   const reconcile = new ReconcileDirectory(
@@ -276,6 +317,27 @@ export function createAppContainer(config: AppConfig): AppContainer {
   // tag aggregator so the palette stays consistent with the rest of the UI.
   const searchAll = new SearchAll(creatorRepo, videoRepo, cutRepo, getAllDistinctTags)
 
+  // ── Collections / playlists use cases ──
+  // Each mutation use case fires a `db-updated` push with `scope: ['collections']`
+  // so the renderer's targeted query invalidation refreshes only the collections
+  // tree. AddToCollection / ReorderCollection wrap their multi-step writes in
+  // `transactionScope.run()` to maintain the unified-position invariant.
+  const createCollection = new CreateCollection(collectionRepo, idGenerator, notifier)
+  const renameCollection = new RenameCollection(collectionRepo, notifier)
+  const deleteCollection = new DeleteCollection(collectionRepo, notifier)
+  const addToCollection = new AddToCollection(
+    collectionRepo,
+    videoRepo,
+    cutRepo,
+    transactionScope,
+    notifier
+  )
+  const removeFromCollection = new RemoveFromCollection(collectionRepo, notifier)
+  const reorderCollection = new ReorderCollection(collectionRepo, transactionScope, notifier)
+  const getCollectionItems = new GetCollectionItems(collectionRepo, videoRepo, cutRepo)
+  const getCollectionById = new GetCollectionById(collectionRepo)
+  const getCollectionsPaginated = new GetCollectionsPaginated(collectionRepo)
+
   // ── Media protocol (entity-keyed klip-media:// resolver + handler) ──
   // The renderer references local media via klip-media://<kind>/<id>/<asset>
   // and never holds raw filesystem paths. ResolveMediaUrl maps the entity ref
@@ -307,6 +369,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
       creator: creatorRepo,
       video: videoRepo,
       cut: cutRepo,
+      collection: collectionRepo,
       settings: settingsRepo,
       operation: operationRepo,
       auditLog: auditLogRepo
@@ -342,7 +405,16 @@ export function createAppContainer(config: AppConfig): AppContainer {
       getAllDistinctTags,
       bulkUpdateTags,
       renameTagGlobally,
-      searchAll
+      searchAll,
+      createCollection,
+      renameCollection,
+      deleteCollection,
+      addToCollection,
+      removeFromCollection,
+      reorderCollection,
+      getCollectionItems,
+      getCollectionById,
+      getCollectionsPaginated
     },
     services: {
       fileWatcher,

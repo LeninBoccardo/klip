@@ -44,5 +44,11 @@ export const queryKeys = {
   search: {
     all: ['search'] as const,
     query: (query: string, limit: number) => ['search', 'all', query, limit] as const
+  },
+  collections: {
+    all: ['collections'] as const,
+    list: (params: PaginationParams) => ['collections', 'list', params] as const,
+    detail: (id: string) => ['collections', 'detail', id] as const,
+    items: (id: string) => ['collections', 'items', id] as const
   }
 } as const

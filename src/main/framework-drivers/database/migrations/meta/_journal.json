@@ -36,6 +36,13 @@
       "when": 1777372986169,
       "tag": "0004_good_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1777424095514,
+      "tag": "0005_square_inhumans",
+      "breakpoints": true
     }
   ]
 }

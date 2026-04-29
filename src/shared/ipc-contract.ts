@@ -21,9 +21,23 @@ import type {
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
   RenameTagGloballyResult,
-  SearchAllResult
+  SearchAllResult,
+  CreateCollectionRequest,
+  RenameCollectionRequest,
+  AddToCollectionRequest,
+  AddToCollectionResult,
+  RemoveFromCollectionRequest,
+  ReorderCollectionRequest
 } from './types'
-import type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
+import type {
+  CreatorDto,
+  VideoDto,
+  CutDto,
+  AuditEntryDto,
+  OperationDto,
+  CollectionDto,
+  CollectionItemDto
+} from './dtos'
 
 /**
  * Typed map of every IPC channel to its parameter tuple and return type.
@@ -91,6 +105,29 @@ export interface IpcContract {
   'open-media-externally': {
     params: [kind: 'video' | 'cut', id: string]
     result: { ok: boolean; error?: string }
+  }
+
+  // ── Collections ──
+  'collections-paginated': {
+    params: [params: PaginationParams]
+    result: PaginatedResult<CollectionDto>
+  }
+  'collection-by-id': { params: [id: string]; result: CollectionDto | null }
+  'collection-get-items': { params: [collectionId: string]; result: CollectionItemDto[] }
+  'collection-create': { params: [request: CreateCollectionRequest]; result: CollectionDto }
+  'collection-rename': { params: [request: RenameCollectionRequest]; result: CollectionDto }
+  'collection-delete': { params: [id: string]; result: { deleted: boolean } }
+  'collection-add-item': {
+    params: [request: AddToCollectionRequest]
+    result: AddToCollectionResult
+  }
+  'collection-remove-item': {
+    params: [request: RemoveFromCollectionRequest]
+    result: { removed: boolean }
+  }
+  'collection-reorder': {
+    params: [request: ReorderCollectionRequest]
+    result: { reordered: number }
   }
 
   // ── Tags ──

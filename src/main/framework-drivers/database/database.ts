@@ -146,6 +146,38 @@ function pushSchema(db: AppDatabase): void {
     )
   `)
 
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS collections (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      kind TEXT NOT NULL DEFAULT 'manual',
+      smart_query TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS collection_videos (
+      collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+      video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      added_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (collection_id, video_id)
+    )
+  `)
+
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS collection_cuts (
+      collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+      cut_id TEXT NOT NULL REFERENCES cuts(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      added_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (collection_id, cut_id)
+    )
+  `)
+
   // Indexes
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_yt_channel_id ON creators(youtube_channel_id)`)
@@ -162,4 +194,11 @@ function pushSchema(db: AppDatabase): void {
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_operations_status ON operations(status)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at)`)
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_collections_updated_at ON collections(updated_at)`)
+  db.run(
+    sql`CREATE INDEX IF NOT EXISTS idx_collection_videos_position ON collection_videos(collection_id, position)`
+  )
+  db.run(
+    sql`CREATE INDEX IF NOT EXISTS idx_collection_cuts_position ON collection_cuts(collection_id, position)`
+  )
 }

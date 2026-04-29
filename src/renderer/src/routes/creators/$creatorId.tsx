@@ -20,6 +20,8 @@ import { Button } from '@ui/button'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Film, Scissors, CheckSquare, Square } from 'lucide-react'
 import { toast } from 'sonner'
+import { AddToCollectionDialog } from '@components/features/collections/AddToCollectionDialog'
+import type { CollectionItemKind } from '@shared/types'
 
 export const Route = createFileRoute('/creators/$creatorId')({
   component: CreatorDetailPage
@@ -74,6 +76,11 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
   const [page, setPage] = useState(1)
   const [selectMode, setSelectMode] = useState(false)
   const selection = useMultiSelect()
+  const [addTarget, setAddTarget] = useState<{
+    kind: CollectionItemKind
+    id: string
+    title: string
+  } | null>(null)
   const { data, isLoading } = useVideosPaginated({ page, pageSize: 20, creatorId })
   const deleteVideo = useDeleteVideo()
   const restoreVideo = useRestoreVideo()
@@ -174,6 +181,9 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
             <EntityContextMenu
               key={video.id}
               status={video.status}
+              onAddToCollection={() =>
+                setAddTarget({ kind: 'video', id: video.id, title: video.title })
+              }
               onDelete={() =>
                 deleteVideo.mutate(video.id, {
                   onSuccess: () => toast.success(`"${video.title}" deleted`),
@@ -200,6 +210,14 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
       )}
 
       <PaginationControls page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+
+      <AddToCollectionDialog
+        open={addTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setAddTarget(null)
+        }}
+        entity={addTarget}
+      />
     </div>
   )
 }
@@ -208,6 +226,11 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
   const [page, setPage] = useState(1)
   const [selectMode, setSelectMode] = useState(false)
   const selection = useMultiSelect()
+  const [addTarget, setAddTarget] = useState<{
+    kind: CollectionItemKind
+    id: string
+    title: string
+  } | null>(null)
   const { data, isLoading } = useCutsPaginated({ page, pageSize: 20, creatorId })
   const deleteCut = useDeleteCut()
   const restoreCut = useRestoreCut()
@@ -303,6 +326,7 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
             <EntityContextMenu
               key={cut.id}
               status={cut.status}
+              onAddToCollection={() => setAddTarget({ kind: 'cut', id: cut.id, title: cut.title })}
               onDelete={() =>
                 deleteCut.mutate(cut.id, {
                   onSuccess: () => toast.success(`"${cut.title}" deleted`),
@@ -329,6 +353,14 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
       )}
 
       <PaginationControls page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+
+      <AddToCollectionDialog
+        open={addTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setAddTarget(null)
+        }}
+        entity={addTarget}
+      />
     </div>
   )
 }

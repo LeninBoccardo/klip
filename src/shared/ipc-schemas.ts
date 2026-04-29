@@ -95,6 +95,56 @@ export const ipcSchemas = {
   'delete-cut': z.tuple([z.string()]),
   'restore-cut': z.tuple([z.string()]),
 
+  // ── Collections ──
+  // Caps mirror the bulk-tag precedent: `name` ≤ 200 chars (UI input limit
+  // is 100), `description` ≤ 5000, item arrays ≤ 5000 elements (above any
+  // realistic playlist size). XSS-driven payloads that exceed these reject
+  // before reaching the use case.
+  'collections-paginated': z.tuple([paginationParamsSchema]),
+  'collection-by-id': z.tuple([z.string().min(1)]),
+  'collection-get-items': z.tuple([z.string().min(1)]),
+  'collection-create': z.tuple([
+    z.object({
+      name: z.string().min(1).max(200),
+      description: z.string().max(5000).nullish()
+    })
+  ]),
+  'collection-rename': z.tuple([
+    z.object({
+      id: z.string().min(1),
+      name: z.string().min(1).max(200),
+      description: z.string().max(5000).nullish()
+    })
+  ]),
+  'collection-delete': z.tuple([z.string().min(1)]),
+  'collection-add-item': z.tuple([
+    z.object({
+      collectionId: z.string().min(1),
+      kind: z.enum(['video', 'cut']),
+      id: z.string().min(1)
+    })
+  ]),
+  'collection-remove-item': z.tuple([
+    z.object({
+      collectionId: z.string().min(1),
+      kind: z.enum(['video', 'cut']),
+      id: z.string().min(1)
+    })
+  ]),
+  'collection-reorder': z.tuple([
+    z.object({
+      collectionId: z.string().min(1),
+      items: z
+        .array(
+          z.object({
+            kind: z.enum(['video', 'cut']),
+            id: z.string().min(1)
+          })
+        )
+        .max(5000)
+    })
+  ]),
+
   // ── Search ──
   // Optional `limit` passes through; an XSS-driven payload that drops it can't
   // exhaust the use case (default and per-surface caps applied there).

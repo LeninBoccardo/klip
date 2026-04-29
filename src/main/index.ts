@@ -11,6 +11,7 @@ import { registerCutController } from './interface-adapters/controllers/CutContr
 import { registerTagController } from './interface-adapters/controllers/TagController'
 import { registerSearchController } from './interface-adapters/controllers/SearchController'
 import { registerShellController } from './interface-adapters/controllers/ShellController'
+import { registerCollectionController } from './interface-adapters/controllers/CollectionController'
 import { registerSettingsController } from './interface-adapters/controllers/SettingsController'
 import { registerAuditLogController } from './interface-adapters/controllers/AuditLogController'
 import { registerOperationController } from './interface-adapters/controllers/OperationController'
@@ -125,6 +126,17 @@ app.whenReady().then(() => {
   )
   registerSearchController(container.useCases.searchAll)
   registerShellController(container.useCases.resolveMediaUrl)
+  registerCollectionController({
+    create: container.useCases.createCollection,
+    rename: container.useCases.renameCollection,
+    delete: container.useCases.deleteCollection,
+    addItem: container.useCases.addToCollection,
+    removeItem: container.useCases.removeFromCollection,
+    reorder: container.useCases.reorderCollection,
+    getItems: container.useCases.getCollectionItems,
+    getById: container.useCases.getCollectionById,
+    getPaginated: container.useCases.getCollectionsPaginated
+  })
   registerSettingsController(container.repositories.settings, container.useCases.migrateRootFolder)
   registerAuditLogController(container.repositories.auditLog)
   registerOperationController(container.repositories.operation)

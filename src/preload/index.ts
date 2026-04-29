@@ -45,6 +45,17 @@ const api = {
   deleteCut: createTypedInvoker('delete-cut'),
   restoreCut: createTypedInvoker('restore-cut'),
 
+  // ── Collections ──
+  getCollectionsPaginated: createTypedInvoker('collections-paginated'),
+  getCollectionById: createTypedInvoker('collection-by-id'),
+  getCollectionItems: createTypedInvoker('collection-get-items'),
+  createCollection: createTypedInvoker('collection-create'),
+  renameCollection: createTypedInvoker('collection-rename'),
+  deleteCollection: createTypedInvoker('collection-delete'),
+  addToCollection: createTypedInvoker('collection-add-item'),
+  removeFromCollection: createTypedInvoker('collection-remove-item'),
+  reorderCollection: createTypedInvoker('collection-reorder'),
+
   // ── Search ──
   searchAll: createTypedInvoker('search-all'),
 

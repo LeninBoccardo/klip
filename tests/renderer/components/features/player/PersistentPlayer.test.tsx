@@ -8,9 +8,15 @@ import { usePlayerStore } from '@/hooks/use-player-store'
 // jsdom does not implement ResizeObserver — provide a no-op shim so the
 // detail-mode positioning effect can run without throwing.
 class ResizeObserverStub {
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
+  observe(): void {
+    // intentionally empty — jsdom shim
+  }
+  unobserve(): void {
+    // intentionally empty — jsdom shim
+  }
+  disconnect(): void {
+    // intentionally empty — jsdom shim
+  }
 }
 ;(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub
 

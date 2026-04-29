@@ -39,6 +39,15 @@ export type {
 } from './tags'
 export type { DbUpdateScope, DbUpdatedPayload } from './notification-events'
 export type { SearchAllResult } from './search'
+export type {
+  CollectionItemKind,
+  CreateCollectionRequest,
+  RenameCollectionRequest,
+  AddToCollectionRequest,
+  RemoveFromCollectionRequest,
+  ReorderCollectionRequest,
+  AddToCollectionResult
+} from './collections'
 export type { PlaybackOnNavigate } from './playback'
 export {
   PLAYBACK_ON_NAVIGATE_VALUES,
