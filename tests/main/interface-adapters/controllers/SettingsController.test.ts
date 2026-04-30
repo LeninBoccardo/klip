@@ -118,6 +118,42 @@ describe('SettingsController', () => {
     expect(settingsRepo.set).not.toHaveBeenCalled()
   })
 
+  it('"set-setting" allows theme with each valid value', async () => {
+    const { settingsRepo, migrateRootFolder } = makeMocks()
+    registerSettingsController(settingsRepo, migrateRootFolder)
+
+    for (const value of ['light', 'dark', 'system']) {
+      await invoke('set-setting', 'theme', value)
+      expect(settingsRepo.set).toHaveBeenCalledWith('theme', value)
+    }
+  })
+
+  it('"set-setting" rejects an out-of-range theme value', async () => {
+    const { settingsRepo, migrateRootFolder } = makeMocks()
+    registerSettingsController(settingsRepo, migrateRootFolder)
+
+    await expect(invoke('set-setting', 'theme', 'sepia')).rejects.toThrow(/invalid/)
+    expect(settingsRepo.set).not.toHaveBeenCalled()
+  })
+
+  it('"set-setting" allows language with each supported locale', async () => {
+    const { settingsRepo, migrateRootFolder } = makeMocks()
+    registerSettingsController(settingsRepo, migrateRootFolder)
+
+    for (const value of ['en', 'pt-BR', 'es']) {
+      await invoke('set-setting', 'language', value)
+      expect(settingsRepo.set).toHaveBeenCalledWith('language', value)
+    }
+  })
+
+  it('"set-setting" rejects an unsupported language', async () => {
+    const { settingsRepo, migrateRootFolder } = makeMocks()
+    registerSettingsController(settingsRepo, migrateRootFolder)
+
+    await expect(invoke('set-setting', 'language', 'fr')).rejects.toThrow(/invalid/)
+    expect(settingsRepo.set).not.toHaveBeenCalled()
+  })
+
   it('"migrate-root" calls migrateRootFolder.execute with the new path', async () => {
     const { settingsRepo, migrateRootFolder } = makeMocks()
     registerSettingsController(settingsRepo, migrateRootFolder)

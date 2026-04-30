@@ -1,7 +1,7 @@
 import { createRootRoute, Outlet, useMatches, Link } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@components/theme-provider'
+import { ThemeProvider } from 'next-themes'
 import { TooltipProvider } from '@ui/tooltip'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@ui/sidebar'
 import { Toaster } from '@ui/sonner'
@@ -19,11 +19,14 @@ import { useDbListener } from '@/hooks/use-db-listener'
 import { useDownloadProgressListener } from '@/hooks/use-downloads'
 import { useUpdaterStatus, useInstallUpdate } from '@/hooks/use-updater'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppSidebar } from '@components/features/layout/AppSidebar'
+import { ThemeToggle } from '@components/features/layout/ThemeToggle'
 import { BlockingOperationDialog } from '@/components/shared'
 import { CommandPalette } from '@/components/features/search/CommandPalette'
 import { PersistentPlayer } from '@/components/features/player/PersistentPlayer'
+import { PreferencesBootstrap } from '@components/PreferencesBootstrap'
 import { usePlaybackSettingMirror } from '@/hooks/use-playback-setting'
 import { Button } from '@ui/button'
 import { Search } from 'lucide-react'
@@ -51,6 +54,7 @@ function isTextInputActive(): boolean {
 }
 
 function CommandPaletteController(): React.ReactElement {
+  const { t } = useTranslation('navigation')
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -79,10 +83,10 @@ function CommandPaletteController(): React.ReactElement {
         size="sm"
         onClick={() => setOpen(true)}
         className="ml-auto gap-2 text-muted-foreground"
-        aria-label="Open search palette"
+        aria-label={t('openSearchPalette')}
       >
         <Search className="size-4" />
-        <span className="hidden sm:inline">Search</span>
+        <span className="hidden sm:inline">{t('search')}</span>
         <kbd className="ml-2 hidden rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline">
           Ctrl K
         </kbd>
@@ -133,28 +137,33 @@ function UpdaterToastWatcher(): null {
   return null
 }
 
-/** Map route paths to display labels for breadcrumbs */
-const routeLabels: Record<string, string> = {
-  '/': 'Library',
-  '/downloads': 'Downloads',
-  '/settings': 'Settings',
-  '/about': 'About'
+/**
+ * Map route paths to navigation translation keys for breadcrumbs. Add new
+ * routes here when introducing top-level pages.
+ */
+const ROUTE_KEYS: Record<string, 'library' | 'collections' | 'downloads' | 'settings' | 'about'> = {
+  '/': 'library',
+  '/collections': 'collections',
+  '/downloads': 'downloads',
+  '/settings': 'settings',
+  '/about': 'about'
 }
 
 function AppBreadcrumb(): React.ReactElement | null {
+  const { t } = useTranslation('navigation')
   const matches = useMatches()
 
   // Build breadcrumb segments from matched routes (skip root)
   const segments = matches
     .filter((m) => m.id !== '__root__')
-    .map((m) => ({
-      path: m.pathname,
-      label:
-        routeLabels[m.pathname] ||
-        // For dynamic routes like /creators/$creatorId, show the param
-        m.pathname.split('/').pop() ||
-        ''
-    }))
+    .map((m) => {
+      const key = ROUTE_KEYS[m.pathname]
+      const label = key
+        ? t(key)
+        : // For dynamic routes like /creators/$creatorId, show the param
+          m.pathname.split('/').pop() || ''
+      return { path: m.pathname, label }
+    })
     .filter((s) => s.label)
 
   if (segments.length === 0) return null
@@ -184,7 +193,8 @@ function AppBreadcrumb(): React.ReactElement | null {
 
 const RootLayout = (): React.ReactElement => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="klip-theme">
+      <PreferencesBootstrap />
       <TooltipProvider>
         <SidebarProvider>
           <AppSidebar />
@@ -194,6 +204,7 @@ const RootLayout = (): React.ReactElement => (
               <Separator orientation="vertical" className="mr-2 h-4" />
               <AppBreadcrumb />
               <CommandPaletteController />
+              <ThemeToggle />
             </header>
             <div className="flex-1 overflow-hidden">
               <Outlet />

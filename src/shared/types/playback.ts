@@ -21,10 +21,19 @@ export const PLAYBACK_ON_NAVIGATE_VALUES = [
 
 export const DEFAULT_PLAYBACK_ON_NAVIGATE: PlaybackOnNavigate = 'floating'
 
-/** Setting key constants — keeps renderer + main + tests in sync. */
+/**
+ * Setting key constants — keeps renderer + main + tests in sync.
+ *
+ * Co-located here for historical reasons (this file pre-dates the broader
+ * preference surface). All persisted preferences register their key here;
+ * type definitions and validators live in their own module
+ * (`preferences.ts` for theme/language, this file for `playbackOnNavigate`).
+ */
 export const SETTING_KEYS = {
   rootPath: 'rootPath',
-  playbackOnNavigate: 'playbackOnNavigate'
+  playbackOnNavigate: 'playbackOnNavigate',
+  theme: 'theme',
+  language: 'language'
 } as const
 
 export function isPlaybackOnNavigate(value: unknown): value is PlaybackOnNavigate {

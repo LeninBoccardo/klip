@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   CommandDialog,
   CommandInput,
@@ -40,6 +41,7 @@ export function CommandPalette({
   open: boolean
   onOpenChange: (next: boolean) => void
 }): React.ReactElement {
+  const { t } = useTranslation('search')
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const search = useSearchAll(query)
@@ -86,7 +88,7 @@ export function CommandPalette({
   }
 
   const handleTagSelect = (tag: string): void => {
-    toast.info(`Tag filter coming soon: ${tag}`)
+    toast.info(t('tagFilterToast', { tag }))
     close()
   }
 
@@ -99,24 +101,18 @@ export function CommandPalette({
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Search"
-      description="Search creators, videos, cuts, and tags."
+      title={t('title')}
+      description={t('description')}
     >
       {/* `shouldFilter={false}` — the server-side query already filtered, and
           cmdk's fuzzy reranker would otherwise discard partial matches the
           user expects to see (e.g. case-insensitive substring hits). */}
-      <CommandInput
-        value={query}
-        onValueChange={setQuery}
-        placeholder="Search creators, videos, cuts, tags…"
-      />
+      <CommandInput value={query} onValueChange={setQuery} placeholder={t('placeholder')} />
       <CommandList>
-        {showRecents && recents.length === 0 && (
-          <CommandEmpty>Type to search across your library.</CommandEmpty>
-        )}
+        {showRecents && recents.length === 0 && <CommandEmpty>{t('empty.initial')}</CommandEmpty>}
 
         {showRecents && recents.length > 0 && (
-          <CommandGroup heading="Recent">
+          <CommandGroup heading={t('groups.recent')}>
             {recents.map((r) => (
               <CommandItem
                 key={`${r.kind}:${r.id}`}
@@ -125,7 +121,7 @@ export function CommandPalette({
               >
                 <RecentIcon kind={r.kind} />
                 <span className="truncate">{r.label}</span>
-                <CommandShortcut className="capitalize">{r.kind}</CommandShortcut>
+                <CommandShortcut className="capitalize">{t(`kinds.${r.kind}`)}</CommandShortcut>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -134,20 +130,20 @@ export function CommandPalette({
         {!showRecents && isLoading && (
           <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Searching…
+            {t('loading')}
           </div>
         )}
 
         {!showRecents && !isLoading && search.isError && (
-          <CommandEmpty>Search failed. Try again.</CommandEmpty>
+          <CommandEmpty>{t('empty.error')}</CommandEmpty>
         )}
 
         {!showRecents && !isLoading && data && isEmpty(data) && (
-          <CommandEmpty>No results for &ldquo;{trimmed}&rdquo;.</CommandEmpty>
+          <CommandEmpty>{t('empty.noResults', { query: trimmed })}</CommandEmpty>
         )}
 
         {!showRecents && data && data.creators.length > 0 && (
-          <CommandGroup heading="Creators">
+          <CommandGroup heading={t('groups.creators')}>
             {data.creators.map((c) => (
               <CommandItem
                 key={`creator:${c.id}`}
@@ -164,7 +160,7 @@ export function CommandPalette({
         {!showRecents && data && data.videos.length > 0 && (
           <>
             <CommandSeparator />
-            <CommandGroup heading="Videos">
+            <CommandGroup heading={t('groups.videos')}>
               {data.videos.map((v) => (
                 <CommandItem
                   key={`video:${v.id}`}
@@ -182,7 +178,7 @@ export function CommandPalette({
         {!showRecents && data && data.cuts.length > 0 && (
           <>
             <CommandSeparator />
-            <CommandGroup heading="Cuts">
+            <CommandGroup heading={t('groups.cuts')}>
               {data.cuts.map((cut) => (
                 <CommandItem
                   key={`cut:${cut.id}`}
@@ -200,18 +196,18 @@ export function CommandPalette({
         {!showRecents && data && data.tags.length > 0 && (
           <>
             <CommandSeparator />
-            <CommandGroup heading="Tags">
-              {data.tags.map((t) => (
+            <CommandGroup heading={t('groups.tags')}>
+              {data.tags.map((tag) => (
                 <CommandItem
-                  key={`tag:${t.tag}`}
-                  value={`tag-${t.tag}`}
-                  onSelect={() => handleTagSelect(t.tag)}
+                  key={`tag:${tag.tag}`}
+                  value={`tag-${tag.tag}`}
+                  onSelect={() => handleTagSelect(tag.tag)}
                 >
                   <Tag />
-                  <span className="truncate">{t.tag}</span>
+                  <span className="truncate">{tag.tag}</span>
                   <CommandShortcut>
                     <Badge variant="outline" className="ml-2 font-normal">
-                      {t.videoCount + t.cutCount}
+                      {tag.videoCount + tag.cutCount}
                     </Badge>
                   </CommandShortcut>
                 </CommandItem>

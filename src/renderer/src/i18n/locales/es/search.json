@@ -1,0 +1,25 @@
+{
+  "title": "Buscar",
+  "description": "Busca creadores, videos, cortes y etiquetas.",
+  "placeholder": "Buscar creadores, videos, cortes, etiquetas…",
+  "empty": {
+    "initial": "Escribe para buscar en tu biblioteca.",
+    "error": "La búsqueda falló. Inténtalo de nuevo.",
+    "noResults": "Sin resultados para “{{query}}”."
+  },
+  "loading": "Buscando…",
+  "groups": {
+    "recent": "Recientes",
+    "creators": "Creadores",
+    "videos": "Videos",
+    "cuts": "Cortes",
+    "tags": "Etiquetas"
+  },
+  "kinds": {
+    "creator": "creador",
+    "video": "video",
+    "cut": "corte",
+    "tag": "etiqueta"
+  },
+  "tagFilterToast": "Filtro de etiquetas próximamente: {{tag}}"
+}

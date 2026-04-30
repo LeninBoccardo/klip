@@ -1,7 +1,7 @@
 import { dialog, BrowserWindow } from 'electron'
 import type { ISettingsRepository } from '@domain/repositories'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
-import { isPlaybackOnNavigate, SETTING_KEYS } from '@shared/types'
+import { isPlaybackOnNavigate, isTheme, isLanguage, SETTING_KEYS } from '@shared/types'
 import { createTypedHandler } from './create-typed-handler'
 
 /**
@@ -15,7 +15,11 @@ import { createTypedHandler } from './create-typed-handler'
  *
  * Add new keys here as they are introduced.
  */
-const SETTABLE_KEYS = new Set<string>([SETTING_KEYS.playbackOnNavigate])
+const SETTABLE_KEYS = new Set<string>([
+  SETTING_KEYS.playbackOnNavigate,
+  SETTING_KEYS.theme,
+  SETTING_KEYS.language
+])
 
 /**
  * Per-key value validators for keys that have constrained ranges. Keys not
@@ -24,7 +28,9 @@ const SETTABLE_KEYS = new Set<string>([SETTING_KEYS.playbackOnNavigate])
  * the IPC schema's "no malformed payloads reach the use case" invariant.
  */
 const VALUE_VALIDATORS: Record<string, (value: string) => boolean> = {
-  [SETTING_KEYS.playbackOnNavigate]: isPlaybackOnNavigate
+  [SETTING_KEYS.playbackOnNavigate]: isPlaybackOnNavigate,
+  [SETTING_KEYS.theme]: isTheme,
+  [SETTING_KEYS.language]: isLanguage
 }
 
 /**

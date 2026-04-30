@@ -1,0 +1,72 @@
+{
+  "page": {
+    "title": "Settings",
+    "description": "Application configuration and maintenance"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "description": "Choose how Klip looks. \"System\" follows your operating system setting.",
+    "options": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "toggleAria": "Toggle theme"
+  },
+  "language": {
+    "title": "Language",
+    "description": "The language used across the Klip interface.",
+    "options": {
+      "en": "English",
+      "pt-BR": "Português (Brasil)",
+      "es": "Español"
+    },
+    "selectAria": "Select language"
+  },
+  "storage": {
+    "title": "Storage",
+    "description": "Where Klip stores your media files on disk."
+  },
+  "maintenance": {
+    "title": "Maintenance",
+    "description": "Reconcile the database index with files on disk."
+  },
+  "metadata": {
+    "title": "Metadata Enrichment",
+    "description": "Fetch extended metadata (likes, comments, transcripts) for indexed videos."
+  },
+  "playback": {
+    "title": "Playback",
+    "description": "What happens to the player when you navigate away from a video.",
+    "options": {
+      "floating": {
+        "label": "Float in mini-player",
+        "description": "Keep playing in a floating window in the bottom-right corner."
+      },
+      "pause": {
+        "label": "Pause and remember",
+        "description": "Pause the video; resume from the same time when you return."
+      },
+      "stop": {
+        "label": "Stop and reset",
+        "description": "Close the player; returning starts the video from the beginning."
+      }
+    },
+    "saveError": "Failed to save preference: {{message}}"
+  },
+  "updates": {
+    "title": "Updates",
+    "description": "Stay up to date with the latest version of Klip."
+  },
+  "auditLog": {
+    "title": "Recent Audit Log",
+    "description": "Last 30 entity mutations tracked by the system.",
+    "empty": "No audit entries yet.",
+    "columns": {
+      "action": "Action",
+      "entity": "Entity",
+      "entityId": "Entity ID",
+      "when": "When"
+    }
+  }
+}

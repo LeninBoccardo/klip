@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useSetting } from '@/hooks/use-settings'
 import { useAuditLogRecent } from '@/hooks/use-audit-log'
 import { useAppStore } from '@/hooks/use-app-store'
@@ -8,30 +9,55 @@ import { ReconcileButton } from '@components/features/settings/ReconcileButton'
 import { EnrichVideosButton } from '@components/features/settings/EnrichVideosButton'
 import { UpdatesCard } from '@components/features/settings/UpdatesCard'
 import { PlaybackSettings } from '@components/features/settings/PlaybackSettings'
+import { AppearanceSettings } from '@components/features/settings/AppearanceSettings'
+import { LanguageSettings } from '@components/features/settings/LanguageSettings'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
 import { ScrollArea } from '@ui/scroll-area'
 import { Skeleton } from '@ui/skeleton'
 import { formatDistanceToNow } from 'date-fns'
+import { useDateLocale } from '@renderer/i18n/date-locale'
 
 export const Route = createFileRoute('/settings')({
   component: SettingsPage
 })
 
 function SettingsPage(): React.ReactElement {
+  const { t } = useTranslation('settings')
   const { data: rootPath, isLoading: rootLoading } = useSetting('rootPath')
   const { data: auditEntries, isLoading: auditLoading } = useAuditLogRecent(30)
   const isBlocking = useAppStore((s) => s.blockingOperation !== null)
+  const dateLocale = useDateLocale()
 
   return (
     <PageContainer>
-      <PageHeader title="Settings" description="Application configuration and maintenance" />
+      <PageHeader title={t('page.title')} description={t('page.description')} />
 
       <Card>
         <CardHeader>
-          <CardTitle>Storage</CardTitle>
-          <CardDescription>Where Klip stores your media files on disk.</CardDescription>
+          <CardTitle>{t('appearance.title')}</CardTitle>
+          <CardDescription>{t('appearance.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AppearanceSettings />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('language.title')}</CardTitle>
+          <CardDescription>{t('language.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LanguageSettings />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('storage.title')}</CardTitle>
+          <CardDescription>{t('storage.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {rootLoading ? (
@@ -47,8 +73,8 @@ function SettingsPage(): React.ReactElement {
 
       <Card>
         <CardHeader>
-          <CardTitle>Maintenance</CardTitle>
-          <CardDescription>Reconcile the database index with files on disk.</CardDescription>
+          <CardTitle>{t('maintenance.title')}</CardTitle>
+          <CardDescription>{t('maintenance.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <ReconcileButton disabled={isBlocking} />
@@ -57,10 +83,8 @@ function SettingsPage(): React.ReactElement {
 
       <Card>
         <CardHeader>
-          <CardTitle>Metadata Enrichment</CardTitle>
-          <CardDescription>
-            Fetch extended metadata (likes, comments, transcripts) for indexed videos.
-          </CardDescription>
+          <CardTitle>{t('metadata.title')}</CardTitle>
+          <CardDescription>{t('metadata.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <EnrichVideosButton disabled={isBlocking} />
@@ -69,10 +93,8 @@ function SettingsPage(): React.ReactElement {
 
       <Card>
         <CardHeader>
-          <CardTitle>Playback</CardTitle>
-          <CardDescription>
-            What happens to the player when you navigate away from a video.
-          </CardDescription>
+          <CardTitle>{t('playback.title')}</CardTitle>
+          <CardDescription>{t('playback.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <PlaybackSettings />
@@ -81,8 +103,8 @@ function SettingsPage(): React.ReactElement {
 
       <Card>
         <CardHeader>
-          <CardTitle>Updates</CardTitle>
-          <CardDescription>Stay up to date with the latest version of Klip.</CardDescription>
+          <CardTitle>{t('updates.title')}</CardTitle>
+          <CardDescription>{t('updates.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <UpdatesCard />
@@ -91,8 +113,8 @@ function SettingsPage(): React.ReactElement {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Audit Log</CardTitle>
-          <CardDescription>Last 30 entity mutations tracked by the system.</CardDescription>
+          <CardTitle>{t('auditLog.title')}</CardTitle>
+          <CardDescription>{t('auditLog.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           {auditLoading ? (
@@ -102,10 +124,10 @@ function SettingsPage(): React.ReactElement {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Entity ID</TableHead>
-                    <TableHead>When</TableHead>
+                    <TableHead>{t('auditLog.columns.action')}</TableHead>
+                    <TableHead>{t('auditLog.columns.entity')}</TableHead>
+                    <TableHead>{t('auditLog.columns.entityId')}</TableHead>
+                    <TableHead>{t('auditLog.columns.when')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -117,7 +139,10 @@ function SettingsPage(): React.ReactElement {
                         {entry.entityId}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(entry.createdAt), {
+                          addSuffix: true,
+                          locale: dateLocale
+                        })}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -125,7 +150,7 @@ function SettingsPage(): React.ReactElement {
               </Table>
             </ScrollArea>
           ) : (
-            <p className="text-sm text-muted-foreground">No audit entries yet.</p>
+            <p className="text-sm text-muted-foreground">{t('auditLog.empty')}</p>
           )}
         </CardContent>
       </Card>

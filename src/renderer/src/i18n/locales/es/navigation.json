@@ -1,0 +1,11 @@
+{
+  "groupLabel": "Navegación",
+  "library": "Biblioteca",
+  "collections": "Colecciones",
+  "downloads": "Descargas",
+  "settings": "Configuración",
+  "about": "Acerca de",
+  "search": "Buscar",
+  "openSearchPalette": "Abrir paleta de búsqueda",
+  "version": "Klip v{{version}}"
+}

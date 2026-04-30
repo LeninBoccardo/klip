@@ -1,0 +1,72 @@
+{
+  "page": {
+    "title": "Configurações",
+    "description": "Configuração e manutenção do aplicativo"
+  },
+  "appearance": {
+    "title": "Aparência",
+    "description": "Escolha como o Klip aparece. \"Sistema\" segue a configuração do seu sistema operacional.",
+    "options": {
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
+    },
+    "toggleAria": "Alternar tema"
+  },
+  "language": {
+    "title": "Idioma",
+    "description": "O idioma usado em toda a interface do Klip.",
+    "options": {
+      "en": "English",
+      "pt-BR": "Português (Brasil)",
+      "es": "Español"
+    },
+    "selectAria": "Selecionar idioma"
+  },
+  "storage": {
+    "title": "Armazenamento",
+    "description": "Onde o Klip armazena seus arquivos de mídia em disco."
+  },
+  "maintenance": {
+    "title": "Manutenção",
+    "description": "Reconciliar o índice do banco de dados com os arquivos em disco."
+  },
+  "metadata": {
+    "title": "Enriquecimento de Metadados",
+    "description": "Buscar metadados estendidos (curtidas, comentários, transcrições) para vídeos indexados."
+  },
+  "playback": {
+    "title": "Reprodução",
+    "description": "O que acontece com o player quando você sai da página de um vídeo.",
+    "options": {
+      "floating": {
+        "label": "Flutuar no mini-player",
+        "description": "Continuar reproduzindo em uma janela flutuante no canto inferior direito."
+      },
+      "pause": {
+        "label": "Pausar e lembrar",
+        "description": "Pausar o vídeo; retomar do mesmo ponto ao voltar."
+      },
+      "stop": {
+        "label": "Parar e reiniciar",
+        "description": "Fechar o player; ao voltar o vídeo começa do início."
+      }
+    },
+    "saveError": "Falha ao salvar preferência: {{message}}"
+  },
+  "updates": {
+    "title": "Atualizações",
+    "description": "Mantenha-se atualizado com a versão mais recente do Klip."
+  },
+  "auditLog": {
+    "title": "Log de Auditoria Recente",
+    "description": "Últimas 30 mutações de entidades rastreadas pelo sistema.",
+    "empty": "Nenhuma entrada de auditoria ainda.",
+    "columns": {
+      "action": "Ação",
+      "entity": "Entidade",
+      "entityId": "ID da Entidade",
+      "when": "Quando"
+    }
+  }
+}

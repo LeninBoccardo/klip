@@ -55,3 +55,12 @@ export {
   SETTING_KEYS,
   isPlaybackOnNavigate
 } from './playback'
+export type { Theme, Language } from './preferences'
+export {
+  THEME_VALUES,
+  LANGUAGE_VALUES,
+  DEFAULT_THEME,
+  DEFAULT_LANGUAGE,
+  isTheme,
+  isLanguage
+} from './preferences'

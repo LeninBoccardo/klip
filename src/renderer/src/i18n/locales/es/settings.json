@@ -1,0 +1,72 @@
+{
+  "page": {
+    "title": "Configuración",
+    "description": "Configuración y mantenimiento de la aplicación"
+  },
+  "appearance": {
+    "title": "Apariencia",
+    "description": "Elige cómo se ve Klip. \"Sistema\" sigue la configuración de tu sistema operativo.",
+    "options": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
+    "toggleAria": "Cambiar tema"
+  },
+  "language": {
+    "title": "Idioma",
+    "description": "El idioma utilizado en toda la interfaz de Klip.",
+    "options": {
+      "en": "English",
+      "pt-BR": "Português (Brasil)",
+      "es": "Español"
+    },
+    "selectAria": "Seleccionar idioma"
+  },
+  "storage": {
+    "title": "Almacenamiento",
+    "description": "Dónde Klip almacena tus archivos multimedia en disco."
+  },
+  "maintenance": {
+    "title": "Mantenimiento",
+    "description": "Reconciliar el índice de la base de datos con los archivos en disco."
+  },
+  "metadata": {
+    "title": "Enriquecimiento de Metadatos",
+    "description": "Obtener metadatos extendidos (me gusta, comentarios, transcripciones) para los videos indexados."
+  },
+  "playback": {
+    "title": "Reproducción",
+    "description": "Qué le ocurre al reproductor cuando navegas fuera de un video.",
+    "options": {
+      "floating": {
+        "label": "Flotar en mini-reproductor",
+        "description": "Seguir reproduciendo en una ventana flotante en la esquina inferior derecha."
+      },
+      "pause": {
+        "label": "Pausar y recordar",
+        "description": "Pausar el video; reanudar desde el mismo punto al volver."
+      },
+      "stop": {
+        "label": "Detener y reiniciar",
+        "description": "Cerrar el reproductor; al volver, el video empieza desde el principio."
+      }
+    },
+    "saveError": "Error al guardar la preferencia: {{message}}"
+  },
+  "updates": {
+    "title": "Actualizaciones",
+    "description": "Mantente al día con la última versión de Klip."
+  },
+  "auditLog": {
+    "title": "Registro de Auditoría Reciente",
+    "description": "Últimas 30 mutaciones de entidades registradas por el sistema.",
+    "empty": "Aún no hay entradas de auditoría.",
+    "columns": {
+      "action": "Acción",
+      "entity": "Entidad",
+      "entityId": "ID de Entidad",
+      "when": "Cuándo"
+    }
+  }
+}

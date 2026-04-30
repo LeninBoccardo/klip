@@ -1,0 +1,25 @@
+{
+  "title": "Search",
+  "description": "Search creators, videos, cuts, and tags.",
+  "placeholder": "Search creators, videos, cuts, tags…",
+  "empty": {
+    "initial": "Type to search across your library.",
+    "error": "Search failed. Try again.",
+    "noResults": "No results for “{{query}}”."
+  },
+  "loading": "Searching…",
+  "groups": {
+    "recent": "Recent",
+    "creators": "Creators",
+    "videos": "Videos",
+    "cuts": "Cuts",
+    "tags": "Tags"
+  },
+  "kinds": {
+    "creator": "creator",
+    "video": "video",
+    "cut": "cut",
+    "tag": "tag"
+  },
+  "tagFilterToast": "Tag filter coming soon: {{tag}}"
+}
