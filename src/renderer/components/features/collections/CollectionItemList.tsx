@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@ui/card'
 import { Button } from '@ui/button'
 import { Badge } from '@ui/badge'
@@ -31,6 +32,7 @@ interface CollectionItemListProps {
  * render as tombstones with a warning badge but stay reorderable.
  */
 export function CollectionItemList({ collectionId }: CollectionItemListProps): React.ReactElement {
+  const { t } = useTranslation('collections')
   const itemsQuery = useCollectionItems(collectionId)
   const reorder = useReorderCollection()
   const remove = useRemoveFromCollection()
@@ -57,7 +59,7 @@ export function CollectionItemList({ collectionId }: CollectionItemListProps): R
         items: reordered.map((it) => ({ kind: it.kind, id: idOf(it) }))
       },
       {
-        onError: (err) => toast.error(`Reorder failed: ${err.message}`)
+        onError: (err) => toast.error(t('detail.items.reorderFailed', { message: err.message }))
       }
     )
   }
@@ -66,14 +68,14 @@ export function CollectionItemList({ collectionId }: CollectionItemListProps): R
     remove.mutate(
       { collectionId, kind: item.kind, id: idOf(item) },
       {
-        onError: (err) => toast.error(`Remove failed: ${err.message}`)
+        onError: (err) => toast.error(t('detail.items.removeFailed', { message: err.message }))
       }
     )
   }
 
   const handlePlay = (item: CollectionItemDto): void => {
     if (!item.entity || item.entity.status === 'missing') {
-      toast.error('This item is missing on disk.')
+      toast.error(t('detail.items.missingOnDisk'))
       return
     }
     if (item.kind === 'video') {
@@ -110,8 +112,8 @@ export function CollectionItemList({ collectionId }: CollectionItemListProps): R
     return (
       <Empty className="min-h-50 rounded-lg border">
         <EmptyHeader>
-          <EmptyTitle>No items yet</EmptyTitle>
-          <EmptyDescription>Add videos and cuts from the library context menu.</EmptyDescription>
+          <EmptyTitle>{t('detail.items.emptyTitle')}</EmptyTitle>
+          <EmptyDescription>{t('detail.items.emptyDescription')}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     )
@@ -155,9 +157,10 @@ function CollectionRow({
   onPlay: () => void
   disabled: boolean
 }): React.ReactElement {
+  const { t } = useTranslation('collections')
   const entity = item.entity
   const missing = !entity || entity.status === 'missing' || entity.status === 'deleted'
-  const title = entity?.title ?? '(unavailable)'
+  const title = entity?.title ?? t('detail.items.unavailable')
   const thumb =
     entity && entity.hasThumbnail ? mediaUrl(item.kind, entity.id, 'thumbnail') : undefined
 
@@ -170,7 +173,7 @@ function CollectionRow({
             variant="ghost"
             className="size-6"
             disabled={disabled || isFirst}
-            aria-label="Move up"
+            aria-label={t('detail.items.moveUpAria')}
             onClick={onMoveUp}
           >
             <ChevronUp className="size-3" />
@@ -180,7 +183,7 @@ function CollectionRow({
             variant="ghost"
             className="size-6"
             disabled={disabled || isLast}
-            aria-label="Move down"
+            aria-label={t('detail.items.moveDownAria')}
             onClick={onMoveDown}
           >
             <ChevronDown className="size-3" />
@@ -191,7 +194,7 @@ function CollectionRow({
           type="button"
           onClick={onPlay}
           disabled={missing}
-          aria-label={`Play ${title}`}
+          aria-label={t('detail.items.playAria', { title })}
           className="flex flex-1 items-center gap-3 text-left disabled:cursor-not-allowed"
         >
           <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
@@ -209,14 +212,14 @@ function CollectionRow({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{title}</p>
-            <p className="text-xs text-muted-foreground capitalize">{item.kind}</p>
+            <p className="text-xs text-muted-foreground">{t(`detail.items.kind.${item.kind}`)}</p>
           </div>
         </button>
 
         {missing && (
           <Badge variant="outline" className="gap-1 text-xs text-amber-600">
             <AlertTriangle className="size-3" />
-            Missing
+            {t('detail.items.missingBadge')}
           </Badge>
         )}
 
@@ -224,7 +227,7 @@ function CollectionRow({
           size="icon"
           variant="ghost"
           className="size-7 text-destructive"
-          aria-label="Remove from collection"
+          aria-label={t('detail.items.removeAria')}
           disabled={disabled}
           onClick={onRemove}
         >

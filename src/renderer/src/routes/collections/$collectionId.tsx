@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCollection, useCollectionItems, useDeleteCollection } from '@/hooks/use-collections'
 import { CollectionItemList } from '@components/features/collections/CollectionItemList'
 import { RenameCollectionDialog } from '@components/features/collections/RenameCollectionDialog'
@@ -17,6 +18,8 @@ export const Route = createFileRoute('/collections/$collectionId')({
 })
 
 function CollectionDetailPage(): React.ReactElement {
+  const { t } = useTranslation('collections')
+  const { t: tc } = useTranslation('common')
   const { collectionId } = Route.useParams()
   const navigate = useNavigate()
   const collectionQuery = useCollection(collectionId)
@@ -41,7 +44,7 @@ function CollectionDetailPage(): React.ReactElement {
       }))
 
     if (playable.length === 0) {
-      toast.error('No playable items in this collection.')
+      toast.error(t('detail.noPlayable'))
       return
     }
     playQueue(playable)
@@ -55,13 +58,13 @@ function CollectionDetailPage(): React.ReactElement {
 
   const handleDelete = (): void => {
     if (!collection) return
-    if (!window.confirm(`Delete collection "${collection.name}"?`)) return
+    if (!window.confirm(t('deleteConfirm', { name: collection.name }))) return
     deleteCollection.mutate(collection.id, {
       onSuccess: () => {
-        toast.success(`"${collection.name}" deleted`)
+        toast.success(t('toasts.deleted', { name: collection.name }))
         navigate({ to: '/collections' })
       },
-      onError: (err) => toast.error(`Failed to delete: ${err.message}`)
+      onError: (err) => toast.error(t('toasts.deleteFailed', { message: err.message }))
     })
   }
 
@@ -79,12 +82,12 @@ function CollectionDetailPage(): React.ReactElement {
       <PageContainer>
         <Empty className="min-h-100 rounded-lg border">
           <EmptyHeader>
-            <EmptyTitle>Collection not found</EmptyTitle>
+            <EmptyTitle>{t('detail.notFound')}</EmptyTitle>
           </EmptyHeader>
         </Empty>
         <Button variant="outline" onClick={() => navigate({ to: '/collections' })}>
           <ArrowLeft className="mr-2 size-4" />
-          Back to collections
+          {t('detail.backToCollections')}
         </Button>
       </PageContainer>
     )
@@ -99,19 +102,19 @@ function CollectionDetailPage(): React.ReactElement {
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => navigate({ to: '/collections' })}>
               <ArrowLeft className="mr-2 size-4" />
-              Back
+              {tc('actions.back')}
             </Button>
             <Button variant="outline" onClick={() => setEditing(true)}>
               <Pencil className="mr-2 size-4" />
-              Edit
+              {tc('actions.edit')}
             </Button>
             <Button variant="outline" className="text-destructive" onClick={handleDelete}>
               <Trash2 className="mr-2 size-4" />
-              Delete
+              {tc('actions.delete')}
             </Button>
             <Button onClick={handlePlayAll} disabled={collection.itemCount === 0}>
               <Play className="mr-2 size-4 fill-current" />
-              Play all
+              {t('detail.playAll')}
             </Button>
           </div>
         }

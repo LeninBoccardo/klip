@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCreatorById } from '@/hooks/use-creators'
 import { useVideosPaginated, useDeleteVideo, useRestoreVideo } from '@/hooks/use-videos'
 import { useCutsPaginated, useDeleteCut, useRestoreCut } from '@/hooks/use-cuts'
@@ -28,6 +29,7 @@ export const Route = createFileRoute('/creators/$creatorId')({
 })
 
 function CreatorDetailPage(): React.ReactElement {
+  const { t } = useTranslation('creators')
   const { creatorId } = Route.useParams()
   const { data: creator, isLoading: creatorLoading } = useCreatorById(creatorId)
 
@@ -45,7 +47,7 @@ function CreatorDetailPage(): React.ReactElement {
       <PageContainer>
         <Empty className="min-h-[400px] border rounded-lg">
           <EmptyHeader>
-            <EmptyTitle>Creator not found</EmptyTitle>
+            <EmptyTitle>{t('detail.notFound')}</EmptyTitle>
           </EmptyHeader>
         </Empty>
       </PageContainer>
@@ -57,8 +59,8 @@ function CreatorDetailPage(): React.ReactElement {
       <CreatorHeader creator={creator} />
       <Tabs defaultValue="videos">
         <TabsList>
-          <TabsTrigger value="videos">Videos</TabsTrigger>
-          <TabsTrigger value="cuts">Cuts</TabsTrigger>
+          <TabsTrigger value="videos">{t('detail.tabs.videos')}</TabsTrigger>
+          <TabsTrigger value="cuts">{t('detail.tabs.cuts')}</TabsTrigger>
         </TabsList>
         <TabsContent value="videos" className="mt-4">
           <VideosTab creatorId={creatorId} />
@@ -72,6 +74,9 @@ function CreatorDetailPage(): React.ReactElement {
 }
 
 function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
+  const { t } = useTranslation('creators')
+  const { t: tc } = useTranslation('common')
+  const { t: tl } = useTranslation('library')
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [selectMode, setSelectMode] = useState(false)
@@ -102,8 +107,8 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
           <EmptyMedia>
             <Film className="size-8 text-muted-foreground" />
           </EmptyMedia>
-          <EmptyTitle>No videos</EmptyTitle>
-          <EmptyDescription>Download videos for this creator to see them here.</EmptyDescription>
+          <EmptyTitle>{t('detail.videos.emptyTitle')}</EmptyTitle>
+          <EmptyDescription>{t('detail.videos.emptyDescription')}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     )
@@ -124,12 +129,12 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
             onClick={() => selection.selectAll(data.data.map((v) => v.id))}
           >
             <CheckSquare className="mr-2 size-4" />
-            Select all on this page
+            {tc('actions.selectAllOnPage')}
           </Button>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setSelectMode(true)}>
             <Square className="mr-2 size-4" />
-            Select
+            {tc('actions.select')}
           </Button>
         )}
       </div>
@@ -186,13 +191,13 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
               }
               onDelete={() =>
                 deleteVideo.mutate(video.id, {
-                  onSuccess: () => toast.success(`"${video.title}" deleted`),
+                  onSuccess: () => toast.success(tl('toasts.deleted', { name: video.title })),
                   onError: (err) => toast.error(err.message)
                 })
               }
               onRestore={() =>
                 restoreVideo.mutate(video.id, {
-                  onSuccess: () => toast.success(`"${video.title}" restored`),
+                  onSuccess: () => toast.success(tl('toasts.restored', { name: video.title })),
                   onError: (err) => toast.error(err.message)
                 })
               }
@@ -205,7 +210,7 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
 
       {selectMode && (
         <Button size="sm" variant="ghost" onClick={exitSelectMode}>
-          Done
+          {tc('actions.done')}
         </Button>
       )}
 
@@ -223,6 +228,9 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
 }
 
 function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
+  const { t } = useTranslation('creators')
+  const { t: tc } = useTranslation('common')
+  const { t: tl } = useTranslation('library')
   const [page, setPage] = useState(1)
   const [selectMode, setSelectMode] = useState(false)
   const selection = useMultiSelect()
@@ -252,10 +260,8 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
           <EmptyMedia>
             <Scissors className="size-8 text-muted-foreground" />
           </EmptyMedia>
-          <EmptyTitle>No cuts</EmptyTitle>
-          <EmptyDescription>
-            Export cuts from your editor into this creator&apos;s cuts folder.
-          </EmptyDescription>
+          <EmptyTitle>{t('detail.cuts.emptyTitle')}</EmptyTitle>
+          <EmptyDescription>{t('detail.cuts.emptyDescription')}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     )
@@ -276,12 +282,12 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
             onClick={() => selection.selectAll(data.data.map((c) => c.id))}
           >
             <CheckSquare className="mr-2 size-4" />
-            Select all on this page
+            {tc('actions.selectAllOnPage')}
           </Button>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setSelectMode(true)}>
             <Square className="mr-2 size-4" />
-            Select
+            {tc('actions.select')}
           </Button>
         )}
       </div>
@@ -329,13 +335,13 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
               onAddToCollection={() => setAddTarget({ kind: 'cut', id: cut.id, title: cut.title })}
               onDelete={() =>
                 deleteCut.mutate(cut.id, {
-                  onSuccess: () => toast.success(`"${cut.title}" deleted`),
+                  onSuccess: () => toast.success(tl('toasts.deleted', { name: cut.title })),
                   onError: (err) => toast.error(err.message)
                 })
               }
               onRestore={() =>
                 restoreCut.mutate(cut.id, {
-                  onSuccess: () => toast.success(`"${cut.title}" restored`),
+                  onSuccess: () => toast.success(tl('toasts.restored', { name: cut.title })),
                   onError: (err) => toast.error(err.message)
                 })
               }
@@ -348,7 +354,7 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
 
       {selectMode && (
         <Button size="sm" variant="ghost" onClick={exitSelectMode}>
-          Done
+          {tc('actions.done')}
         </Button>
       )}
 

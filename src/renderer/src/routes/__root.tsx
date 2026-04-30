@@ -103,6 +103,7 @@ function CommandPaletteController(): React.ReactElement {
  * notify again.
  */
 function UpdaterToastWatcher(): null {
+  const { t } = useTranslation('settings')
   const { data: status } = useUpdaterStatus()
   const installUpdate = useInstallUpdate()
   const notifiedFor = useRef<string | null>(null)
@@ -121,18 +122,18 @@ function UpdaterToastWatcher(): null {
       // Avoid re-toasting on every render for the same downloaded version.
       if (notifiedFor.current === status.newVersion) return
       notifiedFor.current = status.newVersion
-      toast.message(`Update v${status.newVersion} ready`, {
-        description: 'Restart Klip now to install, or it will install on next quit.',
+      toast.message(t('updates.toast.readyTitle', { version: status.newVersion }), {
+        description: t('updates.toast.readyDescription'),
         duration: Infinity,
         action: {
-          label: 'Restart now',
+          label: t('updates.toast.restartAction'),
           onClick: () => installRef.current.mutate()
         }
       })
     } else if (status.state !== 'ready') {
       notifiedFor.current = null
     }
-  }, [status])
+  }, [status, t])
 
   return null
 }

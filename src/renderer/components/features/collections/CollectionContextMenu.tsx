@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -18,17 +19,18 @@ export function CollectionContextMenu({
   onDelete,
   children
 }: CollectionContextMenuProps): React.ReactElement {
+  const { t } = useTranslation('common')
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={onEdit}>
           <Pencil className="mr-2 size-4" />
-          Edit
+          {t('actions.edit')}
         </ContextMenuItem>
         <ContextMenuItem onClick={onDelete} className="text-destructive">
           <Trash2 className="mr-2 size-4" />
-          Delete
+          {t('actions.delete')}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

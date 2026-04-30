@@ -1,0 +1,76 @@
+{
+  "page": {
+    "title": "Collections",
+    "description": "Manual playlists across videos and cuts.",
+    "newButton": "New collection"
+  },
+  "empty": {
+    "title": "No collections yet",
+    "description": "Create your first collection to group related videos and cuts."
+  },
+  "card": {
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items"
+  },
+  "deleteConfirm": "Delete collection “{{name}}”?",
+  "toasts": {
+    "deleted": "“{{name}}” deleted",
+    "deleteFailed": "Failed to delete: {{message}}"
+  },
+  "detail": {
+    "notFound": "Collection not found",
+    "backToCollections": "Back to collections",
+    "playAll": "Play all",
+    "noPlayable": "No playable items in this collection.",
+    "items": {
+      "emptyTitle": "No items yet",
+      "emptyDescription": "Add videos and cuts from the library context menu.",
+      "missingBadge": "Missing",
+      "unavailable": "(unavailable)",
+      "moveUpAria": "Move up",
+      "moveDownAria": "Move down",
+      "removeAria": "Remove from collection",
+      "missingOnDisk": "This item is missing on disk.",
+      "reorderFailed": "Reorder failed: {{message}}",
+      "removeFailed": "Remove failed: {{message}}",
+      "playAria": "Play {{title}}",
+      "kind": {
+        "video": "video",
+        "cut": "cut"
+      }
+    }
+  },
+  "create": {
+    "title": "New collection",
+    "description": "Create a manual collection. You can add videos and cuts to it from any card’s context menu.",
+    "nameLabel": "Name",
+    "namePlaceholder": "My favourite clips",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "What this collection is for…",
+    "createdToast": "Collection “{{name}}” created",
+    "createFailed": "Failed to create collection: {{message}}"
+  },
+  "rename": {
+    "title": "Edit collection",
+    "description": "Rename or update the description.",
+    "nameLabel": "Name",
+    "descriptionLabel": "Description",
+    "updatedToast": "Collection updated",
+    "updateFailed": "Failed to update: {{message}}"
+  },
+  "addToCollection": {
+    "title": "Add to collection",
+    "description": "Pick a collection to add {{title}} to, or create a new one.",
+    "fallbackTitle": "this item",
+    "placeholder": "Search collections, or type a new name…",
+    "noneYet": "No collections yet — type a name to create one.",
+    "existingHeading": "Existing",
+    "createHeading": "Create new",
+    "createOption": "Create “{{name}}” and add",
+    "addedToast": "Added to “{{name}}”",
+    "addFailed": "Failed to add: {{message}}",
+    "createdAndAdded": "Created “{{name}}” and added",
+    "createdButAddFailed": "Created collection but add failed: {{message}}",
+    "createCollectionFailed": "Failed to create collection: {{message}}"
+  }
+}

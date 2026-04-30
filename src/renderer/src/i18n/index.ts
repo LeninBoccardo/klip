@@ -6,16 +6,40 @@ import enCommon from './locales/en/common.json'
 import enNavigation from './locales/en/navigation.json'
 import enSettings from './locales/en/settings.json'
 import enSearch from './locales/en/search.json'
+import enLibrary from './locales/en/library.json'
+import enCreators from './locales/en/creators.json'
+import enVideos from './locales/en/videos.json'
+import enDownloads from './locales/en/downloads.json'
+import enCollections from './locales/en/collections.json'
+import enPlayer from './locales/en/player.json'
+import enAbout from './locales/en/about.json'
+import enTags from './locales/en/tags.json'
 
 import ptBRCommon from './locales/pt-BR/common.json'
 import ptBRNavigation from './locales/pt-BR/navigation.json'
 import ptBRSettings from './locales/pt-BR/settings.json'
 import ptBRSearch from './locales/pt-BR/search.json'
+import ptBRLibrary from './locales/pt-BR/library.json'
+import ptBRCreators from './locales/pt-BR/creators.json'
+import ptBRVideos from './locales/pt-BR/videos.json'
+import ptBRDownloads from './locales/pt-BR/downloads.json'
+import ptBRCollections from './locales/pt-BR/collections.json'
+import ptBRPlayer from './locales/pt-BR/player.json'
+import ptBRAbout from './locales/pt-BR/about.json'
+import ptBRTags from './locales/pt-BR/tags.json'
 
 import esCommon from './locales/es/common.json'
 import esNavigation from './locales/es/navigation.json'
 import esSettings from './locales/es/settings.json'
 import esSearch from './locales/es/search.json'
+import esLibrary from './locales/es/library.json'
+import esCreators from './locales/es/creators.json'
+import esVideos from './locales/es/videos.json'
+import esDownloads from './locales/es/downloads.json'
+import esCollections from './locales/es/collections.json'
+import esPlayer from './locales/es/player.json'
+import esAbout from './locales/es/about.json'
+import esTags from './locales/es/tags.json'
 
 /**
  * i18next bootstrap — synchronous and offline. All resources are statically
@@ -28,19 +52,43 @@ export const resources = {
     common: enCommon,
     navigation: enNavigation,
     settings: enSettings,
-    search: enSearch
+    search: enSearch,
+    library: enLibrary,
+    creators: enCreators,
+    videos: enVideos,
+    downloads: enDownloads,
+    collections: enCollections,
+    player: enPlayer,
+    about: enAbout,
+    tags: enTags
   },
   'pt-BR': {
     common: ptBRCommon,
     navigation: ptBRNavigation,
     settings: ptBRSettings,
-    search: ptBRSearch
+    search: ptBRSearch,
+    library: ptBRLibrary,
+    creators: ptBRCreators,
+    videos: ptBRVideos,
+    downloads: ptBRDownloads,
+    collections: ptBRCollections,
+    player: ptBRPlayer,
+    about: ptBRAbout,
+    tags: ptBRTags
   },
   es: {
     common: esCommon,
     navigation: esNavigation,
     settings: esSettings,
-    search: esSearch
+    search: esSearch,
+    library: esLibrary,
+    creators: esCreators,
+    videos: esVideos,
+    downloads: esDownloads,
+    collections: esCollections,
+    player: esPlayer,
+    about: esAbout,
+    tags: esTags
   }
 } as const
 
@@ -49,7 +97,20 @@ void i18n.use(initReactI18next).init({
   lng: detectInitialLanguage(),
   fallbackLng: 'en',
   defaultNS: 'common',
-  ns: ['common', 'navigation', 'settings', 'search'],
+  ns: [
+    'common',
+    'navigation',
+    'settings',
+    'search',
+    'library',
+    'creators',
+    'videos',
+    'downloads',
+    'collections',
+    'player',
+    'about',
+    'tags'
+  ],
   interpolation: {
     // React already escapes by default — double-escaping breaks accents.
     escapeValue: false

@@ -1,0 +1,32 @@
+{
+  "filters": {
+    "searchPlaceholder": "Search creators...",
+    "status": {
+      "active": "Active",
+      "all": "All",
+      "deleted": "Deleted",
+      "missing": "Missing"
+    },
+    "statusBadgeAria": "Status filter"
+  },
+  "status": {
+    "active": "Active",
+    "deleted": "Deleted",
+    "missing": "Missing"
+  },
+  "detail": {
+    "tabs": {
+      "videos": "Videos",
+      "cuts": "Cuts"
+    },
+    "notFound": "Creator not found",
+    "videos": {
+      "emptyTitle": "No videos",
+      "emptyDescription": "Download videos for this creator to see them here."
+    },
+    "cuts": {
+      "emptyTitle": "No cuts",
+      "emptyDescription": "Export cuts from your editor into this creator’s cuts folder."
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   InputGroup,
   InputGroupAddon,
@@ -21,12 +22,7 @@ interface CreatorFiltersProps {
   onStatusFilterChange: (value: EntityStatus[] | undefined) => void
 }
 
-const statusOptions = [
-  { label: 'Active', value: 'active' },
-  { label: 'All', value: 'all' },
-  { label: 'Deleted', value: 'deleted' },
-  { label: 'Missing', value: 'missing' }
-] as const
+const STATUS_VALUES = ['active', 'all', 'deleted', 'missing'] as const
 
 export function CreatorFilters({
   search,
@@ -34,6 +30,7 @@ export function CreatorFilters({
   statusFilter,
   onStatusFilterChange
 }: CreatorFiltersProps): React.ReactElement {
+  const { t } = useTranslation('creators')
   const currentStatusValue =
     !statusFilter || (statusFilter.length === 1 && statusFilter[0] === 'active')
       ? 'active'
@@ -50,7 +47,7 @@ export function CreatorFilters({
           </InputGroupText>
         </InputGroupAddon>
         <InputGroupInput
-          placeholder="Search creators..."
+          placeholder={t('filters.searchPlaceholder')}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -69,9 +66,9 @@ export function CreatorFilters({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {statusOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
+          {STATUS_VALUES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {t(`filters.status.${value}` as const)}
             </SelectItem>
           ))}
         </SelectContent>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CommandDialog,
   CommandInput,
@@ -38,6 +39,8 @@ export function AddToCollectionDialog({
   onOpenChange,
   entity
 }: AddToCollectionDialogProps): React.ReactElement {
+  const { t } = useTranslation('collections')
+  const { t: tc } = useTranslation('common')
   const [query, setQuery] = useState('')
   // cmdk's filter handles the search; we always fetch the first page (sorted
   // by updated_at desc) so the most-recently-touched collections show first.
@@ -61,10 +64,10 @@ export function AddToCollectionDialog({
       { collectionId, kind: entity.kind, id: entity.id },
       {
         onSuccess: () => {
-          toast.success(`Added to "${collectionName}"`)
+          toast.success(t('addToCollection.addedToast', { name: collectionName }))
           close()
         },
-        onError: (err) => toast.error(`Failed to add: ${err.message}`)
+        onError: (err) => toast.error(t('addToCollection.addFailed', { message: err.message }))
       }
     )
   }
@@ -80,14 +83,16 @@ export function AddToCollectionDialog({
             { collectionId: created.id, kind: entity.kind, id: entity.id },
             {
               onSuccess: () => {
-                toast.success(`Created "${created.name}" and added`)
+                toast.success(t('addToCollection.createdAndAdded', { name: created.name }))
                 close()
               },
-              onError: (err) => toast.error(`Created collection but add failed: ${err.message}`)
+              onError: (err) =>
+                toast.error(t('addToCollection.createdButAddFailed', { message: err.message }))
             }
           )
         },
-        onError: (err) => toast.error(`Failed to create collection: ${err.message}`)
+        onError: (err) =>
+          toast.error(t('addToCollection.createCollectionFailed', { message: err.message }))
       }
     )
   }
@@ -98,28 +103,30 @@ export function AddToCollectionDialog({
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add to collection"
-      description={`Pick a collection to add ${entity?.title ?? 'this item'} to, or create a new one.`}
+      title={t('addToCollection.title')}
+      description={t('addToCollection.description', {
+        title: entity?.title ?? t('addToCollection.fallbackTitle')
+      })}
     >
       <CommandInput
         value={query}
         onValueChange={setQuery}
-        placeholder="Search collections, or type a new name…"
+        placeholder={t('addToCollection.placeholder')}
       />
       <CommandList>
         {collectionsQuery.isLoading && (
           <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Loading…
+            {tc('states.loading')}
           </div>
         )}
 
         {!collectionsQuery.isLoading && collections.length === 0 && trimmed.length === 0 && (
-          <CommandEmpty>No collections yet — type a name to create one.</CommandEmpty>
+          <CommandEmpty>{t('addToCollection.noneYet')}</CommandEmpty>
         )}
 
         {collections.length > 0 && (
-          <CommandGroup heading="Existing">
+          <CommandGroup heading={t('addToCollection.existingHeading')}>
             {collections.map((c) => (
               <CommandItem
                 key={c.id}
@@ -130,7 +137,7 @@ export function AddToCollectionDialog({
                 <ListMusic />
                 <span className="truncate">{c.name}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {c.itemCount} {c.itemCount === 1 ? 'item' : 'items'}
+                  {t('card.items', { count: c.itemCount })}
                 </span>
               </CommandItem>
             ))}
@@ -140,10 +147,10 @@ export function AddToCollectionDialog({
         {showCreateOption && (
           <>
             <CommandSeparator />
-            <CommandGroup heading="Create new">
+            <CommandGroup heading={t('addToCollection.createHeading')}>
               <CommandItem value={`__new__${trimmed}`} disabled={busy} onSelect={handleCreate}>
                 <Plus />
-                <span>Create &ldquo;{trimmed}&rdquo; and add</span>
+                <span>{t('addToCollection.createOption', { name: trimmed })}</span>
               </CommandItem>
             </CommandGroup>
           </>

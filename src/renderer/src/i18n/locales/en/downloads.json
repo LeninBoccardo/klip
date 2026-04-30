@@ -1,0 +1,31 @@
+{
+  "page": {
+    "title": "Downloads",
+    "description": "Fetch video info and download from supported URLs"
+  },
+  "newDownload": {
+    "cardTitle": "New Download",
+    "downloadButton": "Download",
+    "needsCreator": "Please provide a creator name",
+    "queued": "Download queued ({{id}})",
+    "downloadFailed": "Download failed: {{message}}",
+    "fetchInfoFailed": "Failed to fetch info: {{message}}"
+  },
+  "active": {
+    "cardTitle": "Active Downloads",
+    "emptyTitle": "No active downloads",
+    "emptyDescription": "Downloads will appear here in real time."
+  },
+  "creator": {
+    "label": "Creator name",
+    "placeholder": "e.g. MrBeast"
+  },
+  "url": {
+    "placeholder": "Paste a video URL...",
+    "fetchButton": "Fetch Info",
+    "invalid": "Enter a valid URL"
+  },
+  "progress": {
+    "etaPrefix": "ETA"
+  }
+}

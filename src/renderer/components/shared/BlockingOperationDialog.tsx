@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '@/hooks/use-app-store'
 import {
   Dialog,
@@ -10,11 +11,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Loader2 } from 'lucide-react'
 
-const phaseLabels: Record<string, string> = {
-  moving: 'Moving files…',
-  updating_db: 'Updating database…',
-  reconciling: 'Reconciling…'
-}
+const KNOWN_PHASES = new Set(['moving', 'updating_db', 'reconciling'])
 
 /**
  * Non-dismissable dialog shown during long-running blocking operations.
@@ -23,6 +20,7 @@ const phaseLabels: Record<string, string> = {
  * Mount once near the root layout.
  */
 export function BlockingOperationDialog(): React.ReactElement | null {
+  const { t } = useTranslation('common')
   const blockingOperation = useAppStore((s) => s.blockingOperation)
 
   if (!blockingOperation) return null
@@ -52,7 +50,11 @@ export function BlockingOperationDialog(): React.ReactElement | null {
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {phaseLabels[progress.phase] ?? progress.phase}
+                {KNOWN_PHASES.has(progress.phase)
+                  ? t(
+                      `operations.phases.${progress.phase as 'moving' | 'updating_db' | 'reconciling'}`
+                    )
+                  : progress.phase}
               </span>
               {progress.total > 0 && (
                 <Badge variant="secondary">

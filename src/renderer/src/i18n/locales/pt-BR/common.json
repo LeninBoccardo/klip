@@ -1,8 +1,35 @@
 {
-  "save": "Salvar",
-  "cancel": "Cancelar",
-  "close": "Fechar",
-  "delete": "Excluir",
-  "create": "Criar",
-  "loading": "Carregando…"
+  "actions": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "delete": "Excluir",
+    "create": "Criar",
+    "edit": "Editar",
+    "rename": "Renomear",
+    "restore": "Restaurar",
+    "retry": "Tentar novamente",
+    "dismiss": "Dispensar",
+    "ok": "OK",
+    "back": "Voltar",
+    "done": "Concluído",
+    "select": "Selecionar",
+    "selectAllOnPage": "Selecionar todos nesta página",
+    "apply": "Aplicar",
+    "copy": "Copiar",
+    "copyAll": "Copiar tudo",
+    "reload": "Recarregar",
+    "refresh": "Atualizar"
+  },
+  "states": {
+    "loading": "Carregando…",
+    "idle": "Inativo"
+  },
+  "operations": {
+    "phases": {
+      "moving": "Movendo arquivos…",
+      "updating_db": "Atualizando banco de dados…",
+      "reconciling": "Reconciliando…"
+    }
+  }
 }

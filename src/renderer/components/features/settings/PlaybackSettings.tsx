@@ -1,31 +1,14 @@
+import { useTranslation } from 'react-i18next'
 import { RadioGroup, RadioGroupItem } from '@ui/radio-group'
 import { Skeleton } from '@ui/skeleton'
 import { Label } from '@ui/label'
 import { usePlaybackOnNavigate, useSetPlaybackOnNavigate } from '@/hooks/use-playback-setting'
-import { isPlaybackOnNavigate, type PlaybackOnNavigate } from '@shared/types'
+import {
+  isPlaybackOnNavigate,
+  PLAYBACK_ON_NAVIGATE_VALUES,
+  type PlaybackOnNavigate
+} from '@shared/types'
 import { toast } from 'sonner'
-
-const OPTIONS: ReadonlyArray<{
-  value: PlaybackOnNavigate
-  label: string
-  description: string
-}> = [
-  {
-    value: 'floating',
-    label: 'Float in mini-player',
-    description: 'Keep playing in a floating window in the bottom-right corner.'
-  },
-  {
-    value: 'pause',
-    label: 'Pause and remember',
-    description: 'Pause the video; resume from the same time when you return.'
-  },
-  {
-    value: 'stop',
-    label: 'Stop and reset',
-    description: 'Close the player; returning starts the video from the beginning.'
-  }
-]
 
 /**
  * Radio group control for the `playbackOnNavigate` setting. Drives whether
@@ -33,13 +16,14 @@ const OPTIONS: ReadonlyArray<{
  * with resume-on-return, or fully stops playback.
  */
 export function PlaybackSettings(): React.ReactElement {
+  const { t } = useTranslation('settings')
   const { data, isLoading } = usePlaybackOnNavigate()
   const setMutation = useSetPlaybackOnNavigate()
 
   const handleChange = (next: string): void => {
     if (!isPlaybackOnNavigate(next)) return
     setMutation.mutate(next, {
-      onError: (err) => toast.error(`Failed to save preference: ${err.message}`)
+      onError: (err) => toast.error(t('playback.saveError', { message: err.message }))
     })
   }
 
@@ -47,16 +31,22 @@ export function PlaybackSettings(): React.ReactElement {
 
   return (
     <RadioGroup value={data} onValueChange={handleChange} disabled={setMutation.isPending}>
-      {OPTIONS.map((opt) => (
+      {PLAYBACK_ON_NAVIGATE_VALUES.map((value: PlaybackOnNavigate) => (
         <Label
-          key={opt.value}
-          htmlFor={`playbackOnNavigate-${opt.value}`}
+          key={value}
+          htmlFor={`playbackOnNavigate-${value}`}
           className="flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-muted/50"
         >
-          <RadioGroupItem id={`playbackOnNavigate-${opt.value}`} value={opt.value} />
+          <RadioGroupItem id={`playbackOnNavigate-${value}`} value={value} />
           <div className="space-y-1">
-            <p className="text-sm font-medium">{opt.label}</p>
-            <p className="text-xs text-muted-foreground">{opt.description}</p>
+            <p className="text-sm font-medium">
+              {t(`playback.options.${value}.label` as 'playback.options.floating.label')}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                `playback.options.${value}.description` as 'playback.options.floating.description'
+              )}
+            </p>
           </div>
         </Label>
       ))}

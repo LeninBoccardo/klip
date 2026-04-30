@@ -25,15 +25,59 @@
   },
   "storage": {
     "title": "Armazenamento",
-    "description": "Onde o Klip armazena seus arquivos de mídia em disco."
+    "description": "Onde o Klip armazena seus arquivos de mídia em disco.",
+    "rootLabel": "Diretório raiz",
+    "notSet": "Não definido",
+    "changeButton": "Alterar Pasta Raiz",
+    "confirm": {
+      "title": "Mover todos os arquivos para um novo local?",
+      "body": "Isso moverá todas as pastas de criadores da raiz atual para o destino selecionado. A pasta de destino deve estar vazia.",
+      "from": "De:",
+      "to": "Para:",
+      "unknown": "Desconhecido",
+      "action": "Mover Arquivos"
+    },
+    "result": {
+      "successTitle": "Migração Concluída",
+      "successDescription_one": "Movida {{count}} pasta para o novo local com sucesso.",
+      "successDescription_other": "Movidas {{count}} pastas para o novo local com sucesso.",
+      "errorTitle": "Falha na Migração",
+      "unknownError": "Ocorreu um erro desconhecido"
+    }
   },
   "maintenance": {
     "title": "Manutenção",
-    "description": "Reconciliar o índice do banco de dados com os arquivos em disco."
+    "description": "Reconciliar o índice do banco de dados com os arquivos em disco.",
+    "runButton": "Executar Reconciliação",
+    "completeToast": "Reconciliação concluída",
+    "failedToast": "Reconciliação falhou: {{message}}",
+    "result": {
+      "title": "Resultado da Reconciliação",
+      "creatorsAdded": "Criadores adicionados",
+      "creatorsMissing": "Criadores ausentes",
+      "creatorsRecovered": "Criadores recuperados",
+      "videosAdded": "Vídeos adicionados",
+      "videosMissing": "Vídeos ausentes",
+      "videosRecovered": "Vídeos recuperados",
+      "cutsAdded": "Cortes adicionados",
+      "cutsMissing": "Cortes ausentes",
+      "cutsRecovered": "Cortes recuperados"
+    }
   },
   "metadata": {
     "title": "Enriquecimento de Metadados",
-    "description": "Buscar metadados estendidos (curtidas, comentários, transcrições) para vídeos indexados."
+    "description": "Buscar metadados estendidos (curtidas, comentários, transcrições) para vídeos indexados.",
+    "runButton": "Enriquecer Todos os Vídeos",
+    "helper": "Busca curtidas, comentários, transcrições e outros metadados do yt-dlp para cada vídeo que ainda não foi enriquecido. Roda um por vez para evitar limites de taxa.",
+    "result": {
+      "title": "Última Execução",
+      "total": "Total",
+      "enriched": "Enriquecidos",
+      "failed": "Falharam",
+      "skipped": "Ignorados"
+    },
+    "successToast": "Enriquecidos {{enriched}} de {{total}} vídeos",
+    "failedToast": "Enriquecimento falhou: {{message}}"
   },
   "playback": {
     "title": "Reprodução",
@@ -56,7 +100,36 @@
   },
   "updates": {
     "title": "Atualizações",
-    "description": "Mantenha-se atualizado com a versão mais recente do Klip."
+    "description": "Mantenha-se atualizado com a versão mais recente do Klip.",
+    "currentVersion": "Versão atual",
+    "statusLabel": "Status",
+    "lastChecked": "Última verificação {{ago}}",
+    "checkButton": "Verificar atualizações",
+    "restartButton": "Reiniciar e instalar",
+    "stateCopy": {
+      "idle": "Pronto para verificar.",
+      "checking": "Verificando atualizações…",
+      "available": "Atualização disponível — baixando.",
+      "downloading": "Baixando atualização…",
+      "ready": "Atualização pronta para instalar.",
+      "up-to-date": "Você está na versão mais recente.",
+      "error": "Falha ao verificar atualizações.",
+      "disabled": "Atualizações automáticas só rodam em builds de produção."
+    },
+    "badge": {
+      "upToDate": "Atualizado",
+      "ready": "Pronto",
+      "available": "Disponível",
+      "checking": "Verificando",
+      "error": "Erro",
+      "disabled": "Desativado",
+      "idle": "Inativo"
+    },
+    "toast": {
+      "readyTitle": "Atualização v{{version}} pronta",
+      "readyDescription": "Reinicie o Klip agora para instalar, ou ela será instalada na próxima saída.",
+      "restartAction": "Reiniciar agora"
+    }
   },
   "auditLog": {
     "title": "Log de Auditoria Recente",

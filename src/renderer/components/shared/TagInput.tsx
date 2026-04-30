@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -41,10 +42,12 @@ export function TagInput({
   value,
   onChange,
   suggestions = [],
-  placeholder = 'Add tag…',
+  placeholder,
   disabled,
   className
 }: TagInputProps): React.ReactElement {
+  const { t } = useTranslation('tags')
+  const effectivePlaceholder = placeholder ?? t('input.placeholder')
   const [draft, setDraft] = useState('')
   const [open, setOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -105,7 +108,7 @@ export function TagInput({
           <span>{tag}</span>
           <button
             type="button"
-            aria-label={`Remove tag ${tag}`}
+            aria-label={t('input.removeAria', { tag })}
             className="rounded-full p-0.5 hover:bg-muted-foreground/20"
             onClick={(e) => {
               e.stopPropagation()
@@ -128,7 +131,7 @@ export function TagInput({
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder={value.length === 0 ? placeholder : ''}
+            placeholder={value.length === 0 ? effectivePlaceholder : ''}
             disabled={disabled}
             className="h-7 min-w-[8ch] flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
           />
@@ -142,10 +145,10 @@ export function TagInput({
           <Command shouldFilter>
             <CommandList>
               {candidates.length === 0 && !showCreateOption && (
-                <CommandEmpty>No matching tags.</CommandEmpty>
+                <CommandEmpty>{t('input.noMatches')}</CommandEmpty>
               )}
               {candidates.length > 0 && (
-                <CommandGroup heading="Existing tags">
+                <CommandGroup heading={t('input.existingHeading')}>
                   {candidates.map((tag) => (
                     <CommandItem key={tag} value={tag} onSelect={() => commitTag(tag)}>
                       {tag}
@@ -154,12 +157,12 @@ export function TagInput({
                 </CommandGroup>
               )}
               {showCreateOption && (
-                <CommandGroup heading="Create new">
+                <CommandGroup heading={t('input.createHeading')}>
                   <CommandItem
                     value={`__new__${trimmedDraft}`}
                     onSelect={() => commitTag(trimmedDraft)}
                   >
-                    Create &ldquo;{trimmedDraft}&rdquo;
+                    {t('input.createOption', { name: trimmedDraft })}
                   </CommandItem>
                 </CommandGroup>
               )}

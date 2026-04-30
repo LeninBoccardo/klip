@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   InputGroup,
@@ -11,18 +12,21 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-const urlSchema = z.object({
-  url: z.string().url('Enter a valid URL')
-})
-
-type UrlFormValues = z.infer<typeof urlSchema>
-
 interface UrlInputProps {
   onSubmit: (url: string) => void
   isLoading?: boolean
 }
 
 export function UrlInput({ onSubmit, isLoading }: UrlInputProps): React.ReactElement {
+  const { t } = useTranslation('downloads')
+
+  // Schema is rebuilt per-render so the Zod validation message reflects the
+  // active language (i18next re-renders consumers on `languageChanged`).
+  const urlSchema = z.object({
+    url: z.string().url(t('url.invalid'))
+  })
+  type UrlFormValues = z.infer<typeof urlSchema>
+
   const {
     register,
     handleSubmit,
@@ -41,7 +45,7 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps): React.ReactEle
             </InputGroupText>
           </InputGroupAddon>
           <InputGroupInput
-            placeholder="Paste a video URL..."
+            placeholder={t('url.placeholder')}
             aria-invalid={!!errors.url}
             {...register('url')}
           />
@@ -50,7 +54,7 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps): React.ReactEle
       </Field>
       <Button type="submit" disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-        Fetch Info
+        {t('url.fetchButton')}
       </Button>
     </form>
   )

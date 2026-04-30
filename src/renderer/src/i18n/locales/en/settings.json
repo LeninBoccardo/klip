@@ -25,15 +25,59 @@
   },
   "storage": {
     "title": "Storage",
-    "description": "Where Klip stores your media files on disk."
+    "description": "Where Klip stores your media files on disk.",
+    "rootLabel": "Root directory",
+    "notSet": "Not set",
+    "changeButton": "Change Root Folder",
+    "confirm": {
+      "title": "Move all files to a new location?",
+      "body": "This will move all creator folders from the current root to the selected destination. The target folder must be empty.",
+      "from": "From:",
+      "to": "To:",
+      "unknown": "Unknown",
+      "action": "Move Files"
+    },
+    "result": {
+      "successTitle": "Migration Complete",
+      "successDescription_one": "Successfully moved {{count}} folder to the new location.",
+      "successDescription_other": "Successfully moved {{count}} folders to the new location.",
+      "errorTitle": "Migration Failed",
+      "unknownError": "An unknown error occurred"
+    }
   },
   "maintenance": {
     "title": "Maintenance",
-    "description": "Reconcile the database index with files on disk."
+    "description": "Reconcile the database index with files on disk.",
+    "runButton": "Run Reconciliation",
+    "completeToast": "Reconciliation complete",
+    "failedToast": "Reconciliation failed: {{message}}",
+    "result": {
+      "title": "Reconciliation Result",
+      "creatorsAdded": "Creators added",
+      "creatorsMissing": "Creators missing",
+      "creatorsRecovered": "Creators recovered",
+      "videosAdded": "Videos added",
+      "videosMissing": "Videos missing",
+      "videosRecovered": "Videos recovered",
+      "cutsAdded": "Cuts added",
+      "cutsMissing": "Cuts missing",
+      "cutsRecovered": "Cuts recovered"
+    }
   },
   "metadata": {
     "title": "Metadata Enrichment",
-    "description": "Fetch extended metadata (likes, comments, transcripts) for indexed videos."
+    "description": "Fetch extended metadata (likes, comments, transcripts) for indexed videos.",
+    "runButton": "Enrich All Videos",
+    "helper": "Fetches likes, comments, transcripts, and other metadata from yt-dlp for every video that hasn’t been enriched yet. Runs one at a time to avoid rate-limit issues.",
+    "result": {
+      "title": "Last Run",
+      "total": "Total",
+      "enriched": "Enriched",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "successToast": "Enriched {{enriched}} of {{total}} videos",
+    "failedToast": "Enrichment failed: {{message}}"
   },
   "playback": {
     "title": "Playback",
@@ -56,7 +100,36 @@
   },
   "updates": {
     "title": "Updates",
-    "description": "Stay up to date with the latest version of Klip."
+    "description": "Stay up to date with the latest version of Klip.",
+    "currentVersion": "Current version",
+    "statusLabel": "Status",
+    "lastChecked": "Last checked {{ago}}",
+    "checkButton": "Check for updates",
+    "restartButton": "Restart and install",
+    "stateCopy": {
+      "idle": "Ready to check.",
+      "checking": "Checking for updates…",
+      "available": "Update available — downloading.",
+      "downloading": "Downloading update…",
+      "ready": "Update ready to install.",
+      "up-to-date": "You are on the latest version.",
+      "error": "Update check failed.",
+      "disabled": "Auto-updates run in production builds only."
+    },
+    "badge": {
+      "upToDate": "Up to date",
+      "ready": "Ready",
+      "available": "Available",
+      "checking": "Checking",
+      "error": "Error",
+      "disabled": "Disabled",
+      "idle": "Idle"
+    },
+    "toast": {
+      "readyTitle": "Update v{{version}} ready",
+      "readyDescription": "Restart Klip now to install, or it will install on next quit.",
+      "restartAction": "Restart now"
+    }
   },
   "auditLog": {
     "title": "Recent Audit Log",

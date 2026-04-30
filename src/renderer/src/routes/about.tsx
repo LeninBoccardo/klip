@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/card'
 import { Clapperboard, FolderGit2Icon, Scale, User } from 'lucide-react'
@@ -9,20 +10,17 @@ export const Route = createFileRoute('/about')({
 })
 
 function AboutPage(): React.ReactElement {
+  const { t } = useTranslation('about')
   return (
     <PageContainer>
-      <PageHeader title="About" description="Application information" />
+      <PageHeader title={t('page.title')} description={t('page.description')} />
 
       <Card>
         <CardContent className="flex flex-col items-center justify-center gap-4 py-12">
           <Clapperboard className="size-16 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight">Klip</h1>
           <Badge variant="secondary">v0.0.1</Badge>
-          <p className="max-w-md text-center text-muted-foreground">
-            A local, offline-first desktop asset manager designed to organize downloaded source
-            videos and manually created video cuts. Built for video creators who need a fast,
-            private way to manage their media library without cloud dependencies.
-          </p>
+          <p className="max-w-md text-center text-muted-foreground">{t('appDescription')}</p>
         </CardContent>
       </Card>
 
@@ -31,7 +29,7 @@ function AboutPage(): React.ReactElement {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="size-4" />
-              Author
+              {t('author.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -43,18 +41,18 @@ function AboutPage(): React.ReactElement {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Scale className="size-4" />
-              License
+              {t('license.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">MIT License</p>
+            <p className="text-sm text-muted-foreground">{t('license.value')}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Built With</CardTitle>
+          <CardTitle className="text-base">{t('builtWith')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {[
@@ -78,7 +76,7 @@ function AboutPage(): React.ReactElement {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <FolderGit2Icon className="size-4" />
-            Source Code
+            {t('sourceCode')}
           </CardTitle>
         </CardHeader>
         <CardContent>

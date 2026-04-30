@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -27,12 +28,13 @@ export function RenameCollectionDialog({
   onOpenChange,
   collection
 }: RenameCollectionDialogProps): React.ReactElement {
+  const { t } = useTranslation('collections')
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit collection</DialogTitle>
-          <DialogDescription>Rename or update the description.</DialogDescription>
+          <DialogTitle>{t('rename.title')}</DialogTitle>
+          <DialogDescription>{t('rename.description')}</DialogDescription>
         </DialogHeader>
         {/* Keying the form on (open, id) makes useState pick up the latest
             seed naturally on each new open without setState-in-effect. */}
@@ -55,6 +57,8 @@ function RenameForm({
   collection: CollectionDto
   onClose: () => void
 }): React.ReactElement {
+  const { t } = useTranslation('collections')
+  const { t: tc } = useTranslation('common')
   const [name, setName] = useState(collection.name)
   const [description, setDescription] = useState(collection.description ?? '')
   const rename = useRenameCollection()
@@ -69,10 +73,10 @@ function RenameForm({
       { id: collection.id, name: trimmedName, description: description.trim() || null },
       {
         onSuccess: () => {
-          toast.success('Collection updated')
+          toast.success(t('rename.updatedToast'))
           onClose()
         },
-        onError: (err) => toast.error(`Failed to update: ${err.message}`)
+        onError: (err) => toast.error(t('rename.updateFailed', { message: err.message }))
       }
     )
   }
@@ -80,7 +84,7 @@ function RenameForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="rename-collection-name">Name</Label>
+        <Label htmlFor="rename-collection-name">{t('rename.nameLabel')}</Label>
         <Input
           id="rename-collection-name"
           value={name}
@@ -90,7 +94,7 @@ function RenameForm({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="rename-collection-description">Description</Label>
+        <Label htmlFor="rename-collection-description">{t('rename.descriptionLabel')}</Label>
         <Textarea
           id="rename-collection-description"
           value={description}
@@ -101,11 +105,11 @@ function RenameForm({
       </div>
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={onClose}>
-          Cancel
+          {tc('actions.cancel')}
         </Button>
         <Button type="submit" disabled={!canSubmit}>
           {rename.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Save
+          {tc('actions.save')}
         </Button>
       </DialogFooter>
     </form>

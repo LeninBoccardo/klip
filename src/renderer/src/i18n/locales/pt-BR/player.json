@@ -1,0 +1,11 @@
+{
+  "fallbackTitle": "Reproduzindo",
+  "previousAria": "Anterior na fila",
+  "nextAria": "Próximo na fila",
+  "openExternalAria": "Abrir em reprodutor externo",
+  "expandAria": "Expandir para detalhes",
+  "closeAria": "Fechar reprodutor",
+  "openExternal": "Abrir em reprodutor externo",
+  "openFailed": "Falha ao abrir o arquivo.",
+  "unsupported": "O navegador não consegue reproduzir este codec."
+}

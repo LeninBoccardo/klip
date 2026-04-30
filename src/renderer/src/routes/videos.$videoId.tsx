@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useVideoById, useFetchVideoDetail, useTranscript } from '@/hooks/use-videos'
 import { usePlayerStore } from '@/hooks/use-player-store'
 import { PageContainer, PageHeader } from '@/components/shared'
@@ -32,6 +33,7 @@ export const Route = createFileRoute('/videos/$videoId')({
 })
 
 function VideoDetailPage(): React.ReactElement {
+  const { t } = useTranslation('videos')
   const { videoId } = Route.useParams()
   const { data: video, isLoading } = useVideoById(videoId)
   const fetchDetail = useFetchVideoDetail()
@@ -53,15 +55,15 @@ function VideoDetailPage(): React.ReactElement {
 
   const handleRefresh = (): void => {
     fetchDetail.mutate(videoId, {
-      onSuccess: () => toast.success('Metadata refreshed'),
-      onError: (err) => toast.error(`Refresh failed: ${err.message}`)
+      onSuccess: () => toast.success(t('detail.metadataRefreshed')),
+      onError: (err) => toast.error(t('detail.refreshFailed', { message: err.message }))
     })
   }
 
   const handleCopyTranscript = (): void => {
     if (!transcriptQuery.data) return
     navigator.clipboard.writeText(transcriptQuery.data)
-    toast.success('Transcript copied to clipboard')
+    toast.success(t('detail.transcriptCopied'))
   }
 
   if (isLoading) {
@@ -78,7 +80,7 @@ function VideoDetailPage(): React.ReactElement {
       <PageContainer>
         <Empty className="min-h-[400px] border rounded-lg">
           <EmptyHeader>
-            <EmptyTitle>Video not found</EmptyTitle>
+            <EmptyTitle>{t('detail.notFound')}</EmptyTitle>
           </EmptyHeader>
         </Empty>
       </PageContainer>
@@ -95,19 +97,21 @@ function VideoDetailPage(): React.ReactElement {
 
   const handleOpenExternal = async (): Promise<void> => {
     const result = await window.api.openMediaExternally('video', video.id)
-    if (!result.ok) toast.error(result.error ?? 'Failed to open file.')
+    if (!result.ok) toast.error(result.error ?? t('detail.openFailed'))
   }
 
   return (
     <PageContainer>
       <PageHeader
         title={video.title}
-        description={video.uploadDate ? `Uploaded ${video.uploadDate}` : undefined}
+        description={
+          video.uploadDate ? t('detail.uploaded', { date: video.uploadDate }) : undefined
+        }
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleOpenExternal}>
               <ExternalLink className="mr-2 size-4" />
-              Open externally
+              {t('detail.openExternally')}
             </Button>
             <Button onClick={handleRefresh} disabled={fetchDetail.isPending} variant="outline">
               {fetchDetail.isPending ? (
@@ -115,7 +119,7 @@ function VideoDetailPage(): React.ReactElement {
               ) : (
                 <RefreshCw className="mr-2 size-4" />
               )}
-              {everEnriched ? 'Refresh metadata' : 'Fetch metadata'}
+              {everEnriched ? t('detail.refreshMetadata') : t('detail.fetchMetadata')}
             </Button>
           </div>
         }
@@ -127,7 +131,7 @@ function VideoDetailPage(): React.ReactElement {
           <button
             type="button"
             onClick={handlePlay}
-            aria-label={`Play ${video.title}`}
+            aria-label={t('detail.playAria', { title: video.title })}
             className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 text-white transition-colors hover:bg-black/55"
           >
             <Play className="size-12 fill-white" />
@@ -138,44 +142,44 @@ function VideoDetailPage(): React.ReactElement {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatTile
           icon={<Eye className="size-4" />}
-          label="Views"
+          label={t('detail.stats.views')}
           value={formatCount(video.viewCount)}
         />
         <StatTile
           icon={<ThumbsUp className="size-4" />}
-          label="Likes"
+          label={t('detail.stats.likes')}
           value={formatCount(video.likeCount)}
         />
         <StatTile
           icon={<ThumbsDown className="size-4" />}
-          label="Dislikes"
+          label={t('detail.stats.dislikes')}
           value={formatCount(video.dislikeCount)}
         />
         <StatTile
           icon={<MessageSquare className="size-4" />}
-          label="Comments"
+          label={t('detail.stats.comments')}
           value={formatCount(video.commentCount)}
         />
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="info">Info</TabsTrigger>
-          <TabsTrigger value="transcript">Transcript</TabsTrigger>
-          <TabsTrigger value="comments">Comments</TabsTrigger>
+          <TabsTrigger value="info">{t('detail.tabs.info')}</TabsTrigger>
+          <TabsTrigger value="transcript">{t('detail.tabs.transcript')}</TabsTrigger>
+          <TabsTrigger value="comments">{t('detail.tabs.comments')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">File</CardTitle>
-              <CardDescription>Local media metadata.</CardDescription>
+              <CardTitle className="text-base">{t('detail.file.title')}</CardTitle>
+              <CardDescription>{t('detail.file.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <Row label="Duration" value={formatDuration(video.duration)} />
-              <Row label="Resolution" value={video.resolution ?? '—'} />
-              <Row label="Size" value={formatFileSize(video.fileSize)} />
-              <Row label="URL" value={video.url ?? '—'} mono />
+              <Row label={t('detail.file.duration')} value={formatDuration(video.duration)} />
+              <Row label={t('detail.file.resolution')} value={video.resolution ?? '—'} />
+              <Row label={t('detail.file.size')} value={formatFileSize(video.fileSize)} />
+              <Row label={t('detail.file.url')} value={video.url ?? '—'} mono />
             </CardContent>
           </Card>
 
@@ -186,7 +190,9 @@ function VideoDetailPage(): React.ReactElement {
             readOnlyExtras={
               video.isShort || video.category ? (
                 <>
-                  {video.isShort && <Badge variant="destructive">Short</Badge>}
+                  {video.isShort && (
+                    <Badge variant="destructive">{t('detail.categoryBadges.short')}</Badge>
+                  )}
                   {video.category && <Badge variant="secondary">{video.category}</Badge>}
                 </>
               ) : undefined
@@ -196,7 +202,7 @@ function VideoDetailPage(): React.ReactElement {
           {video.description && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Description</CardTitle>
+                <CardTitle className="text-base">{t('detail.description.title')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
@@ -211,17 +217,17 @@ function VideoDetailPage(): React.ReactElement {
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-base">Auto-transcript</CardTitle>
+                <CardTitle className="text-base">{t('detail.transcript.title')}</CardTitle>
                 <CardDescription>
                   {video.hasTranscript
-                    ? 'Generated by yt-dlp from auto-captions.'
-                    : 'No transcript fetched yet.'}
+                    ? t('detail.transcript.fromCaptions')
+                    : t('detail.transcript.notFetched')}
                 </CardDescription>
               </div>
               {transcriptQuery.data && (
                 <Button size="sm" variant="outline" onClick={handleCopyTranscript}>
                   <Copy className="mr-2 size-4" />
-                  Copy
+                  {t('actions.copy', { ns: 'common' })}
                 </Button>
               )}
             </CardHeader>
@@ -237,11 +243,11 @@ function VideoDetailPage(): React.ReactElement {
               ) : (
                 <Empty className="min-h-[200px]">
                   <EmptyHeader>
-                    <EmptyTitle>No transcript available</EmptyTitle>
+                    <EmptyTitle>{t('detail.transcript.noneTitle')}</EmptyTitle>
                     <EmptyDescription>
                       {everEnriched
-                        ? 'This video has no auto-generated captions.'
-                        : 'Click "Fetch metadata" to retrieve the auto-generated transcript.'}
+                        ? t('detail.transcript.noneDescriptionEnriched')
+                        : t('detail.transcript.noneDescriptionNotEnriched')}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>

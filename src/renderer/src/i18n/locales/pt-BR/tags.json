@@ -1,0 +1,32 @@
+{
+  "input": {
+    "placeholder": "Adicionar tag…",
+    "noMatches": "Nenhuma tag correspondente.",
+    "existingHeading": "Tags existentes",
+    "createHeading": "Criar nova",
+    "createOption": "Criar “{{name}}”",
+    "removeAria": "Remover tag {{tag}}"
+  },
+  "bulk": {
+    "selected_one": "{{count}} selecionado",
+    "selected_other": "{{count}} selecionados",
+    "addButton": "Adicionar tag…",
+    "removeButton": "Remover tag…",
+    "clear": "Limpar",
+    "addTitle": "Adicionar tags a {{count}} selecionados",
+    "removeTitle": "Remover tags de {{count}} selecionados",
+    "addDescription": "Digite para adicionar tags novas ou existentes. Cada uma será adicionada a cada entidade selecionada.",
+    "removeDescription": "Escolha tags existentes para remover. Entidades que não possuem a tag não são afetadas.",
+    "addPlaceholder": "Adicionar tag…",
+    "removePlaceholder": "Remover tag…",
+    "addedToastVideo_one": "Tags adicionadas a {{count}} vídeo",
+    "addedToastVideo_other": "Tags adicionadas a {{count}} vídeos",
+    "addedToastCut_one": "Tags adicionadas a {{count}} corte",
+    "addedToastCut_other": "Tags adicionadas a {{count}} cortes",
+    "removedToastVideo_one": "Tags removidas de {{count}} vídeo",
+    "removedToastVideo_other": "Tags removidas de {{count}} vídeos",
+    "removedToastCut_one": "Tags removidas de {{count}} corte",
+    "removedToastCut_other": "Tags removidas de {{count}} cortes",
+    "updateFailed": "Atualização em massa falhou: {{message}}"
+  }
+}

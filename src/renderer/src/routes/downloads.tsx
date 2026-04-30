@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useFetchVideoInfo, useDownloadVideo } from '@/hooks/use-downloads'
 import { UrlInput } from '@components/features/downloads/UrlInput'
 import { VideoInfoPreview } from '@components/features/downloads/VideoInfoPreview'
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/downloads')({
 })
 
 function DownloadsPage(): React.ReactElement {
+  const { t } = useTranslation('downloads')
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
   const [fetchedUrl, setFetchedUrl] = useState('')
   const [creatorName, setCreatorName] = useState('')
@@ -36,38 +38,35 @@ function DownloadsPage(): React.ReactElement {
           setCreatorName(info.channel)
         }
       },
-      onError: (err) => toast.error(`Failed to fetch info: ${err.message}`)
+      onError: (err) => toast.error(t('newDownload.fetchInfoFailed', { message: err.message }))
     })
   }
 
   const handleDownload = (): void => {
     if (!fetchedUrl || !creatorName.trim()) {
-      toast.error('Please provide a creator name')
+      toast.error(t('newDownload.needsCreator'))
       return
     }
     download.mutate(
       { url: fetchedUrl, creatorName: creatorName.trim() },
       {
         onSuccess: (result) => {
-          toast.success(`Download queued (${result.downloadId})`)
+          toast.success(t('newDownload.queued', { id: result.downloadId }))
           setVideoInfo(null)
           setFetchedUrl('')
         },
-        onError: (err) => toast.error(`Download failed: ${err.message}`)
+        onError: (err) => toast.error(t('newDownload.downloadFailed', { message: err.message }))
       }
     )
   }
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Downloads"
-        description="Fetch video info and download from supported URLs"
-      />
+      <PageHeader title={t('page.title')} description={t('page.description')} />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">New Download</CardTitle>
+          <CardTitle className="text-base">{t('newDownload.cardTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <UrlInput onSubmit={handleFetchInfo} isLoading={fetchInfo.isPending} />
@@ -83,7 +82,7 @@ function DownloadsPage(): React.ReactElement {
                 ) : (
                   <Download className="mr-2 size-4" />
                 )}
-                Download
+                {t('newDownload.downloadButton')}
               </Button>
             </>
           )}
@@ -92,7 +91,7 @@ function DownloadsPage(): React.ReactElement {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Active Downloads</CardTitle>
+          <CardTitle className="text-base">{t('active.cardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ActiveDownloadsList />

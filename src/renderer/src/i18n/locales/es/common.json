@@ -1,8 +1,35 @@
 {
-  "save": "Guardar",
-  "cancel": "Cancelar",
-  "close": "Cerrar",
-  "delete": "Eliminar",
-  "create": "Crear",
-  "loading": "Cargando…"
+  "actions": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "create": "Crear",
+    "edit": "Editar",
+    "rename": "Renombrar",
+    "restore": "Restaurar",
+    "retry": "Reintentar",
+    "dismiss": "Descartar",
+    "ok": "OK",
+    "back": "Volver",
+    "done": "Hecho",
+    "select": "Seleccionar",
+    "selectAllOnPage": "Seleccionar todo en esta página",
+    "apply": "Aplicar",
+    "copy": "Copiar",
+    "copyAll": "Copiar todo",
+    "reload": "Recargar",
+    "refresh": "Actualizar"
+  },
+  "states": {
+    "loading": "Cargando…",
+    "idle": "Inactivo"
+  },
+  "operations": {
+    "phases": {
+      "moving": "Moviendo archivos…",
+      "updating_db": "Actualizando base de datos…",
+      "reconciling": "Reconciliando…"
+    }
+  }
 }

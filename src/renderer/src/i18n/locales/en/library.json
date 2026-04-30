@@ -1,0 +1,17 @@
+{
+  "page": {
+    "title": "Library",
+    "description": "Browse and manage your creator library"
+  },
+  "empty": {
+    "title": "No creators found",
+    "withSearch": "Try a different search term.",
+    "withoutSearch": "Download a video or add creator folders to your root directory to get started."
+  },
+  "toasts": {
+    "deleted": "“{{name}}” deleted",
+    "deleteFailed": "Failed to delete: {{message}}",
+    "restored": "“{{name}}” restored",
+    "restoreFailed": "Failed to restore: {{message}}"
+  }
+}

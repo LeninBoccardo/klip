@@ -1,0 +1,75 @@
+{
+  "card": {
+    "shortBadge": "Short"
+  },
+  "detail": {
+    "uploaded": "Subido el {{date}}",
+    "openExternally": "Abrir externamente",
+    "openFailed": "Error al abrir el archivo.",
+    "fetchMetadata": "Obtener metadatos",
+    "refreshMetadata": "Actualizar metadatos",
+    "metadataRefreshed": "Metadatos actualizados",
+    "refreshFailed": "Error al actualizar: {{message}}",
+    "transcriptCopied": "Transcripción copiada al portapapeles",
+    "playAria": "Reproducir {{title}}",
+    "notFound": "Video no encontrado",
+    "stats": {
+      "views": "Vistas",
+      "likes": "Me gusta",
+      "dislikes": "No me gusta",
+      "comments": "Comentarios"
+    },
+    "tabs": {
+      "info": "Información",
+      "transcript": "Transcripción",
+      "comments": "Comentarios"
+    },
+    "file": {
+      "title": "Archivo",
+      "description": "Metadatos del medio local.",
+      "duration": "Duración",
+      "resolution": "Resolución",
+      "size": "Tamaño",
+      "url": "URL"
+    },
+    "categoryBadges": {
+      "short": "Short"
+    },
+    "description": {
+      "title": "Descripción"
+    },
+    "transcript": {
+      "title": "Transcripción automática",
+      "fromCaptions": "Generada por yt-dlp a partir de subtítulos automáticos.",
+      "notFetched": "Aún no se ha obtenido ninguna transcripción.",
+      "noneTitle": "No hay transcripción disponible",
+      "noneDescriptionEnriched": "Este video no tiene subtítulos generados automáticamente.",
+      "noneDescriptionNotEnriched": "Haz clic en “Obtener metadatos” para recuperar la transcripción automática."
+    }
+  },
+  "comments": {
+    "noneLoaded": "No hay comentarios cargados",
+    "ctaWithCount": "Este video tiene {{count}} comentarios. Haz clic abajo para obtenerlos — puede tardar 30–60s en videos populares.",
+    "ctaWithoutCount": "Haz clic abajo para obtener los comentarios de YouTube. Puede tardar 30–60s en videos populares.",
+    "loadButton": "Cargar comentarios",
+    "loadingTitle": "Obteniendo comentarios de YouTube…",
+    "loadingHint": "Puede tardar 30–60 segundos en videos populares.",
+    "errorTitle": "Error al obtener comentarios",
+    "noneOnVideo": "Sin comentarios en este video",
+    "summaryComments": "comentarios",
+    "summaryReplies": "respuestas",
+    "truncatedBadge": "Solo los primeros 500",
+    "pinnedBadge": "Fijado",
+    "viewReplies": "Ver {{count}} respuestas",
+    "hideReplies": "Ocultar {{count}} respuestas",
+    "copySuccess": "Comentarios copiados al portapapeles",
+    "copyError": "Error al copiar comentarios"
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "empty": "Sin etiquetas aún.",
+    "editAria": "Editar etiquetas",
+    "updated": "Etiquetas actualizadas",
+    "updateFailed": "Error al actualizar etiquetas: {{message}}"
+  }
+}

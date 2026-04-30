@@ -1,8 +1,35 @@
 {
-  "save": "Save",
-  "cancel": "Cancel",
-  "close": "Close",
-  "delete": "Delete",
-  "create": "Create",
-  "loading": "Loading…"
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "create": "Create",
+    "edit": "Edit",
+    "rename": "Rename",
+    "restore": "Restore",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
+    "ok": "OK",
+    "back": "Back",
+    "done": "Done",
+    "select": "Select",
+    "selectAllOnPage": "Select all on this page",
+    "apply": "Apply",
+    "copy": "Copy",
+    "copyAll": "Copy All",
+    "reload": "Reload",
+    "refresh": "Refresh"
+  },
+  "states": {
+    "loading": "Loading…",
+    "idle": "Idle"
+  },
+  "operations": {
+    "phases": {
+      "moving": "Moving files…",
+      "updating_db": "Updating database…",
+      "reconciling": "Reconciling…"
+    }
+  }
 }

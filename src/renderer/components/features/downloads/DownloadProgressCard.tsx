@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Item, ItemContent, ItemTitle, ItemDescription, ItemActions } from '@/components/ui/item'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ export function DownloadProgressCard({
   progress,
   onCancel
 }: DownloadProgressCardProps): React.ReactElement {
+  const { t } = useTranslation('downloads')
   const isTerminal =
     progress.status === 'complete' || progress.status === 'error' || progress.status === 'cancelled'
 
@@ -32,7 +34,7 @@ export function DownloadProgressCard({
         <Progress value={progress.percent} className="h-2" />
         <ItemDescription>
           {Math.round(progress.percent)}%{progress.speed && ` · ${progress.speed}`}
-          {progress.eta && ` · ETA ${progress.eta}`}
+          {progress.eta && ` · ${t('progress.etaPrefix')} ${progress.eta}`}
         </ItemDescription>
       </ItemContent>
       {!isTerminal && (

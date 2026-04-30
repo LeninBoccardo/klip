@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '@/hooks/use-app-store'
 import { useCancelDownload } from '@/hooks/use-downloads'
 import { DownloadProgressCard } from './DownloadProgressCard'
@@ -6,6 +7,7 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@u
 import { Download } from 'lucide-react'
 
 export function ActiveDownloadsList(): React.ReactElement {
+  const { t } = useTranslation('downloads')
   const activeDownloads = useAppStore((s) => s.activeDownloads)
   const cancelDownload = useCancelDownload()
   const entries = Object.values(activeDownloads)
@@ -17,8 +19,8 @@ export function ActiveDownloadsList(): React.ReactElement {
           <EmptyMedia>
             <Download className="size-6 text-muted-foreground" />
           </EmptyMedia>
-          <EmptyTitle>No active downloads</EmptyTitle>
-          <EmptyDescription>Downloads will appear here in real time.</EmptyDescription>
+          <EmptyTitle>{t('active.emptyTitle')}</EmptyTitle>
+          <EmptyDescription>{t('active.emptyDescription')}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     )

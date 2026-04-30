@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,6 +9,7 @@ import { useState } from 'react'
 import { Sparkles } from 'lucide-react'
 
 export function EnrichVideosButton({ disabled }: { disabled?: boolean }): React.ReactElement {
+  const { t } = useTranslation('settings')
   const enrich = useEnrichAllVideos()
   const [result, setResult] = useState<EnrichVideosResult | null>(null)
 
@@ -16,9 +18,9 @@ export function EnrichVideosButton({ disabled }: { disabled?: boolean }): React.
     enrich.mutate(undefined, {
       onSuccess: (res) => {
         setResult(res)
-        toast.success(`Enriched ${res.enriched} of ${res.total} videos`)
+        toast.success(t('metadata.successToast', { enriched: res.enriched, total: res.total }))
       },
-      onError: (err) => toast.error(`Enrichment failed: ${err.message}`)
+      onError: (err) => toast.error(t('metadata.failedToast', { message: err.message }))
     })
   }
 
@@ -30,24 +32,21 @@ export function EnrichVideosButton({ disabled }: { disabled?: boolean }): React.
         ) : (
           <Sparkles className="mr-2 size-4" />
         )}
-        Enrich All Videos
+        {t('metadata.runButton')}
       </Button>
-      <p className="text-xs text-muted-foreground">
-        Fetches likes, comments, transcripts, and other metadata from yt-dlp for every video that
-        hasn&apos;t been enriched yet. Runs one at a time to avoid rate-limit issues.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('metadata.helper')}</p>
 
       {result && (
         <Card size="sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Last Run</CardTitle>
+            <CardTitle className="text-sm">{t('metadata.result.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-              <Stat label="Total" value={result.total} />
-              <Stat label="Enriched" value={result.enriched} />
-              <Stat label="Failed" value={result.failed} />
-              <Stat label="Skipped" value={result.skipped} />
+              <Stat label={t('metadata.result.total')} value={result.total} />
+              <Stat label={t('metadata.result.enriched')} value={result.enriched} />
+              <Stat label={t('metadata.result.failed')} value={result.failed} />
+              <Stat label={t('metadata.result.skipped')} value={result.skipped} />
             </div>
           </CardContent>
         </Card>

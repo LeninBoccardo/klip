@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCreatorsPaginated, useDeleteCreator, useRestoreCreator } from '@/hooks/use-creators'
 import { CreatorCard } from '@components/features/creators/CreatorCard'
 import { CreatorFilters } from '@components/features/creators/CreatorFilters'
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/')({
 })
 
 function LibraryPage(): React.ReactElement {
+  const { t } = useTranslation('library')
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -38,21 +40,21 @@ function LibraryPage(): React.ReactElement {
 
   const handleDelete = (id: string, name: string): void => {
     deleteCreator.mutate(id, {
-      onSuccess: () => toast.success(`"${name}" deleted`),
-      onError: (err) => toast.error(`Failed to delete: ${err.message}`)
+      onSuccess: () => toast.success(t('toasts.deleted', { name })),
+      onError: (err) => toast.error(t('toasts.deleteFailed', { message: err.message }))
     })
   }
 
   const handleRestore = (id: string, name: string): void => {
     restoreCreator.mutate(id, {
-      onSuccess: () => toast.success(`"${name}" restored`),
-      onError: (err) => toast.error(`Failed to restore: ${err.message}`)
+      onSuccess: () => toast.success(t('toasts.restored', { name })),
+      onError: (err) => toast.error(t('toasts.restoreFailed', { message: err.message }))
     })
   }
 
   return (
     <PageContainer>
-      <PageHeader title="Library" description="Browse and manage your creator library" />
+      <PageHeader title={t('page.title')} description={t('page.description')} />
 
       <CreatorFilters
         search={search}
@@ -81,11 +83,9 @@ function LibraryPage(): React.ReactElement {
             <EmptyMedia>
               <Users className="size-10 text-muted-foreground" />
             </EmptyMedia>
-            <EmptyTitle>No creators found</EmptyTitle>
+            <EmptyTitle>{t('empty.title')}</EmptyTitle>
             <EmptyDescription>
-              {search
-                ? 'Try a different search term.'
-                : 'Download a video or add creator folders to your root directory to get started.'}
+              {search ? t('empty.withSearch') : t('empty.withoutSearch')}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

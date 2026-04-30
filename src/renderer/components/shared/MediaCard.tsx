@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@/components/ui/card'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -37,6 +38,7 @@ export function MediaCard({
   onClick,
   className
 }: MediaCardProps): React.ReactElement {
+  const { t } = useTranslation('videos')
   const src = hasThumbnail ? mediaUrl(entityKind, entityId, 'thumbnail') : undefined
 
   return (
@@ -63,7 +65,7 @@ export function MediaCard({
         )}
         {isShort && (
           <span className="absolute top-1 left-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-            Short
+            {t('card.shortBadge')}
           </span>
         )}
       </AspectRatio>

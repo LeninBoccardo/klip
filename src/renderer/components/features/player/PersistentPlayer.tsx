@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { usePlayerStore } from '@/hooks/use-player-store'
 import { usePlayerSlot } from './player-slot-ref'
 import { mediaUrl } from '@/lib/format'
@@ -27,6 +28,7 @@ const MINI_OFFSET = 24
  * `ResizeObserver`. Mini mode uses a fixed corner offset.
  */
 export function PersistentPlayer(): React.ReactElement | null {
+  const { t } = useTranslation('player')
   const videoId = usePlayerStore((s) => s.videoId)
   const mediaKind = usePlayerStore((s) => s.mediaKind)
   const title = usePlayerStore((s) => s.title)
@@ -134,7 +136,7 @@ export function PersistentPlayer(): React.ReactElement | null {
   const handleOpenExternally = async (): Promise<void> => {
     if (!videoId) return
     const result = await window.api.openMediaExternally(mediaKind, videoId)
-    if (!result.ok) toast.error(result.error ?? 'Failed to open file.')
+    if (!result.ok) toast.error(result.error ?? t('openFailed'))
   }
 
   const handleExpand = (): void => {
@@ -237,6 +239,7 @@ function MiniOverlay({
   onClose: () => void
   onOpenExternally: () => void
 }): React.ReactElement {
+  const { t } = useTranslation('player')
   return (
     <>
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-gradient-to-t from-black/80 to-transparent px-2 pb-1 pt-6">
@@ -245,7 +248,7 @@ function MiniOverlay({
             <Button
               size="icon"
               variant="ghost"
-              aria-label="Previous in queue"
+              aria-label={t('previousAria')}
               disabled={atQueueStart}
               className="size-6 text-white hover:bg-white/10 hover:text-white"
               onClick={onPrevious}
@@ -255,7 +258,7 @@ function MiniOverlay({
             <Button
               size="icon"
               variant="ghost"
-              aria-label="Next in queue"
+              aria-label={t('nextAria')}
               disabled={atQueueEnd}
               className="size-6 text-white hover:bg-white/10 hover:text-white"
               onClick={onNext}
@@ -264,11 +267,11 @@ function MiniOverlay({
             </Button>
           </>
         )}
-        <span className="flex-1 truncate text-xs text-white">{title ?? 'Playing'}</span>
+        <span className="flex-1 truncate text-xs text-white">{title ?? t('fallbackTitle')}</span>
         <Button
           size="icon"
           variant="ghost"
-          aria-label="Open in external player"
+          aria-label={t('openExternalAria')}
           className="size-6 text-white hover:bg-white/10 hover:text-white"
           onClick={onOpenExternally}
         >
@@ -277,7 +280,7 @@ function MiniOverlay({
         <Button
           size="icon"
           variant="ghost"
-          aria-label="Expand to detail"
+          aria-label={t('expandAria')}
           className="size-6 text-white hover:bg-white/10 hover:text-white"
           onClick={onExpand}
         >
@@ -286,7 +289,7 @@ function MiniOverlay({
         <Button
           size="icon"
           variant="ghost"
-          aria-label="Close player"
+          aria-label={t('closeAria')}
           className="size-6 text-white hover:bg-white/10 hover:text-white"
           onClick={onClose}
         >
@@ -302,12 +305,13 @@ function UnsupportedFallback({
 }: {
   onOpenExternally: () => void
 }): React.ReactElement {
+  const { t } = useTranslation('player')
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted p-4 text-center text-sm text-muted-foreground">
-      <p>Browser can&apos;t play this codec.</p>
+      <p>{t('unsupported')}</p>
       <Button size="sm" variant="outline" onClick={onOpenExternally}>
         <ExternalLink className="mr-2 size-3" />
-        Open in external player
+        {t('openExternal')}
       </Button>
     </div>
   )

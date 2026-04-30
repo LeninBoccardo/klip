@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -33,15 +34,13 @@ export function CreateCollectionDialog({
   onOpenChange,
   onCreated
 }: CreateCollectionDialogProps): React.ReactElement {
+  const { t } = useTranslation('collections')
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New collection</DialogTitle>
-          <DialogDescription>
-            Create a manual collection. You can add videos and cuts to it from any card&apos;s
-            context menu.
-          </DialogDescription>
+          <DialogTitle>{t('create.title')}</DialogTitle>
+          <DialogDescription>{t('create.description')}</DialogDescription>
         </DialogHeader>
         {open && (
           <CreateForm
@@ -64,6 +63,8 @@ function CreateForm({
   onClose: () => void
   onCreated: (created: CollectionDto) => void
 }): React.ReactElement {
+  const { t } = useTranslation('collections')
+  const { t: tc } = useTranslation('common')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const create = useCreateCollection()
@@ -78,10 +79,10 @@ function CreateForm({
       { name: trimmedName, description: description.trim() || null },
       {
         onSuccess: (created) => {
-          toast.success(`Collection "${created.name}" created`)
+          toast.success(t('create.createdToast', { name: created.name }))
           onCreated(created)
         },
-        onError: (err) => toast.error(`Failed to create collection: ${err.message}`)
+        onError: (err) => toast.error(t('create.createFailed', { message: err.message }))
       }
     )
   }
@@ -89,34 +90,34 @@ function CreateForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="collection-name">Name</Label>
+        <Label htmlFor="collection-name">{t('create.nameLabel')}</Label>
         <Input
           id="collection-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="My favourite clips"
+          placeholder={t('create.namePlaceholder')}
           maxLength={200}
           autoFocus
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="collection-description">Description (optional)</Label>
+        <Label htmlFor="collection-description">{t('create.descriptionLabel')}</Label>
         <Textarea
           id="collection-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="What this collection is for…"
+          placeholder={t('create.descriptionPlaceholder')}
           maxLength={5000}
           rows={3}
         />
       </div>
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={onClose}>
-          Cancel
+          {tc('actions.cancel')}
         </Button>
         <Button type="submit" disabled={!canSubmit}>
           {create.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Create
+          {tc('actions.create')}
         </Button>
       </DialogFooter>
     </form>

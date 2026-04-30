@@ -1,0 +1,32 @@
+{
+  "input": {
+    "placeholder": "Añadir etiqueta…",
+    "noMatches": "Sin etiquetas coincidentes.",
+    "existingHeading": "Etiquetas existentes",
+    "createHeading": "Crear nueva",
+    "createOption": "Crear “{{name}}”",
+    "removeAria": "Quitar etiqueta {{tag}}"
+  },
+  "bulk": {
+    "selected_one": "{{count}} seleccionado",
+    "selected_other": "{{count}} seleccionados",
+    "addButton": "Añadir etiqueta…",
+    "removeButton": "Quitar etiqueta…",
+    "clear": "Limpiar",
+    "addTitle": "Añadir etiquetas a {{count}} seleccionados",
+    "removeTitle": "Quitar etiquetas de {{count}} seleccionados",
+    "addDescription": "Escribe para añadir etiquetas nuevas o existentes. Cada una se añadirá a cada entidad seleccionada.",
+    "removeDescription": "Elige etiquetas existentes para quitar. Las entidades que no tienen la etiqueta no se ven afectadas.",
+    "addPlaceholder": "Añadir etiqueta…",
+    "removePlaceholder": "Quitar etiqueta…",
+    "addedToastVideo_one": "Etiquetas añadidas a {{count}} video",
+    "addedToastVideo_other": "Etiquetas añadidas a {{count}} videos",
+    "addedToastCut_one": "Etiquetas añadidas a {{count}} corte",
+    "addedToastCut_other": "Etiquetas añadidas a {{count}} cortes",
+    "removedToastVideo_one": "Etiquetas quitadas de {{count}} video",
+    "removedToastVideo_other": "Etiquetas quitadas de {{count}} videos",
+    "removedToastCut_one": "Etiquetas quitadas de {{count}} corte",
+    "removedToastCut_other": "Etiquetas quitadas de {{count}} cortes",
+    "updateFailed": "Actualización masiva falló: {{message}}"
+  }
+}

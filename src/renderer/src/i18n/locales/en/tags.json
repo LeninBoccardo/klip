@@ -1,0 +1,32 @@
+{
+  "input": {
+    "placeholder": "Add tag…",
+    "noMatches": "No matching tags.",
+    "existingHeading": "Existing tags",
+    "createHeading": "Create new",
+    "createOption": "Create “{{name}}”",
+    "removeAria": "Remove tag {{tag}}"
+  },
+  "bulk": {
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "addButton": "Add tag…",
+    "removeButton": "Remove tag…",
+    "clear": "Clear",
+    "addTitle": "Add tags from {{count}} selected",
+    "removeTitle": "Remove tags from {{count}} selected",
+    "addDescription": "Type to add new or existing tags. Each one will be appended to every selected entity.",
+    "removeDescription": "Pick existing tags to remove. Entities that don’t carry the tag are unaffected.",
+    "addPlaceholder": "Add tag…",
+    "removePlaceholder": "Remove tag…",
+    "addedToastVideo_one": "Tags added to {{count}} video",
+    "addedToastVideo_other": "Tags added to {{count}} videos",
+    "addedToastCut_one": "Tags added to {{count}} cut",
+    "addedToastCut_other": "Tags added to {{count}} cuts",
+    "removedToastVideo_one": "Tags removed from {{count}} video",
+    "removedToastVideo_other": "Tags removed from {{count}} videos",
+    "removedToastCut_one": "Tags removed from {{count}} cut",
+    "removedToastCut_other": "Tags removed from {{count}} cuts",
+    "updateFailed": "Bulk update failed: {{message}}"
+  }
+}

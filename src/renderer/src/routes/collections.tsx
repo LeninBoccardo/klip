@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCollectionsPaginated, useDeleteCollection } from '@/hooks/use-collections'
 import { CollectionCard } from '@components/features/collections/CollectionCard'
 import { CollectionContextMenu } from '@components/features/collections/CollectionContextMenu'
@@ -20,6 +21,7 @@ export const Route = createFileRoute('/collections')({
 const PAGE_SIZE = 24
 
 function CollectionsPage(): React.ReactElement {
+  const { t } = useTranslation('collections')
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
@@ -29,22 +31,22 @@ function CollectionsPage(): React.ReactElement {
   const deleteCollection = useDeleteCollection()
 
   const handleDelete = (collection: CollectionDto): void => {
-    if (!window.confirm(`Delete collection "${collection.name}"?`)) return
+    if (!window.confirm(t('deleteConfirm', { name: collection.name }))) return
     deleteCollection.mutate(collection.id, {
-      onSuccess: () => toast.success(`"${collection.name}" deleted`),
-      onError: (err) => toast.error(`Failed to delete: ${err.message}`)
+      onSuccess: () => toast.success(t('toasts.deleted', { name: collection.name })),
+      onError: (err) => toast.error(t('toasts.deleteFailed', { message: err.message }))
     })
   }
 
   return (
     <PageContainer>
       <PageHeader
-        title="Collections"
-        description="Manual playlists across videos and cuts."
+        title={t('page.title')}
+        description={t('page.description')}
         actions={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 size-4" />
-            New collection
+            {t('page.newButton')}
           </Button>
         }
       />
@@ -58,10 +60,8 @@ function CollectionsPage(): React.ReactElement {
       ) : !data || data.data.length === 0 ? (
         <Empty className="min-h-100 rounded-lg border">
           <EmptyHeader>
-            <EmptyTitle>No collections yet</EmptyTitle>
-            <EmptyDescription>
-              Create your first collection to group related videos and cuts.
-            </EmptyDescription>
+            <EmptyTitle>{t('empty.title')}</EmptyTitle>
+            <EmptyDescription>{t('empty.description')}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (

@@ -1,0 +1,31 @@
+{
+  "page": {
+    "title": "Downloads",
+    "description": "Buscar informações de vídeo e baixar de URLs suportadas"
+  },
+  "newDownload": {
+    "cardTitle": "Novo Download",
+    "downloadButton": "Baixar",
+    "needsCreator": "Por favor, informe o nome do criador",
+    "queued": "Download enfileirado ({{id}})",
+    "downloadFailed": "Falha no download: {{message}}",
+    "fetchInfoFailed": "Falha ao buscar informações: {{message}}"
+  },
+  "active": {
+    "cardTitle": "Downloads Ativos",
+    "emptyTitle": "Nenhum download ativo",
+    "emptyDescription": "Os downloads aparecerão aqui em tempo real."
+  },
+  "creator": {
+    "label": "Nome do criador",
+    "placeholder": "ex.: MrBeast"
+  },
+  "url": {
+    "placeholder": "Cole uma URL de vídeo...",
+    "fetchButton": "Buscar Informações",
+    "invalid": "Insira uma URL válida"
+  },
+  "progress": {
+    "etaPrefix": "ETA"
+  }
+}

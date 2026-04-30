@@ -1,0 +1,32 @@
+{
+  "filters": {
+    "searchPlaceholder": "Buscar criadores...",
+    "status": {
+      "active": "Ativos",
+      "all": "Todos",
+      "deleted": "Excluídos",
+      "missing": "Ausentes"
+    },
+    "statusBadgeAria": "Filtro de status"
+  },
+  "status": {
+    "active": "Ativo",
+    "deleted": "Excluído",
+    "missing": "Ausente"
+  },
+  "detail": {
+    "tabs": {
+      "videos": "Vídeos",
+      "cuts": "Cortes"
+    },
+    "notFound": "Criador não encontrado",
+    "videos": {
+      "emptyTitle": "Nenhum vídeo",
+      "emptyDescription": "Baixe vídeos deste criador para vê-los aqui."
+    },
+    "cuts": {
+      "emptyTitle": "Nenhum corte",
+      "emptyDescription": "Exporte cortes do seu editor para a pasta de cortes deste criador."
+    }
+  }
+}

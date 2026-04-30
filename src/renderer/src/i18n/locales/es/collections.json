@@ -1,0 +1,76 @@
+{
+  "page": {
+    "title": "Colecciones",
+    "description": "Listas de reproducción manuales entre videos y cortes.",
+    "newButton": "Nueva colección"
+  },
+  "empty": {
+    "title": "Aún no hay colecciones",
+    "description": "Crea tu primera colección para agrupar videos y cortes relacionados."
+  },
+  "card": {
+    "items_one": "{{count}} elemento",
+    "items_other": "{{count}} elementos"
+  },
+  "deleteConfirm": "¿Eliminar la colección “{{name}}”?",
+  "toasts": {
+    "deleted": "“{{name}}” eliminada",
+    "deleteFailed": "Error al eliminar: {{message}}"
+  },
+  "detail": {
+    "notFound": "Colección no encontrada",
+    "backToCollections": "Volver a colecciones",
+    "playAll": "Reproducir todo",
+    "noPlayable": "No hay elementos reproducibles en esta colección.",
+    "items": {
+      "emptyTitle": "Aún no hay elementos",
+      "emptyDescription": "Agrega videos y cortes desde el menú contextual de la biblioteca.",
+      "missingBadge": "Faltante",
+      "unavailable": "(no disponible)",
+      "moveUpAria": "Mover arriba",
+      "moveDownAria": "Mover abajo",
+      "removeAria": "Quitar de la colección",
+      "missingOnDisk": "Este elemento falta en el disco.",
+      "reorderFailed": "Error al reordenar: {{message}}",
+      "removeFailed": "Error al quitar: {{message}}",
+      "playAria": "Reproducir {{title}}",
+      "kind": {
+        "video": "video",
+        "cut": "corte"
+      }
+    }
+  },
+  "create": {
+    "title": "Nueva colección",
+    "description": "Crea una colección manual. Puedes añadir videos y cortes desde el menú contextual de cualquier tarjeta.",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Mis clips favoritos",
+    "descriptionLabel": "Descripción (opcional)",
+    "descriptionPlaceholder": "Para qué sirve esta colección…",
+    "createdToast": "Colección “{{name}}” creada",
+    "createFailed": "Error al crear colección: {{message}}"
+  },
+  "rename": {
+    "title": "Editar colección",
+    "description": "Renombra o actualiza la descripción.",
+    "nameLabel": "Nombre",
+    "descriptionLabel": "Descripción",
+    "updatedToast": "Colección actualizada",
+    "updateFailed": "Error al actualizar: {{message}}"
+  },
+  "addToCollection": {
+    "title": "Añadir a colección",
+    "description": "Elige una colección a la que añadir {{title}}, o crea una nueva.",
+    "fallbackTitle": "este elemento",
+    "placeholder": "Buscar colecciones, o escribe un nuevo nombre…",
+    "noneYet": "Aún no hay colecciones — escribe un nombre para crear una.",
+    "existingHeading": "Existentes",
+    "createHeading": "Crear nueva",
+    "createOption": "Crear “{{name}}” y añadir",
+    "addedToast": "Añadido a “{{name}}”",
+    "addFailed": "Error al añadir: {{message}}",
+    "createdAndAdded": "Creada “{{name}}” y añadida",
+    "createdButAddFailed": "Colección creada pero falló añadir: {{message}}",
+    "createCollectionFailed": "Error al crear colección: {{message}}"
+  }
+}

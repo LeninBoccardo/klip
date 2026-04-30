@@ -1,0 +1,16 @@
+{
+  "page": {
+    "title": "Sobre",
+    "description": "Informações do aplicativo"
+  },
+  "appDescription": "Um gerenciador de assets desktop, local e offline-first, projetado para organizar vídeos de origem baixados e cortes de vídeo criados manualmente. Feito para criadores de vídeo que precisam de uma forma rápida e privada de gerenciar sua biblioteca de mídia sem dependências de nuvem.",
+  "author": {
+    "title": "Autor"
+  },
+  "license": {
+    "title": "Licença",
+    "value": "Licença MIT"
+  },
+  "builtWith": "Construído Com",
+  "sourceCode": "Código-fonte"
+}

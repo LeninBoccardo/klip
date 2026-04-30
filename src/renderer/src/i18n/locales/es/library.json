@@ -1,0 +1,17 @@
+{
+  "page": {
+    "title": "Biblioteca",
+    "description": "Explora y gestiona tu biblioteca de creadores"
+  },
+  "empty": {
+    "title": "No se encontraron creadores",
+    "withSearch": "Prueba un término de búsqueda diferente.",
+    "withoutSearch": "Descarga un video o agrega carpetas de creadores a tu directorio raíz para empezar."
+  },
+  "toasts": {
+    "deleted": "“{{name}}” eliminado",
+    "deleteFailed": "Error al eliminar: {{message}}",
+    "restored": "“{{name}}” restaurado",
+    "restoreFailed": "Error al restaurar: {{message}}"
+  }
+}

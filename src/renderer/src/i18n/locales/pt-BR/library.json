@@ -1,0 +1,17 @@
+{
+  "page": {
+    "title": "Biblioteca",
+    "description": "Navegue e gerencie sua biblioteca de criadores"
+  },
+  "empty": {
+    "title": "Nenhum criador encontrado",
+    "withSearch": "Tente um termo de busca diferente.",
+    "withoutSearch": "Baixe um vídeo ou adicione pastas de criadores ao seu diretório raiz para começar."
+  },
+  "toasts": {
+    "deleted": "“{{name}}” excluído",
+    "deleteFailed": "Falha ao excluir: {{message}}",
+    "restored": "“{{name}}” restaurado",
+    "restoreFailed": "Falha ao restaurar: {{message}}"
+  }
+}

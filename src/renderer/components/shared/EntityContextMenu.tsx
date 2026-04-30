@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -28,6 +29,8 @@ export function EntityContextMenu({
   onAddToCollection,
   children
 }: EntityContextMenuProps): React.ReactElement {
+  const { t } = useTranslation('common')
+  const { t: tcol } = useTranslation('collections')
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
@@ -36,7 +39,7 @@ export function EntityContextMenu({
           <>
             <ContextMenuItem onClick={onAddToCollection}>
               <ListPlus className="mr-2 size-4" />
-              Add to collection…
+              {tcol('addToCollection.title')}…
             </ContextMenuItem>
             <ContextMenuSeparator />
           </>
@@ -44,13 +47,13 @@ export function EntityContextMenu({
         {status !== 'deleted' && (
           <ContextMenuItem onClick={onDelete} className="text-destructive">
             <Trash2 className="mr-2 size-4" />
-            Delete
+            {t('actions.delete')}
           </ContextMenuItem>
         )}
         {status !== 'active' && (
           <ContextMenuItem onClick={onRestore}>
             <RotateCcw className="mr-2 size-4" />
-            Restore
+            {t('actions.restore')}
           </ContextMenuItem>
         )}
       </ContextMenuContent>

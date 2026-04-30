@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useFetchVideoComments } from '@/hooks/use-videos'
 import { Button } from '@ui/button'
 import { Badge } from '@ui/badge'
@@ -10,6 +11,8 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@ui/collaps
 import { ChevronRight, Copy, Loader2, MessageSquare, Pin, RefreshCw, ThumbsUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
+import type { Locale } from 'date-fns/locale'
+import { useDateLocale } from '@renderer/i18n/date-locale'
 import { formatCount } from '@/lib/format'
 import type { VideoComment, VideoCommentsResult } from '@shared/types'
 
@@ -61,16 +64,19 @@ function authorInitials(author: string): string {
   return cleaned.slice(0, 2).toUpperCase()
 }
 
-function formatRelative(timestamp: number | null): string {
+function formatRelative(timestamp: number | null, locale: Locale): string {
   if (!timestamp) return ''
   try {
-    return formatDistanceToNow(new Date(timestamp * 1000), { addSuffix: true })
+    return formatDistanceToNow(new Date(timestamp * 1000), { addSuffix: true, locale })
   } catch {
     return ''
   }
 }
 
 export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.ReactElement | null {
+  const { t } = useTranslation('videos')
+  const { t: tc } = useTranslation('common')
+  const dateLocale = useDateLocale()
   const fetchComments = useFetchVideoComments()
   const data: VideoCommentsResult | undefined = fetchComments.data
 
@@ -85,9 +91,9 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
     if (!data) return
     try {
       await navigator.clipboard.writeText(buildClipboardText(threads))
-      toast.success('Comments copied to clipboard')
+      toast.success(t('comments.copySuccess'))
     } catch {
-      toast.error('Failed to copy comments')
+      toast.error(t('comments.copyError'))
     }
   }
 
@@ -99,16 +105,16 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
           <EmptyMedia variant="icon">
             <MessageSquare className="size-6" />
           </EmptyMedia>
-          <EmptyTitle>No comments loaded</EmptyTitle>
+          <EmptyTitle>{t('comments.noneLoaded')}</EmptyTitle>
           <EmptyDescription>
             {knownCount != null
-              ? `This video has ${formatCount(knownCount)} comments. Click below to fetch them — may take 30–60s for popular videos.`
-              : 'Click below to fetch comments from YouTube. May take 30–60s for popular videos.'}
+              ? t('comments.ctaWithCount', { count: formatCount(knownCount) })
+              : t('comments.ctaWithoutCount')}
           </EmptyDescription>
         </EmptyHeader>
         <Button onClick={handleLoad} className="mt-4">
           <MessageSquare className="mr-2 size-4" />
-          Load Comments
+          {t('comments.loadButton')}
         </Button>
       </Empty>
     )
@@ -122,8 +128,8 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
           <EmptyMedia variant="icon">
             <Loader2 className="size-6 animate-spin" />
           </EmptyMedia>
-          <EmptyTitle>Fetching comments from YouTube…</EmptyTitle>
-          <EmptyDescription>This may take 30–60 seconds for popular videos.</EmptyDescription>
+          <EmptyTitle>{t('comments.loadingTitle')}</EmptyTitle>
+          <EmptyDescription>{t('comments.loadingHint')}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     )
@@ -137,12 +143,12 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
           <EmptyMedia variant="icon">
             <MessageSquare className="size-6 text-destructive" />
           </EmptyMedia>
-          <EmptyTitle>Failed to fetch comments</EmptyTitle>
+          <EmptyTitle>{t('comments.errorTitle')}</EmptyTitle>
           <EmptyDescription>{fetchComments.error.message}</EmptyDescription>
         </EmptyHeader>
         <Button onClick={handleLoad} variant="outline" className="mt-4">
           <RefreshCw className="mr-2 size-4" />
-          Retry
+          {tc('actions.retry')}
         </Button>
       </Empty>
     )
@@ -158,29 +164,29 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
           <MessageSquare className="size-4" />
           <span>
             <span className="font-medium text-foreground">{formatCount(data.totalFetched)}</span>{' '}
-            comments
+            {t('comments.summaryComments')}
             {replyCount > 0 && (
               <>
                 {' · '}
                 <span className="font-medium text-foreground">{formatCount(replyCount)}</span>{' '}
-                replies
+                {t('comments.summaryReplies')}
               </>
             )}
           </span>
           {data.wasTruncated && (
             <Badge variant="secondary" className="ml-1">
-              First 500 only
+              {t('comments.truncatedBadge')}
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleCopyAll}>
             <Copy className="mr-2 size-4" />
-            Copy All
+            {tc('actions.copyAll')}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleLoad}>
             <RefreshCw className="mr-2 size-4" />
-            Reload
+            {tc('actions.reload')}
           </Button>
         </div>
       </div>
@@ -188,14 +194,14 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
       {threads.length === 0 ? (
         <Empty className="min-h-[200px]">
           <EmptyHeader>
-            <EmptyTitle>No comments on this video</EmptyTitle>
+            <EmptyTitle>{t('comments.noneOnVideo')}</EmptyTitle>
           </EmptyHeader>
         </Empty>
       ) : (
         <ScrollArea className="max-h-[600px] rounded border">
           <div className="divide-y">
             {threads.map((thread) => (
-              <CommentRow key={thread.top.id} thread={thread} />
+              <CommentRow key={thread.top.id} thread={thread} dateLocale={dateLocale} />
             ))}
           </div>
         </ScrollArea>
@@ -206,7 +212,14 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
 
 // ── Comment row ──
 
-function CommentRow({ thread }: { thread: ThreadGroup }): React.ReactElement {
+function CommentRow({
+  thread,
+  dateLocale
+}: {
+  thread: ThreadGroup
+  dateLocale: Locale
+}): React.ReactElement {
+  const { t } = useTranslation('videos')
   const [open, setOpen] = useState(false)
   const { top, replies } = thread
 
@@ -224,12 +237,12 @@ function CommentRow({ thread }: { thread: ThreadGroup }): React.ReactElement {
             {top.isPinned && (
               <Badge variant="secondary" className="gap-1">
                 <Pin className="size-3" />
-                Pinned
+                {t('comments.pinnedBadge')}
               </Badge>
             )}
             {top.timestamp && (
               <span className="text-xs text-muted-foreground">
-                · {formatRelative(top.timestamp)}
+                · {formatRelative(top.timestamp, dateLocale)}
               </span>
             )}
             <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -251,12 +264,14 @@ function CommentRow({ thread }: { thread: ThreadGroup }): React.ReactElement {
                     className="size-4 transition-transform data-[state=open]:rotate-90"
                     data-state={open ? 'open' : 'closed'}
                   />
-                  {open ? `Hide ${replies.length} replies` : `View ${replies.length} replies`}
+                  {open
+                    ? t('comments.hideReplies', { count: replies.length })
+                    : t('comments.viewReplies', { count: replies.length })}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 ml-2 border-l border-border pl-4 space-y-3">
                 {replies.map((reply) => (
-                  <ReplyRow key={reply.id} comment={reply} />
+                  <ReplyRow key={reply.id} comment={reply} dateLocale={dateLocale} />
                 ))}
               </CollapsibleContent>
             </Collapsible>
@@ -269,7 +284,13 @@ function CommentRow({ thread }: { thread: ThreadGroup }): React.ReactElement {
 
 // ── Reply row ──
 
-function ReplyRow({ comment }: { comment: VideoComment }): React.ReactElement {
+function ReplyRow({
+  comment,
+  dateLocale
+}: {
+  comment: VideoComment
+  dateLocale: Locale
+}): React.ReactElement {
   return (
     <Item variant="default" className="border-transparent p-0 items-start gap-2">
       <ItemMedia variant="image" className="size-7 rounded-full">
@@ -282,7 +303,7 @@ function ReplyRow({ comment }: { comment: VideoComment }): React.ReactElement {
           <span className="font-medium">{comment.author}</span>
           {comment.timestamp && (
             <span className="text-xs text-muted-foreground">
-              · {formatRelative(comment.timestamp)}
+              · {formatRelative(comment.timestamp, dateLocale)}
             </span>
           )}
           <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">

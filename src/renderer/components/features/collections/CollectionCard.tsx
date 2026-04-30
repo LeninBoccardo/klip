@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@ui/card'
 import { Badge } from '@ui/badge'
 import { ListMusic } from 'lucide-react'
@@ -15,6 +16,7 @@ export function CollectionCard({
   onClick,
   className
 }: CollectionCardProps): React.ReactElement {
+  const { t } = useTranslation('collections')
   return (
     <Card
       className={cn('group cursor-pointer transition-colors hover:bg-accent/50', className)}
@@ -31,7 +33,7 @@ export function CollectionCard({
           )}
         </div>
         <Badge variant="outline" className="shrink-0 font-normal">
-          {collection.itemCount} {collection.itemCount === 1 ? 'item' : 'items'}
+          {t('card.items', { count: collection.itemCount })}
         </Badge>
       </CardContent>
     </Card>

@@ -1,0 +1,16 @@
+{
+  "page": {
+    "title": "About",
+    "description": "Application information"
+  },
+  "appDescription": "A local, offline-first desktop asset manager designed to organize downloaded source videos and manually created video cuts. Built for video creators who need a fast, private way to manage their media library without cloud dependencies.",
+  "author": {
+    "title": "Author"
+  },
+  "license": {
+    "title": "License",
+    "value": "MIT License"
+  },
+  "builtWith": "Built With",
+  "sourceCode": "Source Code"
+}

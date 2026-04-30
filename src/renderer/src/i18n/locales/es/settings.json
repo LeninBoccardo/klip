@@ -25,15 +25,59 @@
   },
   "storage": {
     "title": "Almacenamiento",
-    "description": "Dónde Klip almacena tus archivos multimedia en disco."
+    "description": "Dónde Klip almacena tus archivos multimedia en disco.",
+    "rootLabel": "Directorio raíz",
+    "notSet": "No definido",
+    "changeButton": "Cambiar Carpeta Raíz",
+    "confirm": {
+      "title": "¿Mover todos los archivos a una nueva ubicación?",
+      "body": "Esto moverá todas las carpetas de creadores desde la raíz actual al destino seleccionado. La carpeta de destino debe estar vacía.",
+      "from": "Desde:",
+      "to": "Hacia:",
+      "unknown": "Desconocido",
+      "action": "Mover Archivos"
+    },
+    "result": {
+      "successTitle": "Migración Completa",
+      "successDescription_one": "Se movió {{count}} carpeta a la nueva ubicación con éxito.",
+      "successDescription_other": "Se movieron {{count}} carpetas a la nueva ubicación con éxito.",
+      "errorTitle": "Migración Fallida",
+      "unknownError": "Ocurrió un error desconocido"
+    }
   },
   "maintenance": {
     "title": "Mantenimiento",
-    "description": "Reconciliar el índice de la base de datos con los archivos en disco."
+    "description": "Reconciliar el índice de la base de datos con los archivos en disco.",
+    "runButton": "Ejecutar Reconciliación",
+    "completeToast": "Reconciliación completa",
+    "failedToast": "Reconciliación fallida: {{message}}",
+    "result": {
+      "title": "Resultado de la Reconciliación",
+      "creatorsAdded": "Creadores añadidos",
+      "creatorsMissing": "Creadores faltantes",
+      "creatorsRecovered": "Creadores recuperados",
+      "videosAdded": "Videos añadidos",
+      "videosMissing": "Videos faltantes",
+      "videosRecovered": "Videos recuperados",
+      "cutsAdded": "Cortes añadidos",
+      "cutsMissing": "Cortes faltantes",
+      "cutsRecovered": "Cortes recuperados"
+    }
   },
   "metadata": {
     "title": "Enriquecimiento de Metadatos",
-    "description": "Obtener metadatos extendidos (me gusta, comentarios, transcripciones) para los videos indexados."
+    "description": "Obtener metadatos extendidos (me gusta, comentarios, transcripciones) para los videos indexados.",
+    "runButton": "Enriquecer Todos los Videos",
+    "helper": "Obtiene me gusta, comentarios, transcripciones y otros metadatos de yt-dlp para cada video que aún no se ha enriquecido. Se ejecuta de uno en uno para evitar límites de tasa.",
+    "result": {
+      "title": "Última Ejecución",
+      "total": "Total",
+      "enriched": "Enriquecidos",
+      "failed": "Fallidos",
+      "skipped": "Omitidos"
+    },
+    "successToast": "Enriquecidos {{enriched}} de {{total}} videos",
+    "failedToast": "Enriquecimiento fallido: {{message}}"
   },
   "playback": {
     "title": "Reproducción",
@@ -56,7 +100,36 @@
   },
   "updates": {
     "title": "Actualizaciones",
-    "description": "Mantente al día con la última versión de Klip."
+    "description": "Mantente al día con la última versión de Klip.",
+    "currentVersion": "Versión actual",
+    "statusLabel": "Estado",
+    "lastChecked": "Última verificación {{ago}}",
+    "checkButton": "Buscar actualizaciones",
+    "restartButton": "Reiniciar e instalar",
+    "stateCopy": {
+      "idle": "Listo para verificar.",
+      "checking": "Buscando actualizaciones…",
+      "available": "Actualización disponible — descargando.",
+      "downloading": "Descargando actualización…",
+      "ready": "Actualización lista para instalar.",
+      "up-to-date": "Estás en la versión más reciente.",
+      "error": "Error al buscar actualizaciones.",
+      "disabled": "Las auto-actualizaciones solo se ejecutan en builds de producción."
+    },
+    "badge": {
+      "upToDate": "Al día",
+      "ready": "Lista",
+      "available": "Disponible",
+      "checking": "Verificando",
+      "error": "Error",
+      "disabled": "Desactivado",
+      "idle": "Inactivo"
+    },
+    "toast": {
+      "readyTitle": "Actualización v{{version}} lista",
+      "readyDescription": "Reinicia Klip ahora para instalar, o se instalará al cerrar.",
+      "restartAction": "Reiniciar ahora"
+    }
   },
   "auditLog": {
     "title": "Registro de Auditoría Reciente",

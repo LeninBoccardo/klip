@@ -1,0 +1,75 @@
+{
+  "card": {
+    "shortBadge": "Short"
+  },
+  "detail": {
+    "uploaded": "Publicado em {{date}}",
+    "openExternally": "Abrir externamente",
+    "openFailed": "Falha ao abrir o arquivo.",
+    "fetchMetadata": "Buscar metadados",
+    "refreshMetadata": "Atualizar metadados",
+    "metadataRefreshed": "Metadados atualizados",
+    "refreshFailed": "Falha ao atualizar: {{message}}",
+    "transcriptCopied": "Transcrição copiada para a área de transferência",
+    "playAria": "Reproduzir {{title}}",
+    "notFound": "Vídeo não encontrado",
+    "stats": {
+      "views": "Visualizações",
+      "likes": "Curtidas",
+      "dislikes": "Descurtidas",
+      "comments": "Comentários"
+    },
+    "tabs": {
+      "info": "Informações",
+      "transcript": "Transcrição",
+      "comments": "Comentários"
+    },
+    "file": {
+      "title": "Arquivo",
+      "description": "Metadados de mídia local.",
+      "duration": "Duração",
+      "resolution": "Resolução",
+      "size": "Tamanho",
+      "url": "URL"
+    },
+    "categoryBadges": {
+      "short": "Short"
+    },
+    "description": {
+      "title": "Descrição"
+    },
+    "transcript": {
+      "title": "Auto-transcrição",
+      "fromCaptions": "Gerada pelo yt-dlp a partir das legendas automáticas.",
+      "notFetched": "Nenhuma transcrição buscada ainda.",
+      "noneTitle": "Nenhuma transcrição disponível",
+      "noneDescriptionEnriched": "Este vídeo não possui legendas geradas automaticamente.",
+      "noneDescriptionNotEnriched": "Clique em “Buscar metadados” para obter a transcrição automática."
+    }
+  },
+  "comments": {
+    "noneLoaded": "Nenhum comentário carregado",
+    "ctaWithCount": "Este vídeo tem {{count}} comentários. Clique abaixo para buscá-los — pode levar 30–60s para vídeos populares.",
+    "ctaWithoutCount": "Clique abaixo para buscar os comentários do YouTube. Pode levar 30–60s para vídeos populares.",
+    "loadButton": "Carregar comentários",
+    "loadingTitle": "Buscando comentários no YouTube…",
+    "loadingHint": "Pode levar 30–60 segundos para vídeos populares.",
+    "errorTitle": "Falha ao buscar comentários",
+    "noneOnVideo": "Nenhum comentário neste vídeo",
+    "summaryComments": "comentários",
+    "summaryReplies": "respostas",
+    "truncatedBadge": "Apenas os primeiros 500",
+    "pinnedBadge": "Fixado",
+    "viewReplies": "Ver {{count}} respostas",
+    "hideReplies": "Ocultar {{count}} respostas",
+    "copySuccess": "Comentários copiados para a área de transferência",
+    "copyError": "Falha ao copiar comentários"
+  },
+  "tags": {
+    "title": "Tags",
+    "empty": "Nenhuma tag ainda.",
+    "editAria": "Editar tags",
+    "updated": "Tags atualizadas",
+    "updateFailed": "Falha ao atualizar tags: {{message}}"
+  }
+}

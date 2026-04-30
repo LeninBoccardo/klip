@@ -1,0 +1,31 @@
+{
+  "page": {
+    "title": "Descargas",
+    "description": "Obtén información de video y descarga desde URLs compatibles"
+  },
+  "newDownload": {
+    "cardTitle": "Nueva Descarga",
+    "downloadButton": "Descargar",
+    "needsCreator": "Por favor, ingresa el nombre del creador",
+    "queued": "Descarga en cola ({{id}})",
+    "downloadFailed": "Error en la descarga: {{message}}",
+    "fetchInfoFailed": "Error al obtener información: {{message}}"
+  },
+  "active": {
+    "cardTitle": "Descargas Activas",
+    "emptyTitle": "Sin descargas activas",
+    "emptyDescription": "Las descargas aparecerán aquí en tiempo real."
+  },
+  "creator": {
+    "label": "Nombre del creador",
+    "placeholder": "p. ej. MrBeast"
+  },
+  "url": {
+    "placeholder": "Pega una URL de video...",
+    "fetchButton": "Obtener Información",
+    "invalid": "Ingresa una URL válida"
+  },
+  "progress": {
+    "etaPrefix": "ETA"
+  }
+}

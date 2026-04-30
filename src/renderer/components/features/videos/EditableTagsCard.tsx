@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/card'
 import { Badge } from '@ui/badge'
 import { Button } from '@ui/button'
@@ -38,6 +39,8 @@ export function EditableTagsCard({
   tags,
   readOnlyExtras
 }: EditableTagsCardProps): React.ReactElement {
+  const { t } = useTranslation('videos')
+  const { t: tc } = useTranslation('common')
   // `draft` is only meaningful while editing. When not editing it stays at
   // its last value but the read-only path renders `tags` directly, so a
   // stale draft never reaches the DOM. Seeding happens at the click that
@@ -74,10 +77,10 @@ export function EditableTagsCard({
       },
       {
         onSuccess: () => {
-          toast.success('Tags updated')
+          toast.success(t('tags.updated'))
           setEditing(false)
         },
-        onError: (err) => toast.error(`Failed to update tags: ${err.message}`)
+        onError: (err) => toast.error(t('tags.updateFailed', { message: err.message }))
       }
     )
   }
@@ -90,7 +93,7 @@ export function EditableTagsCard({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-base">Tags</CardTitle>
+        <CardTitle className="text-base">{t('tags.title')}</CardTitle>
         {editing ? (
           <div className="flex items-center gap-1">
             <Button
@@ -99,7 +102,7 @@ export function EditableTagsCard({
               onClick={handleCancel}
               disabled={bulkUpdate.isPending}
             >
-              Cancel
+              {tc('actions.cancel')}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={bulkUpdate.isPending}>
               {bulkUpdate.isPending ? (
@@ -107,7 +110,7 @@ export function EditableTagsCard({
               ) : (
                 <Check className="mr-2 size-3" />
               )}
-              Save
+              {tc('actions.save')}
             </Button>
           </div>
         ) : (
@@ -118,7 +121,7 @@ export function EditableTagsCard({
               setDraft(tags)
               setEditing(true)
             }}
-            aria-label="Edit tags"
+            aria-label={t('tags.editAria')}
           >
             <Pencil className="size-3" />
           </Button>
@@ -136,11 +139,11 @@ export function EditableTagsCard({
           <div className="flex flex-wrap gap-2">
             {readOnlyExtras}
             {tags.length === 0 && !readOnlyExtras ? (
-              <p className="text-sm text-muted-foreground">No tags yet.</p>
+              <p className="text-sm text-muted-foreground">{t('tags.empty')}</p>
             ) : (
-              tags.map((t) => (
-                <Badge key={t} variant="outline">
-                  {t}
+              tags.map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
                 </Badge>
               ))
             )}

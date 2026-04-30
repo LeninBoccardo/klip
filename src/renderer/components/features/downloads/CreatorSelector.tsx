@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Field, FieldLabel } from '@/components/ui/field'
 
@@ -11,12 +12,13 @@ interface CreatorSelectorProps {
  * In the future this can be upgraded to a Combobox with existing creator suggestions.
  */
 export function CreatorSelector({ value, onChange }: CreatorSelectorProps): React.ReactElement {
+  const { t } = useTranslation('downloads')
   return (
     <Field>
-      <FieldLabel htmlFor="creator-name">Creator name</FieldLabel>
+      <FieldLabel htmlFor="creator-name">{t('creator.label')}</FieldLabel>
       <Input
         id="creator-name"
-        placeholder="e.g. MrBeast"
+        placeholder={t('creator.placeholder')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

@@ -1,0 +1,76 @@
+{
+  "page": {
+    "title": "Coleções",
+    "description": "Playlists manuais entre vídeos e cortes.",
+    "newButton": "Nova coleção"
+  },
+  "empty": {
+    "title": "Nenhuma coleção ainda",
+    "description": "Crie sua primeira coleção para agrupar vídeos e cortes relacionados."
+  },
+  "card": {
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} itens"
+  },
+  "deleteConfirm": "Excluir coleção “{{name}}”?",
+  "toasts": {
+    "deleted": "“{{name}}” excluída",
+    "deleteFailed": "Falha ao excluir: {{message}}"
+  },
+  "detail": {
+    "notFound": "Coleção não encontrada",
+    "backToCollections": "Voltar para coleções",
+    "playAll": "Reproduzir tudo",
+    "noPlayable": "Nenhum item reproduzível nesta coleção.",
+    "items": {
+      "emptyTitle": "Nenhum item ainda",
+      "emptyDescription": "Adicione vídeos e cortes pelo menu de contexto da biblioteca.",
+      "missingBadge": "Ausente",
+      "unavailable": "(indisponível)",
+      "moveUpAria": "Mover para cima",
+      "moveDownAria": "Mover para baixo",
+      "removeAria": "Remover da coleção",
+      "missingOnDisk": "Este item está ausente no disco.",
+      "reorderFailed": "Falha ao reordenar: {{message}}",
+      "removeFailed": "Falha ao remover: {{message}}",
+      "playAria": "Reproduzir {{title}}",
+      "kind": {
+        "video": "vídeo",
+        "cut": "corte"
+      }
+    }
+  },
+  "create": {
+    "title": "Nova coleção",
+    "description": "Crie uma coleção manual. Você pode adicionar vídeos e cortes a ela pelo menu de contexto de qualquer card.",
+    "nameLabel": "Nome",
+    "namePlaceholder": "Meus clipes favoritos",
+    "descriptionLabel": "Descrição (opcional)",
+    "descriptionPlaceholder": "Para que serve esta coleção…",
+    "createdToast": "Coleção “{{name}}” criada",
+    "createFailed": "Falha ao criar coleção: {{message}}"
+  },
+  "rename": {
+    "title": "Editar coleção",
+    "description": "Renomeie ou atualize a descrição.",
+    "nameLabel": "Nome",
+    "descriptionLabel": "Descrição",
+    "updatedToast": "Coleção atualizada",
+    "updateFailed": "Falha ao atualizar: {{message}}"
+  },
+  "addToCollection": {
+    "title": "Adicionar à coleção",
+    "description": "Escolha uma coleção para adicionar {{title}}, ou crie uma nova.",
+    "fallbackTitle": "este item",
+    "placeholder": "Buscar coleções, ou digite um novo nome…",
+    "noneYet": "Nenhuma coleção ainda — digite um nome para criar uma.",
+    "existingHeading": "Existentes",
+    "createHeading": "Criar nova",
+    "createOption": "Criar “{{name}}” e adicionar",
+    "addedToast": "Adicionado a “{{name}}”",
+    "addFailed": "Falha ao adicionar: {{message}}",
+    "createdAndAdded": "Criada “{{name}}” e adicionada",
+    "createdButAddFailed": "Coleção criada mas a adição falhou: {{message}}",
+    "createCollectionFailed": "Falha ao criar coleção: {{message}}"
+  }
+}

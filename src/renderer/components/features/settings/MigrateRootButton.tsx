@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -27,6 +28,8 @@ interface MigrateRootButtonProps {
 }
 
 export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps): React.ReactElement {
+  const { t } = useTranslation('settings')
+  const { t: tc } = useTranslation('common')
   const isBlocking = useAppStore((s) => s.blockingOperation !== null)
   const { mutation, selectFolder } = useMigrateRoot()
 
@@ -72,38 +75,39 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps): 
   const result = mutation.data
   const isSuccess = result?.success === true
   const isError = mutation.isError || (result && !result.success)
-  const errorMessage = mutation.error?.message ?? result?.error ?? 'An unknown error occurred'
+  const errorMessage = mutation.error?.message ?? result?.error ?? t('storage.result.unknownError')
 
   return (
     <>
       <Button variant="outline" onClick={handleClick} disabled={isBlocking || mutation.isPending}>
         <FolderSync className="mr-2 size-4" />
-        Change Root Folder
+        {t('storage.changeButton')}
       </Button>
 
       {/* Confirmation AlertDialog */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Move all files to a new location?</AlertDialogTitle>
+            <AlertDialogTitle>{t('storage.confirm.title')}</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <span className="block">
-                This will move all creator folders from the current root to the selected
-                destination. The target folder must be empty.
+              <span className="block">{t('storage.confirm.body')}</span>
+              <span className="block text-xs">
+                <strong>{t('storage.confirm.from')}</strong>{' '}
+                <code className="rounded bg-muted px-1 py-0.5">
+                  {currentRootPath ?? t('storage.confirm.unknown')}
+                </code>
               </span>
               <span className="block text-xs">
-                <strong>From:</strong>{' '}
-                <code className="rounded bg-muted px-1 py-0.5">{currentRootPath ?? 'Unknown'}</code>
-              </span>
-              <span className="block text-xs">
-                <strong>To:</strong>{' '}
+                <strong>{t('storage.confirm.to')}</strong>{' '}
                 <code className="rounded bg-muted px-1 py-0.5">{selectedFolder}</code>
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm}>Move Files</AlertDialogAction>
+            <AlertDialogCancel>{tc('actions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm}>
+              {t('storage.confirm.action')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -116,18 +120,17 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps): 
               <>
                 <DialogTitle className="flex items-center gap-2">
                   <CheckCircle2 className="size-5 text-green-500" />
-                  Migration Complete
+                  {t('storage.result.successTitle')}
                 </DialogTitle>
                 <DialogDescription>
-                  Successfully moved {result?.movedCount ?? 0} folder
-                  {result?.movedCount === 1 ? '' : 's'} to the new location.
+                  {t('storage.result.successDescription', { count: result?.movedCount ?? 0 })}
                 </DialogDescription>
               </>
             ) : isError ? (
               <>
                 <DialogTitle className="flex items-center gap-2">
                   <XCircle className="size-5 text-destructive" />
-                  Migration Failed
+                  {t('storage.result.errorTitle')}
                 </DialogTitle>
                 <DialogDescription>{errorMessage}</DialogDescription>
               </>
@@ -136,10 +139,12 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps): 
           <DialogFooter>
             {isError && (
               <Button variant="outline" onClick={handleRetry}>
-                Retry
+                {tc('actions.retry')}
               </Button>
             )}
-            <Button onClick={handleDismissResult}>{isSuccess ? 'OK' : 'Dismiss'}</Button>
+            <Button onClick={handleDismissResult}>
+              {isSuccess ? tc('actions.ok') : tc('actions.dismiss')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

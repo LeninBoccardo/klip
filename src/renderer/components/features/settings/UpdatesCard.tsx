@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Progress } from '@/components/ui/progress'
@@ -5,33 +6,24 @@ import { Badge } from '@/components/ui/badge'
 import { useUpdaterStatus, useCheckForUpdates, useInstallUpdate } from '@/hooks/use-updater'
 import { CheckCircle2, Download, RefreshCw, AlertTriangle, Power } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import type { UpdaterState, UpdaterStatus } from '@shared/types'
-
-const STATE_COPY: Record<UpdaterState, string> = {
-  idle: 'Ready to check.',
-  checking: 'Checking for updates…',
-  available: 'Update available — downloading.',
-  downloading: 'Downloading update…',
-  ready: 'Update ready to install.',
-  'up-to-date': 'You are on the latest version.',
-  error: 'Update check failed.',
-  disabled: 'Auto-updates run in production builds only.'
-}
+import { useDateLocale } from '@renderer/i18n/date-locale'
+import type { UpdaterStatus } from '@shared/types'
 
 function StateBadge({ status }: { status: UpdaterStatus }): React.ReactElement {
+  const { t } = useTranslation('settings')
   switch (status.state) {
     case 'up-to-date':
       return (
         <Badge variant="secondary" className="gap-1">
           <CheckCircle2 className="size-3" />
-          Up to date
+          {t('updates.badge.upToDate')}
         </Badge>
       )
     case 'ready':
       return (
         <Badge className="gap-1">
           <Download className="size-3" />
-          Ready
+          {t('updates.badge.ready')}
         </Badge>
       )
     case 'available':
@@ -39,37 +31,41 @@ function StateBadge({ status }: { status: UpdaterStatus }): React.ReactElement {
       return (
         <Badge variant="secondary" className="gap-1">
           <Download className="size-3" />
-          {status.state === 'downloading' ? `${status.downloadPercent ?? 0}%` : 'Available'}
+          {status.state === 'downloading'
+            ? `${status.downloadPercent ?? 0}%`
+            : t('updates.badge.available')}
         </Badge>
       )
     case 'checking':
       return (
         <Badge variant="secondary" className="gap-1">
           <Spinner className="size-3" />
-          Checking
+          {t('updates.badge.checking')}
         </Badge>
       )
     case 'error':
       return (
         <Badge variant="destructive" className="gap-1">
           <AlertTriangle className="size-3" />
-          Error
+          {t('updates.badge.error')}
         </Badge>
       )
     case 'disabled':
       return (
         <Badge variant="outline" className="gap-1">
           <Power className="size-3" />
-          Disabled
+          {t('updates.badge.disabled')}
         </Badge>
       )
     case 'idle':
     default:
-      return <Badge variant="outline">Idle</Badge>
+      return <Badge variant="outline">{t('updates.badge.idle')}</Badge>
   }
 }
 
 export function UpdatesCard(): React.ReactElement | null {
+  const { t } = useTranslation('settings')
+  const dateLocale = useDateLocale()
   const { data: status } = useUpdaterStatus()
   const checkForUpdates = useCheckForUpdates()
   const installUpdate = useInstallUpdate()
@@ -85,16 +81,16 @@ export function UpdatesCard(): React.ReactElement | null {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">Current version</p>
+          <p className="text-sm text-muted-foreground">{t('updates.currentVersion')}</p>
           <p className="text-lg font-medium">v{status.currentVersion}</p>
         </div>
         <StateBadge status={status} />
       </div>
 
       <div className="space-y-1">
-        <p className="text-sm text-muted-foreground">Status</p>
+        <p className="text-sm text-muted-foreground">{t('updates.statusLabel')}</p>
         <p className="text-sm">
-          {STATE_COPY[status.state]}
+          {t(`updates.stateCopy.${status.state}` as 'updates.stateCopy.idle')}
           {status.state === 'available' && status.newVersion && (
             <span className="text-muted-foreground"> (v{status.newVersion})</span>
           )}
@@ -112,7 +108,12 @@ export function UpdatesCard(): React.ReactElement | null {
 
       {status.lastCheckedAt && (
         <p className="text-xs text-muted-foreground">
-          Last checked {formatDistanceToNow(new Date(status.lastCheckedAt), { addSuffix: true })}
+          {t('updates.lastChecked', {
+            ago: formatDistanceToNow(new Date(status.lastCheckedAt), {
+              addSuffix: true,
+              locale: dateLocale
+            })
+          })}
         </p>
       )}
 
@@ -127,13 +128,13 @@ export function UpdatesCard(): React.ReactElement | null {
           ) : (
             <RefreshCw className="mr-2 size-4" />
           )}
-          Check for updates
+          {t('updates.checkButton')}
         </Button>
 
         {status.state === 'ready' && (
           <Button onClick={() => installUpdate.mutate()} disabled={installUpdate.isPending}>
             <Power className="mr-2 size-4" />
-            Restart and install
+            {t('updates.restartButton')}
           </Button>
         )}
       </div>
