@@ -74,8 +74,14 @@ export class YtDlpDownloader implements IVideoDownloader {
     const bin = this.binaryResolver.resolve('yt-dlp')
 
     return new Promise<ChannelInfo>((resolve, reject) => {
+      // `--flat-playlist --dump-single-json --playlist-items 1` returns a
+      // single playlist-shaped JSON for the channel (with channel-level
+      // `thumbnails` containing the avatar in multiple sizes) plus one flat
+      // entry. The previous per-video `--dump-json` call only exposed video
+      // thumbnails, never the channel avatar.
       const args = [
-        '--dump-json',
+        '--flat-playlist',
+        '--dump-single-json',
         '--playlist-items',
         '1',
         '--no-download',
@@ -104,11 +110,11 @@ export class YtDlpDownloader implements IVideoDownloader {
           const json = JSON.parse(stdout)
           resolve({
             channelId: json.channel_id ?? '',
-            channelName: json.channel ?? json.uploader ?? '',
-            channelUrl: json.channel_url ?? null,
+            channelName: json.channel ?? json.uploader ?? json.title ?? '',
+            channelUrl: json.channel_url ?? json.webpage_url ?? null,
             uploaderUrl: json.uploader_url ?? null,
             subscriberCount: json.channel_follower_count ?? null,
-            avatarUrl: null
+            avatarUrl: pickChannelAvatar(json.thumbnails)
           })
         } catch (e) {
           reject(new Error(`yt-dlp fetchChannelInfo: failed to parse JSON: ${e}`))
@@ -569,4 +575,49 @@ export class YtDlpDownloader implements IVideoDownloader {
       viewCount
     }
   }
+}
+
+interface YtDlpThumbnail {
+  url: string
+  width?: number
+  height?: number
+  id?: string
+}
+
+/**
+ * Pick the channel avatar URL from a yt-dlp `thumbnails` array.
+ *
+ * yt-dlp's flat-playlist output for a YouTube channel exposes both the wide
+ * banner and the square avatar in the same array. We want the avatar:
+ *   1. Prefer entries whose `id` contains "avatar" (yt-dlp tags them).
+ *   2. Otherwise prefer near-square (aspect ratio 0.8–1.25), largest by area.
+ *   3. Fall back to the largest by area regardless of shape.
+ */
+function pickChannelAvatar(thumbnails: unknown): string | null {
+  if (!Array.isArray(thumbnails) || thumbnails.length === 0) return null
+
+  const candidates = thumbnails.filter(
+    (t): t is YtDlpThumbnail => !!t && typeof (t as { url?: unknown }).url === 'string'
+  )
+  if (candidates.length === 0) return null
+
+  const tagged = candidates.filter((t) => t.id?.toLowerCase().includes('avatar'))
+  if (tagged.length > 0) return largestByArea(tagged).url
+
+  const square = candidates.filter((t) => {
+    if (!t.width || !t.height) return false
+    const ratio = t.width / t.height
+    return ratio >= 0.8 && ratio <= 1.25
+  })
+  if (square.length > 0) return largestByArea(square).url
+
+  return largestByArea(candidates).url
+}
+
+function largestByArea<T extends { width?: number; height?: number }>(items: T[]): T {
+  return items.reduce((best, t) => {
+    const area = (t.width ?? 0) * (t.height ?? 0)
+    const bestArea = (best.width ?? 0) * (best.height ?? 0)
+    return area > bestArea ? t : best
+  })
 }
