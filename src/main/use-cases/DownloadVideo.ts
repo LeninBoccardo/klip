@@ -212,6 +212,8 @@ export class DownloadVideo implements IDownloadVideo {
         youtubeChannelUrl: info.channelUrl ?? null,
         subscriberCount: info.subscriberCount ?? null,
         avatarUrl: null,
+        notes: null,
+        tags: [],
         status: 'active',
         deletedAt: null,
         createdAt: now,

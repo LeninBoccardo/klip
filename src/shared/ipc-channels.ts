@@ -18,6 +18,7 @@ export const IpcChannels = {
   GetCreatorById: 'get-creator-by-id',
   DeleteCreator: 'delete-creator',
   RestoreCreator: 'restore-creator',
+  RegisterCreator: 'register-creator',
 
   // ── Videos ──
   GetVideosPaginated: 'get-videos-paginated',

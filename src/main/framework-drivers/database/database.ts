@@ -54,6 +54,8 @@ function pushSchema(db: AppDatabase): void {
       youtube_channel_url TEXT,
       subscriber_count INTEGER,
       avatar_url TEXT,
+      notes TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
       status TEXT NOT NULL DEFAULT 'active',
       deleted_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),

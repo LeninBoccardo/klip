@@ -27,7 +27,9 @@ import type {
   AddToCollectionRequest,
   AddToCollectionResult,
   RemoveFromCollectionRequest,
-  ReorderCollectionRequest
+  ReorderCollectionRequest,
+  RegisterCreatorRequest,
+  RegisterCreatorResult
 } from './types'
 import type {
   CreatorDto,
@@ -64,6 +66,7 @@ export interface IpcContract {
   'get-creator-by-id': { params: [id: string]; result: CreatorDto | null }
   'delete-creator': { params: [id: string]; result: void }
   'restore-creator': { params: [id: string]; result: void }
+  'register-creator': { params: [request: RegisterCreatorRequest]; result: RegisterCreatorResult }
 
   // ── Videos ──
   'get-videos-paginated': {

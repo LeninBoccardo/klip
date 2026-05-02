@@ -1,7 +1,8 @@
 {
   "page": {
     "title": "Biblioteca",
-    "description": "Navegue e gerencie sua biblioteca de criadores"
+    "description": "Navegue e gerencie sua biblioteca de criadores",
+    "newButton": "Novo criador"
   },
   "empty": {
     "title": "Nenhum criador encontrado",

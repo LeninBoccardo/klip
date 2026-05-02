@@ -28,5 +28,34 @@
       "emptyTitle": "Sin cortes",
       "emptyDescription": "Exporta cortes desde tu editor a la carpeta de cortes de este creador."
     }
+  },
+  "register": {
+    "title": "Registrar creador",
+    "description": "Pega la URL de un canal de YouTube para obtener sus datos y revisa los detalles antes de guardar.",
+    "urlLabel": "URL del canal",
+    "urlPlaceholder": "https://www.youtube.com/@canal",
+    "fetchButton": "Obtener",
+    "fetchingButton": "Obteniendo…",
+    "previewSubscribers": "{{count}} suscriptores",
+    "nameLabel": "Nombre para mostrar",
+    "folderLabel": "Nombre de carpeta",
+    "folderHelp": "Se usa como carpeta en disco. Solo minúsculas, dígitos y guiones.",
+    "notesLabel": "Notas",
+    "notesPlaceholder": "Notas opcionales sobre este creador…",
+    "tagsLabel": "Etiquetas",
+    "tagsPlaceholder": "vlog, tech, semanal",
+    "tagsHelp": "Separa con comas.",
+    "saveButton": "Guardar",
+    "savingButton": "Guardando…",
+    "savedToast": "“{{name}}” registrado",
+    "errors": {
+      "fetchFailed": "Error al obtener el canal: {{message}}",
+      "alreadyRegistered": "Este creador ya está registrado.",
+      "alreadyRegisteredAction": "Ver existente",
+      "folderTaken": "El nombre de carpeta “{{folderName}}” ya está en uso.",
+      "invalidFolder": "El nombre de carpeta solo puede usar minúsculas, dígitos y guiones.",
+      "emptyDisplayName": "El nombre para mostrar es obligatorio.",
+      "saveFailed": "Error al registrar el creador: {{message}}"
+    }
   }
 }

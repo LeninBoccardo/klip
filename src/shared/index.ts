@@ -19,8 +19,13 @@ export type {
   ReconcileResult,
   DownloadVideoResult,
   FetchChannelInfoResult,
-  ChannelInfo
+  ChannelInfo,
+  RegisterCreatorRequest,
+  RegisterCreatorResult
 } from './types'
 
 // Re-export DTOs
 export type { CreatorDto, VideoDto, CutDto, AuditEntryDto, OperationDto } from './dtos'
+
+// Re-export shared utilities
+export { slugify } from './slugify'

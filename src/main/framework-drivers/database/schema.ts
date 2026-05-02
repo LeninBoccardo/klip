@@ -14,6 +14,8 @@ export const creators = sqliteTable(
     youtubeChannelUrl: text('youtube_channel_url'),
     subscriberCount: integer('subscriber_count'),
     avatarUrl: text('avatar_url'),
+    notes: text('notes'),
+    tags: text('tags').notNull().default('[]'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),
     createdAt: text('created_at')

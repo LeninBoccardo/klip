@@ -19,6 +19,7 @@ export type {
   DownloadVideoResult,
   FetchChannelInfoResult
 } from './use-case-results'
+export type { RegisterCreatorRequest, RegisterCreatorResult } from './register-creator'
 export type { ProbeStatus } from './probe-status'
 export type { ChannelInfo } from './channel-info'
 export type { MigrateRootProgress, MigrateRootResult } from './migrate-root'

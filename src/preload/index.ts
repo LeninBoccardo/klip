@@ -27,6 +27,7 @@ const api = {
   getCreatorById: createTypedInvoker('get-creator-by-id'),
   deleteCreator: createTypedInvoker('delete-creator'),
   restoreCreator: createTypedInvoker('restore-creator'),
+  registerCreator: createTypedInvoker('register-creator'),
 
   // ── Videos ──
   getVideosPaginated: createTypedInvoker('get-videos-paginated'),

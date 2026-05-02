@@ -43,6 +43,13 @@
       "when": 1777424095514,
       "tag": "0005_square_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1777737665312,
+      "tag": "0006_nosy_lily_hollister",
+      "breakpoints": true
     }
   ]
 }

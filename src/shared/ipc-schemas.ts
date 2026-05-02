@@ -47,6 +47,25 @@ const tagSchema = z.string().min(1).max(64)
 const idArraySchema = z.array(z.string().min(1)).max(5000)
 const tagArraySchema = z.array(tagSchema).max(64)
 
+const channelInfoSchema = z.object({
+  channelId: z.string(),
+  channelName: z.string(),
+  channelUrl: z.string().nullable(),
+  uploaderUrl: z.string().nullable(),
+  subscriberCount: z.number().nullable(),
+  avatarUrl: z.string().nullable()
+})
+
+const registerCreatorRequestSchema = z.object({
+  channelInfo: channelInfoSchema,
+  displayName: z.string().min(1).max(200),
+  folderName: z.string().min(1).max(200),
+  notes: z.string().max(5000).nullable(),
+  // Tags get re-normalized in the use case; the cap here matches tagArraySchema
+  // and protects the use case from oversized payloads.
+  tags: z.array(z.string().max(64)).max(64)
+})
+
 const bulkUpdateTagsRequestSchema = z
   .object({
     entityKind: z.enum(['video', 'cut']),
@@ -74,6 +93,7 @@ export const ipcSchemas = {
   'get-creator-by-id': z.tuple([z.string()]),
   'delete-creator': z.tuple([z.string()]),
   'restore-creator': z.tuple([z.string()]),
+  'register-creator': z.tuple([registerCreatorRequestSchema]),
 
   // ── Videos ──
   'get-videos-paginated': z.tuple([videoQueryParamsSchema]),

@@ -1,4 +1,5 @@
 import type { ICreatorRepository } from '@domain/repositories'
+import type { IRegisterCreator } from '@use-cases/IRegisterCreator'
 import { createTypedHandler } from './create-typed-handler'
 import { toCreatorDto, mapPaginated } from './dto-mappers'
 
@@ -10,8 +11,12 @@ import { toCreatorDto, mapPaginated } from './dto-mappers'
  *   - `get-creator-by-id`      → single creator lookup
  *   - `delete-creator`         → soft-delete (status → 'deleted')
  *   - `restore-creator`        → restore (status → 'active')
+ *   - `register-creator`       → create from a fetched ChannelInfo + overrides
  */
-export function registerCreatorController(creatorRepo: ICreatorRepository): void {
+export function registerCreatorController(
+  creatorRepo: ICreatorRepository,
+  registerCreator: IRegisterCreator
+): void {
   createTypedHandler('get-creators-paginated', async (_event, params) => {
     return mapPaginated(creatorRepo.findPaginated(params), toCreatorDto)
   })
@@ -27,5 +32,9 @@ export function registerCreatorController(creatorRepo: ICreatorRepository): void
 
   createTypedHandler('restore-creator', async (_event, id) => {
     creatorRepo.updateStatus(id, 'active', null)
+  })
+
+  createTypedHandler('register-creator', async (_event, request) => {
+    return registerCreator.execute(request)
   })
 }

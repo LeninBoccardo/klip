@@ -14,6 +14,8 @@ function makeCreator(overrides: Partial<Creator> = {}): Creator {
     youtubeChannelUrl: null,
     subscriberCount: null,
     avatarUrl: null,
+    notes: null,
+    tags: [],
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
@@ -88,6 +90,36 @@ describe('SqliteCreatorRepository', () => {
     const result = repo.findById('creator-1')
     expect(result?.name).toBe('Updated')
     expect(repo.findAll()).toHaveLength(1)
+  })
+
+  // ── notes / tags round-trip ──
+
+  it('round-trips notes (string) and tags (string[]) through SQLite', () => {
+    repo.upsert(
+      makeCreator({
+        notes: 'A great channel',
+        tags: ['vlog', 'tech', 'weekly']
+      })
+    )
+
+    const result = repo.findById('creator-1')
+    expect(result?.notes).toBe('A great channel')
+    expect(result?.tags).toEqual(['vlog', 'tech', 'weekly'])
+  })
+
+  it('persists tags as JSON and parses back to array', () => {
+    repo.upsert(makeCreator({ tags: [] }))
+    const empty = repo.findById('creator-1')
+    expect(empty?.tags).toEqual([])
+
+    repo.upsert(makeCreator({ tags: ['solo'] }))
+    const single = repo.findById('creator-1')
+    expect(single?.tags).toEqual(['solo'])
+  })
+
+  it('preserves null notes', () => {
+    repo.upsert(makeCreator({ notes: null }))
+    expect(repo.findById('creator-1')?.notes).toBeNull()
   })
 
   // ── delete ──

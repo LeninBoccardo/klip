@@ -103,6 +103,8 @@ export function makeCreatorDto(overrides: Partial<CreatorDto> = {}): CreatorDto 
     youtubeChannelUrl: null,
     subscriberCount: null,
     avatarUrl: null,
+    notes: null,
+    tags: [],
     status: 'active',
     deletedAt: null,
     createdAt: '2026-01-01T00:00:00Z',

@@ -18,6 +18,8 @@ export interface CreatorDto {
   youtubeChannelUrl: string | null
   subscriberCount: number | null
   avatarUrl: string | null
+  notes: string | null
+  tags: string[]
   status: EntityStatus
   deletedAt: string | null
   createdAt: string

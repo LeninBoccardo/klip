@@ -28,5 +28,34 @@
       "emptyTitle": "No cuts",
       "emptyDescription": "Export cuts from your editor into this creator’s cuts folder."
     }
+  },
+  "register": {
+    "title": "Register creator",
+    "description": "Paste a YouTube channel URL to fetch its data, then review the details before saving.",
+    "urlLabel": "Channel URL",
+    "urlPlaceholder": "https://www.youtube.com/@channel",
+    "fetchButton": "Fetch",
+    "fetchingButton": "Fetching…",
+    "previewSubscribers": "{{count}} subscribers",
+    "nameLabel": "Display name",
+    "folderLabel": "Folder name",
+    "folderHelp": "Used as the on-disk folder. Lowercase letters, digits, and hyphens only.",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Optional notes about this creator…",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "vlog, tech, weekly",
+    "tagsHelp": "Separate with commas.",
+    "saveButton": "Save",
+    "savingButton": "Saving…",
+    "savedToast": "“{{name}}” registered",
+    "errors": {
+      "fetchFailed": "Failed to fetch channel: {{message}}",
+      "alreadyRegistered": "This creator is already registered.",
+      "alreadyRegisteredAction": "View existing",
+      "folderTaken": "Folder name “{{folderName}}” is already taken.",
+      "invalidFolder": "Folder name must use lowercase letters, digits, and hyphens only.",
+      "emptyDisplayName": "Display name is required.",
+      "saveFailed": "Failed to register creator: {{message}}"
+    }
   }
 }

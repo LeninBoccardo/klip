@@ -28,7 +28,9 @@ import type {
   AddToCollectionRequest,
   AddToCollectionResult,
   RemoveFromCollectionRequest,
-  ReorderCollectionRequest
+  ReorderCollectionRequest,
+  RegisterCreatorRequest,
+  RegisterCreatorResult
 } from '@shared/types'
 import type {
   CreatorDto,
@@ -56,6 +58,7 @@ interface KlipAPI {
   getCreatorById(id: string): Promise<CreatorDto | null>
   deleteCreator(id: string): Promise<void>
   restoreCreator(id: string): Promise<void>
+  registerCreator(request: RegisterCreatorRequest): Promise<RegisterCreatorResult>
 
   // ── Videos ──
   getVideosPaginated(params: VideoQueryParams): Promise<PaginatedResult<VideoDto>>

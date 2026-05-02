@@ -37,6 +37,8 @@ function makeCreator(overrides: Partial<Creator> = {}): Creator {
     youtubeChannelUrl: null,
     subscriberCount: null,
     avatarUrl: null,
+    notes: null,
+    tags: [],
     status: 'active',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',

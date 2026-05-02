@@ -1,7 +1,8 @@
 {
   "page": {
     "title": "Library",
-    "description": "Browse and manage your creator library"
+    "description": "Browse and manage your creator library",
+    "newButton": "New creator"
   },
   "empty": {
     "title": "No creators found",

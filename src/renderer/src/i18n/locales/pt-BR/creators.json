@@ -28,5 +28,34 @@
       "emptyTitle": "Nenhum corte",
       "emptyDescription": "Exporte cortes do seu editor para a pasta de cortes deste criador."
     }
+  },
+  "register": {
+    "title": "Registrar criador",
+    "description": "Cole a URL de um canal do YouTube para buscar os dados e revise os detalhes antes de salvar.",
+    "urlLabel": "URL do canal",
+    "urlPlaceholder": "https://www.youtube.com/@canal",
+    "fetchButton": "Buscar",
+    "fetchingButton": "Buscando…",
+    "previewSubscribers": "{{count}} inscritos",
+    "nameLabel": "Nome de exibição",
+    "folderLabel": "Nome da pasta",
+    "folderHelp": "Usado como pasta no disco. Apenas minúsculas, dígitos e hifens.",
+    "notesLabel": "Notas",
+    "notesPlaceholder": "Notas opcionais sobre este criador…",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "vlog, tech, semanal",
+    "tagsHelp": "Separe por vírgulas.",
+    "saveButton": "Salvar",
+    "savingButton": "Salvando…",
+    "savedToast": "“{{name}}” registrado",
+    "errors": {
+      "fetchFailed": "Falha ao buscar o canal: {{message}}",
+      "alreadyRegistered": "Este criador já está registrado.",
+      "alreadyRegisteredAction": "Ver existente",
+      "folderTaken": "O nome da pasta “{{folderName}}” já está em uso.",
+      "invalidFolder": "O nome da pasta só pode usar minúsculas, dígitos e hifens.",
+      "emptyDisplayName": "O nome de exibição é obrigatório.",
+      "saveFailed": "Falha ao registrar o criador: {{message}}"
+    }
   }
 }

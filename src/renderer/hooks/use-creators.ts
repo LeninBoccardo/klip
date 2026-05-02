@@ -6,7 +6,13 @@ import {
   type UseMutationResult
 } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import type { PaginationParams, PaginatedResult } from '@shared/types'
+import type {
+  PaginationParams,
+  PaginatedResult,
+  FetchChannelInfoResult,
+  RegisterCreatorRequest,
+  RegisterCreatorResult
+} from '@shared/types'
 import type { CreatorDto } from '@shared/dtos'
 
 export function useCreatorsPaginated(
@@ -38,6 +44,24 @@ export function useRestoreCreator(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.restoreCreator(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.creators.all })
+  })
+}
+
+export function useFetchChannelInfo(): UseMutationResult<FetchChannelInfoResult, Error, string> {
+  return useMutation({
+    mutationFn: (url: string) => window.api.fetchChannelInfo(url)
+  })
+}
+
+export function useRegisterCreator(): UseMutationResult<
+  RegisterCreatorResult,
+  Error,
+  RegisterCreatorRequest
+> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (request: RegisterCreatorRequest) => window.api.registerCreator(request),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.creators.all })
   })
 }

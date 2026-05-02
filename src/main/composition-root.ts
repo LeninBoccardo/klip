@@ -32,6 +32,7 @@ import type { IProbeMediaFile } from '@use-cases/IProbeMediaFile'
 import type { IRecoverOperations } from '@use-cases/IRecoverOperations'
 import type { IEnrichMediaMetadata } from '@use-cases/IEnrichMediaMetadata'
 import type { IFetchChannelInfo } from '@use-cases/IFetchChannelInfo'
+import type { IRegisterCreator } from '@use-cases/IRegisterCreator'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
@@ -90,6 +91,7 @@ import { ProbeMediaFile } from '@use-cases/ProbeMediaFile'
 import { RecoverOperations } from '@use-cases/RecoverOperations'
 import { EnrichMediaMetadata } from '@use-cases/EnrichMediaMetadata'
 import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
+import { RegisterCreator } from '@use-cases/RegisterCreator'
 import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
 import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
 import { EnrichAllVideos } from '@use-cases/EnrichAllVideos'
@@ -147,6 +149,7 @@ export interface AppContainer {
     recoverOperations: IRecoverOperations
     enrichMedia: IEnrichMediaMetadata
     fetchChannelInfo: IFetchChannelInfo
+    registerCreator: IRegisterCreator
     migrateRootFolder: IMigrateRootFolder
     fetchVideoDetail: IFetchVideoDetail
     enrichAllVideos: IEnrichAllVideos
@@ -268,6 +271,13 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const fetchVideoInfo = new FetchVideoInfo(videoDownloader)
   const fetchChannelInfo = new FetchChannelInfo(videoDownloader, creatorRepo)
+  const registerCreator = new RegisterCreator(
+    creatorRepo,
+    idGenerator,
+    fsWriter,
+    pathResolver,
+    rootPathRef
+  )
 
   const downloadVideo = new DownloadVideo(
     videoDownloader,
@@ -397,6 +407,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
       recoverOperations,
       enrichMedia,
       fetchChannelInfo,
+      registerCreator,
       migrateRootFolder,
       fetchVideoDetail,
       enrichAllVideos,

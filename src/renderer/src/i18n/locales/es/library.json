@@ -1,7 +1,8 @@
 {
   "page": {
     "title": "Biblioteca",
-    "description": "Explora y gestiona tu biblioteca de creadores"
+    "description": "Explora y gestiona tu biblioteca de creadores",
+    "newButton": "Nuevo creador"
   },
   "empty": {
     "title": "No se encontraron creadores",

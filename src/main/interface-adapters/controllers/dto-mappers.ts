@@ -23,6 +23,8 @@ export function toCreatorDto(creator: Creator): CreatorDto {
     youtubeChannelUrl: creator.youtubeChannelUrl,
     subscriberCount: creator.subscriberCount,
     avatarUrl: creator.avatarUrl,
+    notes: creator.notes,
+    tags: creator.tags,
     status: creator.status,
     deletedAt: creator.deletedAt,
     createdAt: creator.createdAt,

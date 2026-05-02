@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useCreatorsPaginated, useDeleteCreator, useRestoreCreator } from '@/hooks/use-creators'
 import { CreatorCard } from '@components/features/creators/CreatorCard'
 import { CreatorFilters } from '@components/features/creators/CreatorFilters'
+import { RegisterCreatorDialog } from '@components/features/creators/RegisterCreatorDialog'
 import {
   PageContainer,
   PageHeader,
@@ -11,9 +12,10 @@ import {
   PaginationControls,
   EntityContextMenu
 } from '@/components/shared'
+import { Button } from '@ui/button'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
-import { Users } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import type { EntityStatus } from '@shared/types'
 
@@ -27,6 +29,7 @@ function LibraryPage(): React.ReactElement {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<EntityStatus[] | undefined>(undefined)
+  const [registerOpen, setRegisterOpen] = useState(false)
 
   const { data, isLoading } = useCreatorsPaginated({
     page,
@@ -54,7 +57,16 @@ function LibraryPage(): React.ReactElement {
 
   return (
     <PageContainer>
-      <PageHeader title={t('page.title')} description={t('page.description')} />
+      <PageHeader
+        title={t('page.title')}
+        description={t('page.description')}
+        actions={
+          <Button onClick={() => setRegisterOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            {t('page.newButton')}
+          </Button>
+        }
+      />
 
       <CreatorFilters
         search={search}
@@ -118,6 +130,13 @@ function LibraryPage(): React.ReactElement {
           />
         </>
       )}
+
+      <RegisterCreatorDialog
+        open={registerOpen}
+        onOpenChange={setRegisterOpen}
+        onCreated={(id) => navigate({ to: '/creators/$creatorId', params: { creatorId: id } })}
+        onOpenExisting={(id) => navigate({ to: '/creators/$creatorId', params: { creatorId: id } })}
+      />
     </PageContainer>
   )
 }

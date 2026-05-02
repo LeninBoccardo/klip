@@ -22,7 +22,22 @@ const DEFAULT_SORT_COLUMN = creators.name
 type CreatorRow = typeof creators.$inferSelect
 
 function mapRow(row: CreatorRow): Creator {
-  return { ...row, status: row.status as EntityStatus }
+  return {
+    ...row,
+    status: row.status as EntityStatus,
+    tags: parseTags(row.tags)
+  }
+}
+
+function parseTags(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.every((t) => typeof t === 'string')) return parsed
+  } catch {
+    // fall through
+  }
+  console.warn('[SqliteCreatorRepository] Invalid tags JSON, defaulting to []:', raw)
+  return []
 }
 
 export class SqliteCreatorRepository implements ICreatorRepository {
@@ -88,6 +103,8 @@ export class SqliteCreatorRepository implements ICreatorRepository {
         youtubeChannelUrl: creator.youtubeChannelUrl,
         subscriberCount: creator.subscriberCount,
         avatarUrl: creator.avatarUrl,
+        notes: creator.notes,
+        tags: JSON.stringify(creator.tags),
         status: creator.status,
         deletedAt: creator.deletedAt,
         createdAt: creator.createdAt,
@@ -103,6 +120,8 @@ export class SqliteCreatorRepository implements ICreatorRepository {
           youtubeChannelUrl: sql`excluded.youtube_channel_url`,
           subscriberCount: sql`excluded.subscriber_count`,
           avatarUrl: sql`excluded.avatar_url`,
+          notes: sql`excluded.notes`,
+          tags: sql`excluded.tags`,
           status: sql`excluded.status`,
           deletedAt: sql`excluded.deleted_at`,
           updatedAt: sql`excluded.updated_at`
