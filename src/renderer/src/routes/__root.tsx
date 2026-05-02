@@ -18,7 +18,7 @@ import { queryClient } from '@/lib/query-client'
 import { useDbListener } from '@/hooks/use-db-listener'
 import { useDownloadProgressListener } from '@/hooks/use-downloads'
 import { useUpdaterStatus, useInstallUpdate } from '@/hooks/use-updater'
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppSidebar } from '@components/features/layout/AppSidebar'
@@ -154,18 +154,18 @@ function AppBreadcrumb(): React.ReactElement | null {
   const { t } = useTranslation('navigation')
   const matches = useMatches()
 
-  // Build breadcrumb segments from matched routes (skip root)
-  const segments = matches
-    .filter((m) => m.id !== '__root__')
-    .map((m) => {
-      const key = ROUTE_KEYS[m.pathname]
-      const label = key
-        ? t(key)
-        : // For dynamic routes like /creators/$creatorId, show the param
-          m.pathname.split('/').pop() || ''
-      return { path: m.pathname, label }
-    })
-    .filter((s) => s.label)
+  // Build breadcrumb segments from matched routes (skip root). useMatches() can
+  // return the layout match and the index match for the same pathname (both `/`),
+  // so dedupe by pathname — last write wins on the label.
+  const segmentsMap = new Map<string, { path: string; label: string }>()
+  for (const m of matches) {
+    if (m.id === '__root__') continue
+    const key = ROUTE_KEYS[m.pathname]
+    const label = key ? t(key) : m.pathname.split('/').pop() || ''
+    if (!label) continue
+    segmentsMap.set(m.pathname, { path: m.pathname, label })
+  }
+  const segments = [...segmentsMap.values()]
 
   if (segments.length === 0) return null
 
@@ -175,16 +175,18 @@ function AppBreadcrumb(): React.ReactElement | null {
         {segments.map((segment, i) => {
           const isLast = i === segments.length - 1
           return (
-            <BreadcrumbItem key={segment.path}>
+            <Fragment key={segment.path}>
               {i > 0 && <BreadcrumbSeparator />}
-              {isLast ? (
-                <BreadcrumbPage>{segment.label}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link to={segment.path}>{segment.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage>{segment.label}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link to={segment.path}>{segment.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
           )
         })}
       </BreadcrumbList>
