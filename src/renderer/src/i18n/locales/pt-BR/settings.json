@@ -43,6 +43,10 @@
       "successDescription_other": "Movidas {{count}} pastas para o novo local com sucesso.",
       "errorTitle": "Falha na Migração",
       "unknownError": "Ocorreu um erro desconhecido"
+    },
+    "progress": {
+      "title": "Migrando pasta raiz",
+      "body": "Movendo pastas de criadores para o novo local…"
     }
   },
   "maintenance": {

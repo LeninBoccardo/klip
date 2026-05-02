@@ -1,4 +1,11 @@
-import { createRootRoute, Outlet, useMatches, Link } from '@tanstack/react-router'
+import {
+  createRootRoute,
+  Outlet,
+  useMatches,
+  Link,
+  type ErrorComponentProps
+} from '@tanstack/react-router'
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from '@ui/empty'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
@@ -224,4 +231,53 @@ const RootLayout = (): React.ReactElement => (
   </QueryClientProvider>
 )
 
-export const Route = createRootRoute({ component: RootLayout })
+/**
+ * Renders inside the layout (so the sidebar and command palette stay
+ * functional) when a route throws or no match is found. Common copy lives in
+ * `common.errors.*`; the link uses the typed router so deep-link clicks land
+ * on a known route.
+ */
+function NotFoundComponent(): React.ReactElement {
+  const { t } = useTranslation('common')
+  return (
+    <Empty className="m-auto">
+      <EmptyHeader>
+        <EmptyTitle>{t('errors.notFoundTitle')}</EmptyTitle>
+        <EmptyDescription>{t('errors.notFoundBody')}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button asChild>
+          <Link to="/">{t('errors.backHome')}</Link>
+        </Button>
+      </EmptyContent>
+    </Empty>
+  )
+}
+
+function ErrorComponent({ error }: ErrorComponentProps): React.ReactElement {
+  const { t } = useTranslation('common')
+  // Surface the underlying message to console so devs can dig in; we keep
+  // the user-facing copy generic to avoid leaking internals into a UI string.
+  useEffect(() => {
+    console.error('[klip] Route error boundary caught:', error)
+  }, [error])
+  return (
+    <Empty className="m-auto">
+      <EmptyHeader>
+        <EmptyTitle>{t('errors.unexpectedTitle')}</EmptyTitle>
+        <EmptyDescription>{t('errors.unexpectedBody')}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button asChild>
+          <Link to="/">{t('errors.backHome')}</Link>
+        </Button>
+      </EmptyContent>
+    </Empty>
+  )
+}
+
+export const Route = createRootRoute({
+  component: RootLayout,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent
+})

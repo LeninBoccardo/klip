@@ -1,4 +1,19 @@
 /**
+ * Hard upper bound for VTT input. Real yt-dlp transcripts top out around
+ * 1 MB even for multi-hour streams; 10 MB is generous slack while still
+ * capping the worst case from a tampered or malformed file (the inline-tag
+ * stripper at line 39 has pathological backtracking on unbalanced `<`).
+ */
+const MAX_VTT_BYTES = 10 * 1024 * 1024
+
+export class VttTooLargeError extends Error {
+  readonly name = 'VttTooLargeError'
+  constructor(public readonly size: number) {
+    super(`VTT input is ${size} bytes (max ${MAX_VTT_BYTES})`)
+  }
+}
+
+/**
  * Strip a WebVTT file down to plain text:
  *  - drop the WEBVTT header line and any "NOTE …" / "STYLE …" / "Kind:" / "Language:" metadata
  *  - drop cue identifiers and timing lines ("00:00:00.000 --> 00:00:02.500 …")
@@ -7,8 +22,11 @@
  *
  * yt-dlp auto-generated VTTs include duplicated rolling captions; this
  * function de-duplicates consecutive identical cue lines.
+ *
+ * Throws {@link VttTooLargeError} if `raw` exceeds {@link MAX_VTT_BYTES}.
  */
 export function parseVtt(raw: string): string {
+  if (raw.length > MAX_VTT_BYTES) throw new VttTooLargeError(raw.length)
   const lines = raw.split(/\r?\n/)
   const out: string[] = []
   let lastPushed: string | null = null

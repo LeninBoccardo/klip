@@ -19,6 +19,13 @@ import { diffObjects } from './diff-objects'
  * before the delete. The audited delete reads child ids via the injected
  * video/cut repos and emits one `cascade_deleted` entry per victim inside the
  * same transaction.
+ *
+ * AUDIT-2026-05-02 (deferred): updateStatus and similar single-row mutations
+ * are find→update→audit per call (O(N) round trips when invoked in a loop —
+ * `ReconcileDirectory` does this). For the current library scale (<10K rows
+ * per entity) the per-call overhead is microseconds and a bulk variant adds
+ * surface area to four decorators plus four use-case sites for marginal gain.
+ * Revisit if reconcile latency becomes a complaint.
  */
 export class AuditedCreatorRepository implements ICreatorRepository {
   constructor(

@@ -31,5 +31,12 @@
       "updating_db": "Actualizando base de datos…",
       "reconciling": "Reconciliando…"
     }
+  },
+  "errors": {
+    "notFoundTitle": "Página no encontrada",
+    "notFoundBody": "No encontramos la página que buscabas.",
+    "unexpectedTitle": "Algo salió mal",
+    "unexpectedBody": "Ocurrió un error inesperado. Vuelve al inicio e inténtalo de nuevo.",
+    "backHome": "Volver al inicio"
   }
 }

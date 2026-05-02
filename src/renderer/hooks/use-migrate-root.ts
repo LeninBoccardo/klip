@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '@/hooks/use-app-store'
 import { queryKeys } from '@/lib/query-keys'
 import type { MigrateRootProgress, MigrateRootResult } from '@shared/types'
@@ -15,6 +16,7 @@ export function useMigrateRoot(): {
   mutation: UseMutationResult<MigrateRootResult, Error, string>
   selectFolder: () => Promise<string | null>
 } {
+  const { t } = useTranslation('settings')
   const startBlocking = useAppStore((s) => s.startBlockingOperation)
   const updateProgress = useAppStore((s) => s.updateBlockingProgress)
   const endBlocking = useAppStore((s) => s.endBlockingOperation)
@@ -29,7 +31,7 @@ export function useMigrateRoot(): {
 
   const mutation = useMutation<MigrateRootResult, Error, string>({
     mutationFn: (newRootPath: string) => {
-      startBlocking('Migrating root folder', 'Moving creator folders to the new location…')
+      startBlocking(t('storage.progress.title'), t('storage.progress.body'))
       return window.api.migrateRoot(newRootPath)
     },
     onSuccess: (result) => {

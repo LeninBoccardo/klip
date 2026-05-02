@@ -31,5 +31,12 @@
       "updating_db": "Updating database…",
       "reconciling": "Reconciling…"
     }
+  },
+  "errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "We couldn't find the page you were looking for.",
+    "unexpectedTitle": "Something went wrong",
+    "unexpectedBody": "An unexpected error occurred. Try going back to the home page.",
+    "backHome": "Back to home"
   }
 }

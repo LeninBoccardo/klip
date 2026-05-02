@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseVtt } from '@main/domain/types/parse-vtt'
+import { parseVtt, VttTooLargeError } from '@main/domain/types/parse-vtt'
 
 describe('parseVtt', () => {
   it('returns plain text from a minimal VTT', () => {
@@ -54,5 +54,12 @@ World`
 
   it('returns an empty string when the file has no spoken cues', () => {
     expect(parseVtt('WEBVTT\n\n')).toBe('')
+  })
+
+  it('throws VttTooLargeError on input above the size cap (defends the inline-tag stripper)', () => {
+    // 11 MB of literal "<" — over the 10 MB cap. The unbalanced angle-bracket
+    // input would feed the /<[^>]+>/g stripper a pathological string.
+    const oversized = '<'.repeat(11 * 1024 * 1024)
+    expect(() => parseVtt(oversized)).toThrow(VttTooLargeError)
   })
 })

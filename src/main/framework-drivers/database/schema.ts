@@ -212,7 +212,10 @@ export const collectionVideos = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.collectionId, table.videoId] }),
-    index('idx_collection_videos_position').on(table.collectionId, table.position)
+    index('idx_collection_videos_position').on(table.collectionId, table.position),
+    // FK reverse-lookup index — without it "which collections contain video X?"
+    // and the FK CASCADE on videos.id full-scan this join table.
+    index('idx_collection_videos_video_id').on(table.videoId)
   ]
 )
 
@@ -232,7 +235,9 @@ export const collectionCuts = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.collectionId, table.cutId] }),
-    index('idx_collection_cuts_position').on(table.collectionId, table.position)
+    index('idx_collection_cuts_position').on(table.collectionId, table.position),
+    // FK reverse-lookup index — see comment on collection_videos above.
+    index('idx_collection_cuts_cut_id').on(table.cutId)
   ]
 )
 

@@ -443,6 +443,14 @@ export function createAppContainer(config: AppConfig): AppContainer {
       void fileWatcher.stop()
       debouncer.cancel()
       downloadQueue.clear()
+      // Force a WAL checkpoint before close so the next launch doesn't see
+      // leftover *-wal / *-shm files. RESTART blocks new readers/writers
+      // during the checkpoint, which is fine here since we're exiting.
+      try {
+        database.raw.pragma('wal_checkpoint(RESTART)')
+      } catch (err) {
+        console.warn('[klip] WAL checkpoint failed during shutdown:', err)
+      }
       database.raw.close()
       console.log('[klip] Container shut down: watcher stopped, debouncer cancelled, DB closed')
     }

@@ -236,6 +236,21 @@ export class DownloadVideo implements IDownloadVideo {
         updatedAt: now
       }
       this.creatorRepo.upsert(creator)
+      // Best-effort folder creation, mirroring RegisterCreator: a new creator
+      // auto-discovered through a download should have its top-level folder
+      // on disk too. The downstream `ensureDirectory(outputDir)` would
+      // create the tree anyway, but this keeps reconciliation symmetric for
+      // creators that fail mid-download (they'd otherwise reappear without
+      // any disk presence).
+      try {
+        const dir = this.pathResolver.join(this.rootPath.value, folderName)
+        this.fsWriter.ensureDirectory(dir)
+      } catch (err) {
+        console.warn(
+          `[DownloadVideo.ensureCreator] Folder creation failed for "${folderName}":`,
+          err instanceof Error ? err.message : err
+        )
+      }
       return
     }
 

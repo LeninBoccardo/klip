@@ -43,6 +43,10 @@
       "successDescription_other": "Successfully moved {{count}} folders to the new location.",
       "errorTitle": "Migration Failed",
       "unknownError": "An unknown error occurred"
+    },
+    "progress": {
+      "title": "Migrating root folder",
+      "body": "Moving creator folders to the new location…"
     }
   },
   "maintenance": {

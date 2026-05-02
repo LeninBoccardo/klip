@@ -43,6 +43,10 @@
       "successDescription_other": "Se movieron {{count}} carpetas a la nueva ubicación con éxito.",
       "errorTitle": "Migración Fallida",
       "unknownError": "Ocurrió un error desconocido"
+    },
+    "progress": {
+      "title": "Migrando carpeta raíz",
+      "body": "Moviendo carpetas de creadores a la nueva ubicación…"
     }
   },
   "maintenance": {

@@ -56,8 +56,12 @@ export class ProcessFileNotifications {
     if (this.flushPromise) {
       try {
         await this.flushPromise
-      } catch {
-        // Errors are already logged inside flush(); we just need to wait it out.
+      } catch (err) {
+        // Errors should already be logged inside flush() — but if a future
+        // bug ever lets a flush reject without first logging, this catch
+        // would silently swallow it. Re-log defensively so the suspend()
+        // caller has a paper trail.
+        console.warn('[klip] flush rejected during suspend():', err)
       }
     }
   }
