@@ -265,7 +265,10 @@ export class SqliteCutRepository implements ICutRepository {
         thumbnailPath: sql`CASE WHEN ${cuts.thumbnailPath} IS NOT NULL AND substr(${cuts.thumbnailPath}, 1, length(${oldPrefix})) = ${oldPrefix} THEN ${newPrefix} || substr(${cuts.thumbnailPath}, length(${oldPrefix}) + 1) ELSE ${cuts.thumbnailPath} END`,
         updatedAt: new Date().toISOString()
       })
-      .where(sql`${cuts.filePath} LIKE ${oldPrefix + '%'}`)
+      // Escape LIKE wildcards (% and _) in the prefix so a path containing
+      // those literal characters can't accidentally match unrelated rows.
+      // ESCAPE '\\' pairs with `escapeLike`'s backslash convention.
+      .where(sql`${cuts.filePath} LIKE ${escapeLike(oldPrefix) + '%'} ESCAPE '\\'`)
       .run()
   }
 

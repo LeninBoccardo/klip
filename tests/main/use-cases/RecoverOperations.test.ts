@@ -306,8 +306,78 @@ describe('RecoverOperations', () => {
     expect(operationRepo.updateStatus).toHaveBeenCalledWith(
       'op-migrate-bad',
       'rolled_back',
-      'Malformed migrate_root payload (missing oldRoot/newRoot/movedSoFar)'
+      'Malformed migrate_root payload (missing oldRoot/newRoot/moves)'
     )
+  })
+
+  it('skips rolled-back entries in v2 payload and only re-rolls back moved entries (idempotent recovery)', () => {
+    const op = makeOperation({
+      id: 'op-migrate-v2',
+      type: 'migrate_root',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        version: 2,
+        oldRoot: '/old/root',
+        newRoot: '/new/root',
+        folders: ['a', 'b', 'c'],
+        moves: [
+          { folder: 'a', status: 'rolled-back' }, // already returned in a previous run
+          { folder: 'b', status: 'moved' }, // pending
+          { folder: 'c', status: 'moved' } // pending
+        ]
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [op] : []
+    )
+    vi.mocked(fsReader.directoryExists).mockReturnValue(true)
+
+    useCase.execute()
+
+    // Only the two pending entries get a moveDirectory call. The already-
+    // rolled-back entry is skipped without re-attempting.
+    expect(fsWriter.moveDirectory).toHaveBeenCalledTimes(2)
+    expect(fsWriter.moveDirectory).toHaveBeenNthCalledWith(1, '/new/root/b', '/old/root/b')
+    expect(fsWriter.moveDirectory).toHaveBeenNthCalledWith(2, '/new/root/c', '/old/root/c')
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-migrate-v2',
+      'rolled_back',
+      'Root migration interrupted — folders moved back to original root'
+    )
+  })
+
+  it('persists per-folder status flip after each successful v2 rollback step', () => {
+    const op = makeOperation({
+      id: 'op-migrate-v2-persist',
+      type: 'migrate_root',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        version: 2,
+        oldRoot: '/old/root',
+        newRoot: '/new/root',
+        folders: ['a', 'b'],
+        moves: [
+          { folder: 'a', status: 'moved' },
+          { folder: 'b', status: 'moved' }
+        ]
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [op] : []
+    )
+    vi.mocked(fsReader.directoryExists).mockReturnValue(true)
+
+    useCase.execute()
+
+    // Each successful rollback step persists the updated payload so a second
+    // crash can resume without double-moving.
+    const persists = vi.mocked(operationRepo.updatePayload).mock.calls
+    expect(persists.length).toBeGreaterThanOrEqual(2)
+    const finalPayload = JSON.parse(persists[persists.length - 1][1])
+    expect(finalPayload.moves).toEqual([
+      { folder: 'a', status: 'rolled-back' },
+      { folder: 'b', status: 'rolled-back' }
+    ])
   })
 
   it('should mark migrate_root rolled_back with parse-error message when payload is not JSON', () => {

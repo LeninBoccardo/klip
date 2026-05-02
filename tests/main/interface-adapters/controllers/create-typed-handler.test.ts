@@ -92,4 +92,72 @@ describe('createTypedHandler runtime validation', () => {
     expect(inner).toHaveBeenNthCalledWith(1, {}, 'video-1')
     expect(inner).toHaveBeenNthCalledWith(2, {}, 'video-1', 200)
   })
+
+  // ── Numeric bounds (defense against renderer-XSS-driven DoS) ──
+
+  it('rejects an out-of-range pageSize on a paginated channel', async () => {
+    const inner = vi.fn()
+    createTypedHandler('get-videos-paginated', inner)
+    const handler = electron.handlers.get('get-videos-paginated')!
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    // Each of these violates one bound. They must all be rejected before the
+    // use case is called; an XSS-driven `pageSize: 1e9` is the canonical
+    // attack vector this guard is built for.
+    for (const params of [
+      { page: 1, pageSize: 1e9 },
+      { page: 1, pageSize: 0 },
+      { page: 1, pageSize: -1 },
+      { page: 1, pageSize: 1.5 },
+      { page: 0, pageSize: 50 },
+      { page: -1, pageSize: 50 }
+    ]) {
+      await expect(handler({}, params)).rejects.toThrow(
+        'Invalid payload for IPC channel "get-videos-paginated"'
+      )
+    }
+    expect(inner).not.toHaveBeenCalled()
+
+    consoleSpy.mockRestore()
+  })
+
+  it('rejects an out-of-range maxComments on fetch-video-comments', async () => {
+    const inner = vi.fn()
+    createTypedHandler('fetch-video-comments', inner)
+    const handler = electron.handlers.get('fetch-video-comments')!
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await expect(handler({}, 'video-1', Infinity)).rejects.toThrow()
+    await expect(handler({}, 'video-1', 1_000_000)).rejects.toThrow()
+    await expect(handler({}, 'video-1', 0)).rejects.toThrow()
+    expect(inner).not.toHaveBeenCalled()
+
+    consoleSpy.mockRestore()
+  })
+
+  it('rejects an out-of-range limit on search-all', async () => {
+    const inner = vi.fn()
+    createTypedHandler('search-all', inner)
+    const handler = electron.handlers.get('search-all')!
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await expect(handler({}, 'q', 1e6)).rejects.toThrow()
+    await expect(handler({}, 'q', 0)).rejects.toThrow()
+    expect(inner).not.toHaveBeenCalled()
+
+    consoleSpy.mockRestore()
+  })
+
+  it('rejects an out-of-range limit on get-audit-log-recent', async () => {
+    const inner = vi.fn()
+    createTypedHandler('get-audit-log-recent', inner)
+    const handler = electron.handlers.get('get-audit-log-recent')!
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await expect(handler({}, Number.MAX_SAFE_INTEGER)).rejects.toThrow()
+    await expect(handler({}, 0)).rejects.toThrow()
+    expect(inner).not.toHaveBeenCalled()
+
+    consoleSpy.mockRestore()
+  })
 })

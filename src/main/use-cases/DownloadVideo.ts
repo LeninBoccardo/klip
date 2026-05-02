@@ -63,15 +63,31 @@ export class DownloadVideo implements IDownloadVideo {
       status: 'queued'
     })
 
-    // Enqueue — the task runs when a concurrency slot opens
+    // Enqueue — the task runs when a concurrency slot opens. `performDownload`
+    // catches its own errors and emits a terminal `error` event, so the
+    // promise normally resolves. The .catch here is a guarantee for the
+    // residual paths where no terminal event would otherwise reach the UI:
+    //   - the queue rejects without ever invoking the task (e.g. shutdown
+    //     drains pending tasks before they run)
+    //   - the inner catch in `performDownload` itself throws (e.g. notifier
+    //     fails to deliver the original `error` event)
+    // Without this, the UI is stuck in `queued` forever.
     this.downloadQueue
       .enqueue(() => this.performDownload(downloadId, url, creatorName.trim()))
-      .catch((err) =>
+      .catch((err) => {
+        this.notifier.notify('download-progress', {
+          downloadId,
+          url,
+          percent: 0,
+          speed: null,
+          eta: null,
+          status: 'error'
+        })
         console.error(
           `[klip] Download queue error (${downloadId}):`,
           redactError(err, this.rootPath.value)
         )
-      )
+      })
 
     return { downloadId }
   }

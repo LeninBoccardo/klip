@@ -21,9 +21,12 @@ import type { InvokeChannel } from './ipc-contract'
  */
 const entityStatusSchema = z.enum(['active', 'deleted', 'missing'])
 
+// Numeric bounds defend against renderer-XSS-driven DoS: a `pageSize: 1e9`
+// on an unindexed query is a memory amplification primitive. UI never asks
+// for >100 items; the 500 cap leaves slack for future bulk views.
 const paginationParamsSchema = z.object({
-  page: z.number(),
-  pageSize: z.number(),
+  page: z.int().min(1).max(1_000_000),
+  pageSize: z.int().min(1).max(500),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
   search: z.string().optional(),
@@ -105,8 +108,13 @@ export const ipcSchemas = {
   'get-transcript': z.tuple([z.string()]),
   // `maxComments` is optional in the contract; renderer always passes it
   // (default 500 in the hook), but accept either arity to stay forward-
-  // compatible with future call sites.
-  'fetch-video-comments': z.union([z.tuple([z.string()]), z.tuple([z.string(), z.number()])]),
+  // compatible with future call sites. The cap (5000) protects yt-dlp from
+  // an XSS-driven `Infinity` that would scrape millions of comments while
+  // holding the spawn timeout open.
+  'fetch-video-comments': z.union([
+    z.tuple([z.string()]),
+    z.tuple([z.string(), z.int().min(1).max(5000)])
+  ]),
 
   // ── Cuts ──
   'get-cuts-paginated': z.tuple([cutQueryParamsSchema]),
@@ -167,8 +175,9 @@ export const ipcSchemas = {
 
   // ── Search ──
   // Optional `limit` passes through; an XSS-driven payload that drops it can't
-  // exhaust the use case (default and per-surface caps applied there).
-  'search-all': z.union([z.tuple([z.string()]), z.tuple([z.string(), z.number()])]),
+  // exhaust the use case (default and per-surface caps applied there). The
+  // explicit 100 cap matches the UI command-palette ceiling.
+  'search-all': z.union([z.tuple([z.string()]), z.tuple([z.string(), z.int().min(1).max(100)])]),
 
   // ── Shell ──
   // Kind allowlist mirrors the contract; the controller maps these to
@@ -189,7 +198,9 @@ export const ipcSchemas = {
 
   // ── Audit Log ──
   'get-audit-log-by-entity': z.tuple([z.string(), z.string()]),
-  'get-audit-log-recent': z.tuple([z.number()]),
+  // `recent` is a row count; cap matches the largest UI list size we'd ever
+  // render (the audit-log dashboard paginates anything bigger).
+  'get-audit-log-recent': z.tuple([z.int().min(1).max(10_000)]),
 
   // ── Operations ──
   'get-operation-by-id': z.tuple([z.string()]),

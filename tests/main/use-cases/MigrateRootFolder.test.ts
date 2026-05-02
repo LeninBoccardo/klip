@@ -248,13 +248,18 @@ describe('MigrateRootFolder', () => {
     expect(progressCalls[4][1]).toMatchObject({ phase: 'reconciling' })
   })
 
-  it('updates operation payload after each folder move', async () => {
+  it('updates operation payload after each folder move (v2 schema with per-folder status)', async () => {
     await useCase.execute('/new/root')
 
     expect(mocks.operationRepo.updatePayload).toHaveBeenCalledTimes(3)
-    // After third call, movedSoFar should have all 3
+    // After third call, moves should record all 3 with status 'moved'
     const lastPayload = JSON.parse(vi.mocked(mocks.operationRepo.updatePayload).mock.calls[2][1])
-    expect(lastPayload.movedSoFar).toEqual(['creator-a', 'creator-b', 'creator-c'])
+    expect(lastPayload.version).toBe(2)
+    expect(lastPayload.moves).toEqual([
+      { folder: 'creator-a', status: 'moved' },
+      { folder: 'creator-b', status: 'moved' },
+      { folder: 'creator-c', status: 'moved' }
+    ])
   })
 
   // ── Rollback on failure ──
@@ -299,6 +304,48 @@ describe('MigrateRootFolder', () => {
 
     // Watcher restarted on new root (files are already there)
     expect(mocks.fileWatcher.restart).toHaveBeenCalledWith('/new/root')
+  })
+
+  it('marks payload partial=true and persists per-folder status when a rollback step fails', async () => {
+    let moveCalls = 0
+    vi.mocked(mocks.fsWriter.moveDirectory).mockImplementation(() => {
+      moveCalls++
+      // Forward moves: 1 (creator-a) + 2 (creator-b) → throw to trigger rollback.
+      if (moveCalls === 2) throw new Error('Disk full')
+      // Call 3 is the rollback move of creator-a — make it fail so the rollback
+      // itself is partial and payload.partial must be set to true.
+      if (moveCalls === 3) throw new Error('rollback failed')
+    })
+
+    const result = await useCase.execute('/new/root')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Disk full')
+    expect(result.movedCount).toBe(1)
+
+    // Final persist must mark partial=true and keep creator-a at status='moved'
+    // (failed to roll back) so RecoverOperations can resume on next startup.
+    const calls = vi.mocked(mocks.operationRepo.updatePayload).mock.calls
+    const finalPayload = JSON.parse(calls[calls.length - 1][1])
+    expect(finalPayload.partial).toBe(true)
+    expect(finalPayload.moves).toEqual([{ folder: 'creator-a', status: 'moved' }])
+  })
+
+  it('persists per-folder rollback success (status flips to rolled-back)', async () => {
+    let moveCalls = 0
+    vi.mocked(mocks.fsWriter.moveDirectory).mockImplementation(() => {
+      moveCalls++
+      if (moveCalls === 2) throw new Error('Disk full')
+      // All other calls succeed (forward and rollback)
+    })
+
+    await useCase.execute('/new/root')
+
+    const calls = vi.mocked(mocks.operationRepo.updatePayload).mock.calls
+    const finalPayload = JSON.parse(calls[calls.length - 1][1])
+    // creator-a forward-moved then successfully rolled back
+    expect(finalPayload.moves).toEqual([{ folder: 'creator-a', status: 'rolled-back' }])
+    expect(finalPayload.partial).toBeUndefined()
   })
 
   // ── Zero folders ──

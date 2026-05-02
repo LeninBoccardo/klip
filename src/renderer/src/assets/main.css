@@ -168,7 +168,12 @@
 
   body {
     @apply h-full overflow-hidden bg-background text-foreground;
-    font-family: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family:
+      'Geist Variable',
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      sans-serif;
   }
 
   #root {

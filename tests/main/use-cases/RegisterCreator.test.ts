@@ -3,10 +3,17 @@ import { RegisterCreator } from '@use-cases/RegisterCreator'
 import {
   CreatorAlreadyRegisteredError,
   EmptyDisplayNameError,
+  FolderNameTakenError,
   InvalidFolderNameError
 } from '@use-cases/errors/RegisterCreatorErrors'
 import type { ICreatorRepository } from '@domain/repositories'
-import type { IFileSystemWriter, IPathResolver, RootPathRef, IIdGenerator } from '@domain/ports'
+import type {
+  IFileSystemWriter,
+  IPathResolver,
+  RootPathRef,
+  IIdGenerator,
+  ITransactionScope
+} from '@domain/ports'
 import type { ChannelInfo } from '@domain/types'
 import type { Creator } from '@domain/entities'
 
@@ -47,6 +54,10 @@ function mockIdGenerator(value = 'generated-id'): IIdGenerator {
   return { generate: vi.fn().mockReturnValue(value) }
 }
 
+function passthroughTransaction(): ITransactionScope {
+  return { run: vi.fn(<T>(fn: () => T): T => fn()) }
+}
+
 const baseChannelInfo: ChannelInfo = {
   channelId: 'UC_abc123',
   channelName: 'Test Creator',
@@ -82,6 +93,7 @@ describe('RegisterCreator', () => {
   let pathResolver: IPathResolver
   let idGenerator: IIdGenerator
   let rootPathRef: RootPathRef
+  let transaction: ITransactionScope
   let useCase: RegisterCreator
 
   beforeEach(() => {
@@ -90,7 +102,15 @@ describe('RegisterCreator', () => {
     pathResolver = mockPathResolver()
     idGenerator = mockIdGenerator('new-creator-id')
     rootPathRef = { value: '/root' }
-    useCase = new RegisterCreator(creatorRepo, idGenerator, fsWriter, pathResolver, rootPathRef)
+    transaction = passthroughTransaction()
+    useCase = new RegisterCreator(
+      creatorRepo,
+      idGenerator,
+      fsWriter,
+      pathResolver,
+      rootPathRef,
+      transaction
+    )
   })
 
   it('persists a new creator with notes and tags and creates the on-disk folder', async () => {
@@ -270,5 +290,93 @@ describe('RegisterCreator', () => {
 
     expect(creatorRepo.findByYoutubeChannelId).not.toHaveBeenCalled()
     expect(creatorRepo.upsertWithPrevious).toHaveBeenCalled()
+  })
+
+  it('runs the find→insert pair inside a transaction', async () => {
+    await useCase.execute({
+      channelInfo: baseChannelInfo,
+      displayName: 'X',
+      folderName: 'x',
+      notes: null,
+      tags: []
+    })
+
+    expect(transaction.run).toHaveBeenCalledTimes(1)
+  })
+
+  it('translates a youtube_channel_id UNIQUE constraint failure into CreatorAlreadyRegisteredError', async () => {
+    // Simulate the race-loser path: the pre-check finds nothing (the winner
+    // hasn't committed yet), but the insert collides with the partial UNIQUE
+    // index. After the constraint fires, the row is visible — the use case
+    // re-queries and surfaces the existing id.
+    const winner = makeExistingCreator({ id: 'winner-id' })
+    let queryCount = 0
+    vi.mocked(creatorRepo.findByYoutubeChannelId).mockImplementation(() => {
+      queryCount += 1
+      // First call: pre-check inside the transaction, returns null.
+      // Second call: post-failure re-query, returns the winner.
+      return queryCount === 1 ? null : winner
+    })
+    const constraintErr = Object.assign(
+      new Error('UNIQUE constraint failed: creators.youtube_channel_id'),
+      { code: 'SQLITE_CONSTRAINT_UNIQUE' }
+    )
+    vi.mocked(creatorRepo.upsertWithPrevious).mockImplementation(() => {
+      throw constraintErr
+    })
+
+    await expect(
+      useCase.execute({
+        channelInfo: baseChannelInfo,
+        displayName: 'X',
+        folderName: 'x',
+        notes: null,
+        tags: []
+      })
+    ).rejects.toMatchObject({
+      name: 'CreatorAlreadyRegisteredError',
+      existingCreatorId: 'winner-id'
+    })
+    expect(fsWriter.ensureDirectory).not.toHaveBeenCalled()
+  })
+
+  it('translates a folder_name UNIQUE constraint failure into FolderNameTakenError', async () => {
+    const constraintErr = Object.assign(
+      new Error('UNIQUE constraint failed: creators.folder_name'),
+      { code: 'SQLITE_CONSTRAINT_UNIQUE' }
+    )
+    vi.mocked(creatorRepo.upsertWithPrevious).mockImplementation(() => {
+      throw constraintErr
+    })
+
+    await expect(
+      useCase.execute({
+        channelInfo: baseChannelInfo,
+        displayName: 'X',
+        folderName: 'taken',
+        notes: null,
+        tags: []
+      })
+    ).rejects.toBeInstanceOf(FolderNameTakenError)
+    expect(fsWriter.ensureDirectory).not.toHaveBeenCalled()
+  })
+
+  it('rethrows non-UNIQUE SQLite errors without translation', async () => {
+    const otherErr = Object.assign(new Error('database disk image is malformed'), {
+      code: 'SQLITE_CORRUPT'
+    })
+    vi.mocked(creatorRepo.upsertWithPrevious).mockImplementation(() => {
+      throw otherErr
+    })
+
+    await expect(
+      useCase.execute({
+        channelInfo: baseChannelInfo,
+        displayName: 'X',
+        folderName: 'x',
+        notes: null,
+        tags: []
+      })
+    ).rejects.toBe(otherErr)
   })
 })

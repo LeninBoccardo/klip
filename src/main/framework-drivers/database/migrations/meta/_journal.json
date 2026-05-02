@@ -50,6 +50,13 @@
       "when": 1777737665312,
       "tag": "0006_nosy_lily_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1777757295745,
+      "tag": "0007_awesome_chamber",
+      "breakpoints": true
     }
   ]
 }

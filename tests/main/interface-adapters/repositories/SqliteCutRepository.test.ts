@@ -598,6 +598,34 @@ describe('SqliteCutRepository', () => {
       expect(other.filePath).toBe('/some/other/path/cut.mp4')
       expect(other.thumbnailPath).toBe('/some/other/path/thumb.png')
     })
+
+    it('treats LIKE wildcards (% and _) in oldPrefix as literal characters', () => {
+      // Without escaping, "_" is a single-char wildcard and would let
+      // /some-dir/root match a /some_dir/root prefix.
+      cutRepo.upsert(
+        makeCut({
+          id: 'c-target',
+          filePath: '/some_dir/root/creator-1/cuts/c-target/cut.mp4',
+          thumbnailPath: '/some_dir/root/creator-1/cuts/c-target/thumb.png'
+        })
+      )
+      cutRepo.upsert(
+        makeCut({
+          id: 'c-decoy',
+          filePath: '/some-dir/root/creator-1/cuts/c-decoy/cut.mp4',
+          thumbnailPath: null
+        })
+      )
+
+      cutRepo.updateFilePathPrefix('/some_dir/root', '/new/root')
+
+      const target = cutRepo.findById('c-target')!
+      expect(target.filePath).toBe('/new/root/creator-1/cuts/c-target/cut.mp4')
+      expect(target.thumbnailPath).toBe('/new/root/creator-1/cuts/c-target/thumb.png')
+
+      const decoy = cutRepo.findById('c-decoy')!
+      expect(decoy.filePath).toBe('/some-dir/root/creator-1/cuts/c-decoy/cut.mp4')
+    })
   })
 
   // ── getAllDistinctTags ──

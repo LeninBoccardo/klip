@@ -1,4 +1,12 @@
-import { sqliteTable, text, integer, real, index, primaryKey } from 'drizzle-orm/sqlite-core'
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  index,
+  uniqueIndex,
+  primaryKey
+} from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 // ── Core entity tables ──
@@ -27,7 +35,16 @@ export const creators = sqliteTable(
   },
   (table) => [
     index('idx_creators_status').on(table.status),
-    index('idx_creators_yt_channel_id').on(table.youtubeChannelId)
+    // Partial UNIQUE: prevents two creators from claiming the same YouTube
+    // channel id (the find→insert in RegisterCreator is otherwise racy under
+    // concurrent calls), while allowing multiple manual creators with no
+    // channel id (NULL). Acts as the source-of-truth uniqueness guard;
+    // RegisterCreator catches the constraint violation and translates it to
+    // CreatorAlreadyRegisteredError so the race loser sees the same typed
+    // error as a pre-check loser.
+    uniqueIndex('idx_creators_yt_channel_id_unique')
+      .on(table.youtubeChannelId)
+      .where(sql`youtube_channel_id IS NOT NULL`)
   ]
 )
 

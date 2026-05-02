@@ -251,7 +251,10 @@ export class SqliteVideoRepository implements IVideoRepository {
         thumbnailPath: sql`CASE WHEN ${videos.thumbnailPath} IS NOT NULL AND substr(${videos.thumbnailPath}, 1, length(${oldPrefix})) = ${oldPrefix} THEN ${newPrefix} || substr(${videos.thumbnailPath}, length(${oldPrefix}) + 1) ELSE ${videos.thumbnailPath} END`,
         updatedAt: new Date().toISOString()
       })
-      .where(sql`${videos.filePath} LIKE ${oldPrefix + '%'}`)
+      // Escape LIKE wildcards (% and _) in the prefix so a path containing
+      // those literal characters can't accidentally match unrelated rows.
+      // ESCAPE '\\' pairs with `escapeLike`'s backslash convention.
+      .where(sql`${videos.filePath} LIKE ${escapeLike(oldPrefix) + '%'} ESCAPE '\\'`)
       .run()
   }
 

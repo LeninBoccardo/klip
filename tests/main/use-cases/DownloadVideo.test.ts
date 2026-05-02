@@ -379,6 +379,50 @@ describe('DownloadVideo', () => {
     expect(videoRepo.upsert).not.toHaveBeenCalled()
   })
 
+  it('emits a terminal error event when the queue rejects before the task runs', async () => {
+    // Simulate a queue that rejects without ever invoking the task (e.g.
+    // shutdown clearing pending tasks). The use case must still notify the
+    // renderer so the UI doesn't sit in `queued` indefinitely.
+    const queueErr = new Error('queue cleared during shutdown')
+    const rejectingQueue: IDownloadQueue = {
+      enqueue: vi.fn().mockRejectedValue(queueErr),
+      pending: vi.fn().mockReturnValue(0),
+      running: vi.fn().mockReturnValue(0),
+      onIdle: vi.fn().mockResolvedValue(undefined),
+      clear: vi.fn()
+    }
+    useCase = new DownloadVideo(
+      downloader,
+      fetchInfo,
+      rejectingQueue,
+      creatorRepo,
+      videoRepo,
+      pathResolver,
+      fsWriter,
+      notifier,
+      idGenerator,
+      { value: ROOT }
+    )
+
+    const result = await useCase.execute({
+      url: 'https://youtube.com/watch?v=abc123',
+      creatorName: 'TestCreator'
+    })
+    // Allow the .catch handler to run.
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(rejectingQueue.enqueue).toHaveBeenCalledTimes(1)
+    expect(downloader.download).not.toHaveBeenCalled()
+    expect(notifier.notify).toHaveBeenCalledWith(
+      'download-progress',
+      expect.objectContaining({
+        downloadId: result.downloadId,
+        url: 'https://youtube.com/watch?v=abc123',
+        status: 'error'
+      })
+    )
+  })
+
   it('should not notify error when download is cancelled', async () => {
     vi.mocked(downloader.download).mockRejectedValue(new Error('Download cancelled'))
 

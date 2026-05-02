@@ -276,7 +276,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
     idGenerator,
     fsWriter,
     pathResolver,
-    rootPathRef
+    rootPathRef,
+    transactionScope
   )
 
   const downloadVideo = new DownloadVideo(

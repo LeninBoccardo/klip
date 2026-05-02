@@ -468,6 +468,37 @@ describe('SqliteVideoRepository', () => {
       expect(other.filePath).toBe('/some/other/path/video.mp4')
       expect(other.thumbnailPath).toBe('/some/other/path/thumb.jpg')
     })
+
+    it('treats LIKE wildcards (% and _) in oldPrefix as literal characters', () => {
+      // Without escaping, "_" is a single-char wildcard and would let
+      // /some-dir/root match a /some_dir/root prefix. Confirm only the
+      // intended row is rewritten.
+      creatorRepo.upsert(makeCreator())
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v-target',
+          filePath: '/some_dir/root/creator-1/downloads/v-target/video.mp4',
+          thumbnailPath: '/some_dir/root/creator-1/downloads/v-target/thumb.jpg'
+        })
+      )
+      videoRepo.upsert(
+        makeVideo({
+          id: 'v-decoy',
+          filePath: '/some-dir/root/creator-1/downloads/v-decoy/video.mp4',
+          thumbnailPath: null
+        })
+      )
+
+      videoRepo.updateFilePathPrefix('/some_dir/root', '/new/root')
+
+      const target = videoRepo.findById('v-target')!
+      expect(target.filePath).toBe('/new/root/creator-1/downloads/v-target/video.mp4')
+      expect(target.thumbnailPath).toBe('/new/root/creator-1/downloads/v-target/thumb.jpg')
+
+      // Decoy untouched — % wildcard would have matched without escaping.
+      const decoy = videoRepo.findById('v-decoy')!
+      expect(decoy.filePath).toBe('/some-dir/root/creator-1/downloads/v-decoy/video.mp4')
+    })
   })
 
   // ── findByTags ──

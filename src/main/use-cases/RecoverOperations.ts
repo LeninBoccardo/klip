@@ -14,11 +14,27 @@ const renameFolderPayloadSchema = z.object({
   newPath: z.string().min(1)
 })
 
-const migrateRootPayloadSchema = z.object({
+const migrateRootPayloadV1Schema = z.object({
   oldRoot: z.string().min(1),
   newRoot: z.string().min(1),
   movedSoFar: z.array(z.string())
 })
+
+const migrateRootPayloadV2Schema = z.object({
+  version: z.literal(2),
+  oldRoot: z.string().min(1),
+  newRoot: z.string().min(1),
+  folders: z.array(z.string()),
+  moves: z.array(
+    z.object({
+      folder: z.string().min(1),
+      status: z.enum(['moved', 'rolled-back'])
+    })
+  ),
+  partial: z.boolean().optional()
+})
+
+const migrateRootPayloadSchema = z.union([migrateRootPayloadV2Schema, migrateRootPayloadV1Schema])
 
 type PayloadResult<T> =
   | { ok: true; value: T }
@@ -45,10 +61,12 @@ function parsePayload<T extends z.ZodType>(raw: string, schema: T): PayloadResul
  * For each stale operation (status = 'pending' or 'in_progress'):
  *   - `rename_folder`: check if the new path exists → mark completed;
  *     else if old path exists → mark rolled_back.
- *   - `migrate_root`: replay `payload.movedSoFar` in reverse and physically move
- *     each folder back from new root → old root, then mark rolled_back. Best-effort
- *     per folder; failures are logged and the list of stranded folders is recorded
- *     in the operation's `error` field for the user.
+ *   - `migrate_root`: replay the moves payload in reverse and physically move
+ *     each folder back from new root → old root, then mark rolled_back. Best-
+ *     effort per folder; per-folder status is persisted between steps so a
+ *     second crash leaves a resumable state. v2 payloads carry explicit per-
+ *     folder status (`moved` / `rolled-back`) so already-rolled-back folders
+ *     are skipped without relying on filesystem inspection alone.
  *   - `bulk_import`: always mark rolled_back (no partial recovery).
  */
 export class RecoverOperations implements IRecoverOperations {
@@ -142,33 +160,58 @@ export class RecoverOperations implements IRecoverOperations {
         op.id,
         result.reason === 'parse-error'
           ? 'Failed to parse migrate_root payload — manual cleanup required'
-          : 'Malformed migrate_root payload (missing oldRoot/newRoot/movedSoFar)'
+          : 'Malformed migrate_root payload (missing oldRoot/newRoot/moves)'
       )
       return false
     }
 
-    const { oldRoot, newRoot, movedSoFar } = result.value
+    // Normalise both schemas into a single { oldRoot, newRoot, moves } shape.
+    // `'moves' in payload` is the v2/v1 discriminator: only v2 carries explicit
+    // per-folder status, so a v1 payload (legacy `movedSoFar: string[]`) is
+    // upgraded into the same shape with status='moved' so the rest of the
+    // recovery loop is uniform.
+    const payload = result.value
+    const moves: Array<{ folder: string; status: 'moved' | 'rolled-back' }> =
+      'moves' in payload
+        ? payload.moves
+        : payload.movedSoFar.map((folder) => ({ folder, status: 'moved' as const }))
+    const folders: string[] = 'folders' in payload ? payload.folders : moves.map((m) => m.folder)
+    const oldRoot = payload.oldRoot
+    const newRoot = payload.newRoot
 
-    // Replay moves in reverse. Skip folders that were never moved or whose
-    // source no longer exists at newRoot (already rolled back manually, or
-    // never made it in the first place).
     const stranded: string[] = []
-    for (const folder of movedSoFar) {
-      const src = this.pathResolver.join(newRoot, folder)
-      const dest = this.pathResolver.join(oldRoot, folder)
+    for (const move of moves) {
+      if (move.status === 'rolled-back') continue
+      const src = this.pathResolver.join(newRoot, move.folder)
+      const dest = this.pathResolver.join(oldRoot, move.folder)
       try {
         if (!this.fsReader.directoryExists(src)) {
-          // Nothing to move — folder may already be back at oldRoot.
+          // Source missing at newRoot — folder was already rolled back manually
+          // or never made it. Either way, treat as recovered.
+          move.status = 'rolled-back'
           continue
         }
         this.fsWriter.moveDirectory(src, dest)
+        move.status = 'rolled-back'
       } catch (err) {
         console.error(
-          `[klip] migrate_root rollback failed for "${folder}":`,
+          `[klip] migrate_root rollback failed for "${move.folder}":`,
           redactError(err, oldRoot)
         )
-        stranded.push(folder)
+        stranded.push(move.folder)
       }
+      // Persist after each step so a second crash leaves a resumable state.
+      this.operationRepo.updatePayload(
+        op.id,
+        JSON.stringify({
+          version: 2,
+          oldRoot,
+          newRoot,
+          folders,
+          moves,
+          partial: stranded.length > 0
+        })
+      )
     }
 
     const errorMsg =

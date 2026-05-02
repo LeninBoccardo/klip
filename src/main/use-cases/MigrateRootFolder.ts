@@ -20,19 +20,29 @@ import type { IMigrateRootFolder } from './IMigrateRootFolder'
 import type { MigrateRootResult } from '@shared/types'
 import { redactError } from '@domain/types/redact'
 
+/**
+ * v2 payload — replaces the legacy `movedSoFar: string[]` shape with explicit
+ * per-folder move state so partial rollbacks are recoverable. RecoverOperations
+ * still understands the v1 shape for any in-flight migration written by an
+ * older build.
+ */
 interface MigrateRootPayload {
+  version: 2
   oldRoot: string
   newRoot: string
   folders: string[]
-  movedSoFar: string[]
+  moves: Array<{ folder: string; status: 'moved' | 'rolled-back' }>
+  /** True when the inline rollback couldn't move every folder back. */
+  partial?: boolean
 }
 
 /**
  * Migrates all creator folders from the current root to a new root directory.
  *
  * Self-contained rollback: if a folder move fails mid-way, all previously moved
- * folders are moved back to the old root. The operations table logs the attempt
- * for audit purposes only — RecoverOperations is not involved.
+ * folders are moved back to the old root. Per-folder status is persisted so a
+ * crash mid-rollback (or a rollback step that itself fails) can be recovered
+ * by RecoverOperations on next startup without double-moving anything.
  */
 export class MigrateRootFolder implements IMigrateRootFolder {
   constructor(
@@ -95,10 +105,11 @@ export class MigrateRootFolder implements IMigrateRootFolder {
       const folders = this.fsReader.listDirectories(oldRootPath)
       const operationId = this.idGenerator.generate()
       const payload: MigrateRootPayload = {
+        version: 2,
         oldRoot: oldRootPath,
         newRoot: newRootPath,
         folders,
-        movedSoFar: []
+        moves: []
       }
 
       // ── Create operation record (already in_progress so startedAt is recorded) ──
@@ -130,7 +141,7 @@ export class MigrateRootFolder implements IMigrateRootFolder {
 
           this.fsWriter.moveDirectory(srcPath, destPath)
 
-          payload.movedSoFar.push(folder)
+          payload.moves.push({ folder, status: 'moved' })
           this.operationRepo.updatePayload(operationId, JSON.stringify(payload))
         }
       } catch (moveError) {
@@ -138,10 +149,18 @@ export class MigrateRootFolder implements IMigrateRootFolder {
         const errorMsg =
           moveError instanceof Error ? moveError.message : 'Unknown error during folder move'
 
+        // `movedCount` reports forward-move progress before the failure, not
+        // post-rollback state — `moves.length` captures every folder that
+        // reached newRoot (whether the rollback later returned it or not).
+        const movedBeforeFailure = payload.moves.length
         await this.rollbackMovedFolders(payload, operationId, errorMsg)
         watcherRestored = true
 
-        return { success: false, movedCount: payload.movedSoFar.length, error: errorMsg }
+        return {
+          success: false,
+          movedCount: movedBeforeFailure,
+          error: errorMsg
+        }
       }
 
       // ── Update DB paths (atomic: all-or-nothing) ──
@@ -220,8 +239,11 @@ export class MigrateRootFolder implements IMigrateRootFolder {
   }
 
   /**
-   * Moves all previously-moved folders back to the old root,
-   * then restarts the watcher on the old root.
+   * Moves all 'moved' entries back to the old root. Per-folder status flips
+   * to 'rolled-back' on success and is persisted between steps so a crash or
+   * a per-folder failure leaves the operation in a state RecoverOperations
+   * can resume idempotently. If at least one folder couldn't be moved back,
+   * `payload.partial` is set so RecoverOperations can pick up the leftovers.
    *
    * Emits `phase: 'rolling_back'` progress events so the renderer's blocking
    * dialog can communicate that we're backtracking — otherwise it would still
@@ -232,25 +254,38 @@ export class MigrateRootFolder implements IMigrateRootFolder {
     operationId: string,
     error: string
   ): Promise<void> {
-    const total = payload.movedSoFar.length
+    const pending = payload.moves.filter((m) => m.status === 'moved')
+    const total = pending.length
+    let stranded = 0
+
     for (let i = 0; i < total; i++) {
-      const folder = payload.movedSoFar[i]
+      const move = pending[i]
       this.notifier.notify('migrate-root-progress', {
         phase: 'rolling_back',
         current: i + 1,
         total,
-        currentFolder: folder
+        currentFolder: move.folder
       })
       try {
-        const destPath = this.pathResolver.join(payload.newRoot, folder)
-        const srcPath = this.pathResolver.join(payload.oldRoot, folder)
+        const destPath = this.pathResolver.join(payload.newRoot, move.folder)
+        const srcPath = this.pathResolver.join(payload.oldRoot, move.folder)
         this.fsWriter.moveDirectory(destPath, srcPath)
+        move.status = 'rolled-back'
       } catch (rollbackErr) {
         console.error(
-          `[klip] Rollback failed for folder "${folder}":`,
+          `[klip] Rollback failed for folder "${move.folder}":`,
           redactError(rollbackErr, payload.newRoot)
         )
+        stranded += 1
       }
+      // Persist progress after each step so a crash mid-rollback can be
+      // resumed by RecoverOperations without re-attempting succeeded moves.
+      this.operationRepo.updatePayload(operationId, JSON.stringify(payload))
+    }
+
+    if (stranded > 0) {
+      payload.partial = true
+      this.operationRepo.updatePayload(operationId, JSON.stringify(payload))
     }
 
     this.operationRepo.updateStatus(operationId, 'failed', error)

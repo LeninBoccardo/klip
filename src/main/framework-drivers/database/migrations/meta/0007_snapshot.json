@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "70bfc578-fefc-4285-841a-599af67452c7",
-  "prevId": "9bf77c82-6d84-4adc-89e6-9a96b7a50462",
+  "id": "b5f1aaae-d54b-4d5d-822f-8fc975bc1a8e",
+  "prevId": "70bfc578-fefc-4285-841a-599af67452c7",
   "tables": {
     "audit_log": {
       "name": "audit_log",
@@ -391,10 +391,11 @@
           "columns": ["status"],
           "isUnique": false
         },
-        "idx_creators_yt_channel_id": {
-          "name": "idx_creators_yt_channel_id",
+        "idx_creators_yt_channel_id_unique": {
+          "name": "idx_creators_yt_channel_id_unique",
           "columns": ["youtube_channel_id"],
-          "isUnique": false
+          "isUnique": true,
+          "where": "youtube_channel_id IS NOT NULL"
         }
       },
       "foreignKeys": {},
