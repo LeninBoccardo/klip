@@ -308,6 +308,43 @@ describe('SqliteVideoRepository', () => {
       })
       expect(result.data[0].id).toBe('v-long')
     })
+
+    it('uses id DESC as a tiebreaker so paginated rows with identical sort keys never duplicate or skip', () => {
+      // 5 rows, all identical createdAt. Without a tiebreaker, SQLite is free
+      // to reorder ties between queries — paginating could double-count or
+      // miss a row.
+      const sameTimestamp = '2025-04-01T12:00:00.000Z'
+      const ids = ['v-a', 'v-b', 'v-c', 'v-d', 'v-e']
+      for (const id of ids) {
+        videoRepo.upsert(
+          makeVideo({
+            id,
+            title: id,
+            createdAt: sameTimestamp,
+            updatedAt: sameTimestamp
+          })
+        )
+      }
+
+      const seen = new Set<string>()
+      for (let page = 1; page <= 3; page++) {
+        const result = videoRepo.findPaginated({
+          page,
+          pageSize: 2,
+          sortBy: 'createdAt',
+          sortDirection: 'desc'
+        })
+        for (const row of result.data) {
+          // Each id must appear exactly once across the run.
+          expect(seen.has(row.id)).toBe(false)
+          seen.add(row.id)
+        }
+      }
+      // All 5 distinct ids retrieved (plus the two from the outer beforeEach).
+      for (const id of ids) {
+        expect(seen.has(id)).toBe(true)
+      }
+    })
   })
 
   // ── Edge cases: multiple statuses filter ──

@@ -74,6 +74,15 @@ export class SqliteVideoRepository implements IVideoRepository {
       .map(mapRow)
   }
 
+  findIdsByCreator(creatorId: string): string[] {
+    return this.db
+      .select({ id: videos.id })
+      .from(videos)
+      .where(eq(videos.creatorId, creatorId))
+      .all()
+      .map((r) => r.id)
+  }
+
   findByProbeStatus(status: ProbeStatus): Video[] {
     return this.db
       .select()
@@ -283,11 +292,16 @@ export class SqliteVideoRepository implements IVideoRepository {
       .where(where)
       .all()
 
+    // Secondary `id DESC` tiebreaker so rows that share the primary sort key
+    // (e.g. identical `createdAt` timestamps when seeded from a script, or
+    // many rows with the same status) get a stable order across page
+    // boundaries. Without it, SQLite is free to reorder ties and a row could
+    // appear on two pages or none.
     const rows = this.db
       .select()
       .from(videos)
       .where(where)
-      .orderBy(direction)
+      .orderBy(direction, desc(videos.id))
       .limit(params.pageSize)
       .offset(offset)
       .all()

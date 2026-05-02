@@ -106,12 +106,16 @@ describe('RenameTagGlobally', () => {
     useCase = new RenameTagGlobally(videoRepo, cutRepo, transaction, notifier)
   })
 
-  it('throws on empty oldTag', () => {
-    expect(() => useCase.execute('', 'new')).toThrow(/oldTag/)
+  it('throws EmptyOldTagError on empty oldTag (typed error name preserved across IPC)', () => {
+    expect(() => useCase.execute('', 'new')).toThrow(
+      expect.objectContaining({ name: 'EmptyOldTagError' })
+    )
   })
 
-  it('throws on empty newTag', () => {
-    expect(() => useCase.execute('old', '')).toThrow(/newTag/)
+  it('throws EmptyNewTagError on empty newTag (typed error name preserved across IPC)', () => {
+    expect(() => useCase.execute('old', '')).toThrow(
+      expect.objectContaining({ name: 'EmptyNewTagError' })
+    )
   })
 
   it('returns zero counts when oldTag === newTag', () => {

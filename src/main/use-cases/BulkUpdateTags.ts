@@ -3,6 +3,7 @@ import type { ITransactionScope, INotifier } from '@domain/ports'
 import type { BulkUpdateTagsRequest, BulkUpdateTagsResult, TagEntityKind } from '@shared/types'
 import type { Video, Cut } from '@domain/entities'
 import type { IBulkUpdateTags } from './IBulkUpdateTags'
+import { EmptyTagOperationsError } from './errors/TagErrors'
 
 export class BulkUpdateTags implements IBulkUpdateTags {
   constructor(
@@ -17,7 +18,7 @@ export class BulkUpdateTags implements IBulkUpdateTags {
 
     if (ids.length === 0) return { updated: 0, skipped: 0 }
     if (addTags.length === 0 && removeTags.length === 0) {
-      throw new Error('BulkUpdateTags: at least one of addTags or removeTags must be non-empty')
+      throw new EmptyTagOperationsError()
     }
 
     const removeSet = new Set(removeTags)

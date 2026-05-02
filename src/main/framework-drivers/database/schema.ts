@@ -167,6 +167,14 @@ export const operations = sqliteTable(
 // collection, positions are unique. SQLite cannot express that as a DB
 // constraint, so the invariant lives in the use case layer (with a defensive
 // renumber-on-read in `getItems`).
+//
+// AUDIT-2026-05-02 (deferred): a deferred UNIQUE on (collection_id, position)
+// across the union would close the gap if a future raw-SQL writer (CLI,
+// external migration) violated the invariant. SQLite's deferred-constraint
+// support across two tables is awkward (no cross-table CHECK), and the
+// existing renumber-on-read + two-phase shift in `reorderItems` covers every
+// realistic write path through the app. Revisit if a multi-process writer
+// is ever introduced.
 
 export const collections = sqliteTable(
   'collections',

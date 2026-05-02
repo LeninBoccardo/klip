@@ -9,6 +9,14 @@ export interface IVideoRepository {
   findAllActive(): Video[]
   findById(id: string): Video | null
   findByCreatorId(creatorId: string): Video[]
+  /**
+   * Cheap id-only projection for audit-cascade enumeration: when a creator
+   * is hard-deleted, FK CASCADE wipes its videos silently — we read this
+   * list inside the same transaction so the audited decorator can append
+   * one `cascade_deleted` entry per victim. Avoids materializing full Video
+   * rows just to throw all but `id` away.
+   */
+  findIdsByCreator(creatorId: string): string[]
   findByProbeStatus(status: ProbeStatus): Video[]
   /** Active videos with a URL but detail metadata never fetched (detailFetchedAt IS NULL) */
   findNeedingDetail(): Video[]

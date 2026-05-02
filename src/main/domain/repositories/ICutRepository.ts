@@ -10,6 +10,8 @@ export interface ICutRepository {
   findById(id: string): Cut | null
   findByCreatorId(creatorId: string): Cut[]
   findByVideoId(videoId: string): Cut[]
+  /** Cheap id-only projection — see {@link IVideoRepository.findIdsByCreator}. */
+  findIdsByCreator(creatorId: string): string[]
   findByTags(tags: string[]): Cut[]
   /**
    * Active cuts whose `title` contains the (case-insensitive) query as a

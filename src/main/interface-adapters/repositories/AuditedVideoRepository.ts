@@ -35,6 +35,10 @@ export class AuditedVideoRepository implements IVideoRepository {
     return this.inner.findByCreatorId(creatorId)
   }
 
+  findIdsByCreator(creatorId: string): string[] {
+    return this.inner.findIdsByCreator(creatorId)
+  }
+
   findByProbeStatus(status: ProbeStatus): Video[] {
     return this.inner.findByProbeStatus(status)
   }

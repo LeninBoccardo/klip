@@ -233,13 +233,17 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const auditLogRepo = new SqliteAuditLogRepository(database.db)
 
   // ── Audited repository decorators ──
+  // Video and cut audited repos must be built first because the audited
+  // creator repo needs them for cascade-delete audit enumeration.
+  const videoRepo = new AuditedVideoRepository(sqliteVideoRepo, auditLogRepo, transactionScope)
+  const cutRepo = new AuditedCutRepository(sqliteCutRepo, auditLogRepo, transactionScope)
   const creatorRepo = new AuditedCreatorRepository(
     sqliteCreatorRepo,
     auditLogRepo,
-    transactionScope
+    transactionScope,
+    videoRepo,
+    cutRepo
   )
-  const videoRepo = new AuditedVideoRepository(sqliteVideoRepo, auditLogRepo, transactionScope)
-  const cutRepo = new AuditedCutRepository(sqliteCutRepo, auditLogRepo, transactionScope)
   const collectionRepo = new AuditedCollectionRepository(
     sqliteCollectionRepo,
     auditLogRepo,

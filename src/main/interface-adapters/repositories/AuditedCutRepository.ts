@@ -35,6 +35,10 @@ export class AuditedCutRepository implements ICutRepository {
     return this.inner.findByCreatorId(creatorId)
   }
 
+  findIdsByCreator(creatorId: string): string[] {
+    return this.inner.findIdsByCreator(creatorId)
+  }
+
   findByVideoId(videoId: string): Cut[] {
     return this.inner.findByVideoId(videoId)
   }

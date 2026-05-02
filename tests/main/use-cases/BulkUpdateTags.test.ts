@@ -114,8 +114,10 @@ describe('BulkUpdateTags', () => {
     expect(transaction.run).not.toHaveBeenCalled()
   })
 
-  it('throws when both addTags and removeTags are empty', () => {
-    expect(() => useCase.execute({ entityKind: 'video', ids: ['v-1'] })).toThrow(/at least one/)
+  it('throws EmptyTagOperationsError when both addTags and removeTags are empty', () => {
+    expect(() => useCase.execute({ entityKind: 'video', ids: ['v-1'] })).toThrow(
+      expect.objectContaining({ name: 'EmptyTagOperationsError' })
+    )
   })
 
   it('runs all per-id work inside a single transaction', () => {

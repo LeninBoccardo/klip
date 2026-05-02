@@ -5,6 +5,10 @@ export type AuditAction =
   | 'status_changed'
   | 'probe_status_changed'
   | 'deleted'
+  // Emitted by the audited creator repo for each video/cut wiped by the FK
+  // CASCADE on a parent-creator hard-delete; `changes` is a JSON object
+  // `{ cascadedFrom: { entityType, entityId } }` linking back to the trigger.
+  | 'cascade_deleted'
   | 'bulk_path_update'
   // Collection-item actions: collection-level audit row whose `entityId` is
   // the collection id and whose `changes` JSON describes the affected item.

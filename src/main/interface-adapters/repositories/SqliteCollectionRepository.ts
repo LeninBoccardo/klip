@@ -57,11 +57,13 @@ export class SqliteCollectionRepository implements ICollectionRepository {
       .where(where)
       .all()
 
+    // Secondary `id DESC` tiebreaker so rows that share the primary sort key
+    // get a stable order across page boundaries.
     const rows = this.db
       .select()
       .from(collections)
       .where(where)
-      .orderBy(direction)
+      .orderBy(direction, desc(collections.id))
       .limit(params.pageSize)
       .offset(offset)
       .all()

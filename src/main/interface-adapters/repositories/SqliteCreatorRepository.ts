@@ -168,11 +168,15 @@ export class SqliteCreatorRepository implements ICreatorRepository {
       .where(where)
       .all()
 
+    // Secondary `id DESC` tiebreaker so rows that share the primary sort key
+    // (e.g. identical `createdAt` timestamps when seeded from a script, or
+    // many rows with the same status) get a stable order across page
+    // boundaries. Without it, SQLite is free to reorder ties.
     const rows = this.db
       .select()
       .from(creators)
       .where(where)
-      .orderBy(direction)
+      .orderBy(direction, desc(creators.id))
       .limit(params.pageSize)
       .offset(offset)
       .all()

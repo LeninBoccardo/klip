@@ -94,6 +94,15 @@ export class SqliteCutRepository implements ICutRepository {
       .map(mapRowToCut)
   }
 
+  findIdsByCreator(creatorId: string): string[] {
+    return this.db
+      .select({ id: cuts.id })
+      .from(cuts)
+      .where(eq(cuts.creatorId, creatorId))
+      .all()
+      .map((r) => r.id)
+  }
+
   findByVideoId(videoId: string): Cut[] {
     return this.db
       .select()
@@ -308,11 +317,13 @@ export class SqliteCutRepository implements ICutRepository {
       .where(where)
       .all()
 
+    // Secondary `id DESC` tiebreaker so rows that share the primary sort key
+    // get a stable order across page boundaries.
     const rows = this.db
       .select()
       .from(cuts)
       .where(where)
-      .orderBy(direction)
+      .orderBy(direction, desc(cuts.id))
       .limit(params.pageSize)
       .offset(offset)
       .all()

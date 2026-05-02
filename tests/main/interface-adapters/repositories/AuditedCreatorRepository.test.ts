@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   SqliteCreatorRepository,
+  SqliteVideoRepository,
+  SqliteCutRepository,
   SqliteAuditLogRepository,
   AuditedCreatorRepository
 } from '@main/interface-adapters/repositories'
-import type { Creator } from '@domain/entities'
+import type { Creator, Video, Cut } from '@domain/entities'
 import type { DatabaseInstance } from '@main/framework-drivers/database'
 import { SqliteTransactionScope } from '@main/framework-drivers/database'
 import { createTestDb } from '../../helpers/createTestDb'
@@ -29,18 +31,83 @@ function makeCreator(overrides: Partial<Creator> = {}): Creator {
   }
 }
 
+function makeVideo(overrides: Partial<Video> = {}): Video {
+  return {
+    id: 'v-1',
+    creatorId: 'creator-1',
+    title: 'Vid',
+    url: null,
+    duration: null,
+    resolution: null,
+    fileSize: null,
+    filePath: '/root/creator-1/downloads/v-1/video.mp4',
+    thumbnailPath: null,
+    downloadDate: null,
+    probeStatus: 'pending',
+    viewCount: null,
+    likeCount: null,
+    dislikeCount: null,
+    commentCount: null,
+    category: null,
+    tags: [],
+    uploadDate: null,
+    description: null,
+    isShort: false,
+    transcriptPath: null,
+    detailFetchedAt: null,
+    status: 'active',
+    deletedAt: null,
+    createdAt: '2025-01-02T00:00:00.000Z',
+    updatedAt: '2025-01-02T00:00:00.000Z',
+    ...overrides
+  }
+}
+
+function makeCut(overrides: Partial<Cut> = {}): Cut {
+  return {
+    id: 'c-1',
+    creatorId: 'creator-1',
+    videoId: null,
+    title: 'Cut',
+    tags: [],
+    startTimestamp: null,
+    endTimestamp: null,
+    duration: null,
+    resolution: null,
+    fileSize: null,
+    filePath: '/root/creator-1/cuts/c-1/cut.mp4',
+    thumbnailPath: null,
+    probeStatus: 'pending',
+    status: 'active',
+    deletedAt: null,
+    createdAt: '2025-01-03T00:00:00.000Z',
+    updatedAt: '2025-01-03T00:00:00.000Z',
+    ...overrides
+  }
+}
+
 describe('AuditedCreatorRepository', () => {
   let database: DatabaseInstance
   let innerRepo: SqliteCreatorRepository
+  let videoRepo: SqliteVideoRepository
+  let cutRepo: SqliteCutRepository
   let auditLogRepo: SqliteAuditLogRepository
   let repo: AuditedCreatorRepository
 
   beforeEach(() => {
     database = createTestDb()
     innerRepo = new SqliteCreatorRepository(database.db)
+    videoRepo = new SqliteVideoRepository(database.db)
+    cutRepo = new SqliteCutRepository(database.db)
     auditLogRepo = new SqliteAuditLogRepository(database.db)
     const transactionScope = new SqliteTransactionScope(database.raw)
-    repo = new AuditedCreatorRepository(innerRepo, auditLogRepo, transactionScope)
+    repo = new AuditedCreatorRepository(
+      innerRepo,
+      auditLogRepo,
+      transactionScope,
+      videoRepo,
+      cutRepo
+    )
   })
 
   afterEach(() => {
@@ -173,5 +240,46 @@ describe('AuditedCreatorRepository', () => {
     repo.upsert(makeCreator())
     repo.delete('creator-1')
     expect(repo.findById('creator-1')).toBeNull()
+  })
+
+  it('emits cascade_deleted audit entries for every video and cut wiped by FK CASCADE', () => {
+    repo.upsert(makeCreator())
+    videoRepo.upsert(makeVideo({ id: 'v-1' }))
+    videoRepo.upsert(makeVideo({ id: 'v-2' }))
+    cutRepo.upsert(makeCut({ id: 'c-1' }))
+
+    repo.delete('creator-1')
+
+    // FK CASCADE wiped the rows.
+    expect(videoRepo.findById('v-1')).toBeNull()
+    expect(videoRepo.findById('v-2')).toBeNull()
+    expect(cutRepo.findById('c-1')).toBeNull()
+
+    // One cascade_deleted entry per victim, with the trigger context.
+    const v1Logs = auditLogRepo.findByEntity('video', 'v-1')
+    const v1Cascade = v1Logs.find((l) => l.action === 'cascade_deleted')
+    expect(v1Cascade).toBeDefined()
+    expect(JSON.parse(v1Cascade!.changes!)).toEqual({
+      cascadedFrom: { entityType: 'creator', entityId: 'creator-1' }
+    })
+
+    const v2Cascade = auditLogRepo
+      .findByEntity('video', 'v-2')
+      .find((l) => l.action === 'cascade_deleted')
+    expect(v2Cascade).toBeDefined()
+
+    const c1Cascade = auditLogRepo
+      .findByEntity('cut', 'c-1')
+      .find((l) => l.action === 'cascade_deleted')
+    expect(c1Cascade).toBeDefined()
+  })
+
+  it('does not emit cascade_deleted entries when the creator has no children', () => {
+    repo.upsert(makeCreator())
+    repo.delete('creator-1')
+
+    // Plain creator delete still produces one creator-level entry, no cascade ones.
+    const cascadeLogs = auditLogRepo.findRecent(100).filter((l) => l.action === 'cascade_deleted')
+    expect(cascadeLogs).toHaveLength(0)
   })
 })

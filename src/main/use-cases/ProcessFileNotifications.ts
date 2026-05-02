@@ -96,11 +96,23 @@ export class ProcessFileNotifications {
    * any in-flight work. Returns the same promise so callers (and the
    * debouncer) can also await if they wish. Never rejects — internal errors
    * are logged.
+   *
+   * The reschedule check lives in this outer `.finally` (not inside
+   * `runFlush()`) so it runs *after* `flushPromise = null`. That closes the
+   * race where an event arriving between `runFlush()`'s own finally and the
+   * outer null-assignment would be observed by `handleEvent` as "flush still
+   * in-flight" (and skip scheduling), then dropped because the in-flight
+   * flush had already finished its post-check. Synchronous body of this
+   * callback can't interleave with other JS, so the queue check now sees
+   * every late arrival.
    */
   private flush(): Promise<void> {
     if (this.flushPromise) return this.flushPromise
     this.flushPromise = this.runFlush().finally(() => {
       this.flushPromise = null
+      if (!this.suspended && this.queue.size() > 0) {
+        this.debouncer.schedule(() => this.flush(), this.config.debounceMs)
+      }
     })
     return this.flushPromise
   }
@@ -135,11 +147,6 @@ export class ProcessFileNotifications {
       }
     } catch (error) {
       console.error('[klip] Notification flush failed:', redactError(error, this.rootPath.value))
-    } finally {
-      // Double-buffer: check if new events arrived during this flush
-      if (this.queue.size() > 0 && !this.suspended) {
-        this.debouncer.schedule(() => this.flush(), this.config.debounceMs)
-      }
     }
   }
 

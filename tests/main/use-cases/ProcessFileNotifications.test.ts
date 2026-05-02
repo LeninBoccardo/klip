@@ -255,6 +255,37 @@ describe('ProcessFileNotifications', () => {
       expect(mockDebouncer.schedule).not.toHaveBeenCalled()
     })
 
+    it('reschedules for events that arrived during an in-flight flush (post-null-flushPromise check)', async () => {
+      // Defer the drain so handleEvent can fire while flush is mid-flight.
+      let resolveDrain!: (events: FileEvent[]) => void
+      const drainPromise = new Promise<FileEvent[]>((resolve) => {
+        resolveDrain = resolve
+      })
+      vi.mocked(mockQueue.drain).mockReturnValueOnce(drainPromise)
+      // queue.size() reports >0 only after the simulated late event arrives.
+      let lateArrived = false
+      vi.mocked(mockQueue.size).mockImplementation(() => (lateArrived ? 1 : 0))
+
+      useCase.handleEvent(makeEvent('/root/a'))
+      const flushFn = vi.mocked(mockDebouncer.schedule).mock.calls[0][0]
+      const flushPromise = flushFn()
+      vi.mocked(mockDebouncer.schedule).mockClear()
+
+      // Simulate an event arriving during flush. handleEvent SHOULD NOT
+      // schedule (flushPromise is non-null) — the post-flush check is what
+      // must catch it.
+      lateArrived = true
+      useCase.handleEvent(makeEvent('/root/b'))
+      expect(mockDebouncer.schedule).not.toHaveBeenCalled()
+
+      // Let the flush complete. The outer .finally must see queue.size() > 0
+      // and reschedule.
+      resolveDrain([makeEvent('/root/a')])
+      await flushPromise
+
+      expect(mockDebouncer.schedule).toHaveBeenCalledWith(expect.any(Function), 1000)
+    })
+
     it('lets in-flight flush complete when suspend fires mid-flush', async () => {
       // Defer the drain so we can interleave suspend() with an in-flight flush.
       let resolveDrain!: (events: FileEvent[]) => void

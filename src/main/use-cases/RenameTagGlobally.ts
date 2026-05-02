@@ -3,6 +3,7 @@ import type { ITransactionScope, INotifier } from '@domain/ports'
 import type { RenameTagGloballyResult, DbUpdateScope } from '@shared/types'
 import type { Video, Cut } from '@domain/entities'
 import type { IRenameTagGlobally } from './IRenameTagGlobally'
+import { EmptyOldTagError, EmptyNewTagError } from './errors/TagErrors'
 
 export class RenameTagGlobally implements IRenameTagGlobally {
   constructor(
@@ -13,8 +14,8 @@ export class RenameTagGlobally implements IRenameTagGlobally {
   ) {}
 
   execute(oldTag: string, newTag: string): RenameTagGloballyResult {
-    if (!oldTag) throw new Error('RenameTagGlobally: oldTag must be non-empty')
-    if (!newTag) throw new Error('RenameTagGlobally: newTag must be non-empty')
+    if (!oldTag) throw new EmptyOldTagError()
+    if (!newTag) throw new EmptyNewTagError()
     if (oldTag === newTag) return { videosUpdated: 0, cutsUpdated: 0 }
 
     let videosUpdated = 0
