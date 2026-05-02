@@ -217,7 +217,7 @@ function CollectionRow({
         </button>
 
         {missing && (
-          <Badge variant="outline" className="gap-1 text-xs text-amber-600">
+          <Badge variant="outline" className="gap-1 text-xs text-warning">
             <AlertTriangle className="size-3" />
             {t('detail.items.missingBadge')}
           </Badge>

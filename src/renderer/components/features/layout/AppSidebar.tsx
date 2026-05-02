@@ -37,7 +37,9 @@ export function AppSidebar(): React.ReactElement {
       <SidebarHeader className="border-b px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
           <Clapperboard className="size-6 text-primary" />
-          <span className="text-lg font-bold tracking-tight">Klip</span>
+          <span className="text-lg font-bold tracking-tight">
+            Klip<span className="text-primary">.</span>
+          </span>
         </Link>
       </SidebarHeader>
 

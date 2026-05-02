@@ -119,7 +119,7 @@ export function MigrateRootButton({ currentRootPath }: MigrateRootButtonProps): 
             {isSuccess ? (
               <>
                 <DialogTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="size-5 text-green-500" />
+                  <CheckCircle2 className="size-5 text-success" />
                   {t('storage.result.successTitle')}
                 </DialogTitle>
                 <DialogDescription>

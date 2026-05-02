@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist/wght.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -21,6 +22,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -46,73 +49,103 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * ──────────────────────────────────────────
+ * Honeyed Amber palette
+ * ──────────────────────────────────────────
+ * Hue family lives at H=70–80° throughout, including neutrals (chroma
+ * 0.008–0.018), so the system reads as one warm object rather than
+ * gray + yellow sticker. Background chroma capped at 0.012 so it
+ * reads as "warm white", not "yellow-tinted".
+ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.75rem;
+
+  --background: oklch(0.98 0.01 78);
+  --foreground: oklch(0.19 0.012 70);
+
+  --card: oklch(0.99 0.008 78);
+  --card-foreground: oklch(0.19 0.012 70);
+  --popover: oklch(0.99 0.008 78);
+  --popover-foreground: oklch(0.19 0.012 70);
+
+  --primary: oklch(0.79 0.16 85);
+  --primary-foreground: oklch(0.19 0.012 70);
+
+  --secondary: oklch(0.95 0.014 78);
+  --secondary-foreground: oklch(0.22 0.012 70);
+  --muted: oklch(0.95 0.014 78);
+  --muted-foreground: oklch(0.5 0.015 75);
+  --accent: oklch(0.93 0.03 80);
+  --accent-foreground: oklch(0.22 0.012 70);
+
+  --destructive: oklch(0.6 0.21 28);
+
+  --success: oklch(0.62 0.14 145);
+  --warning: oklch(0.7 0.18 65);
+
+  --border: oklch(0.9 0.014 78);
+  --input: oklch(0.9 0.014 78);
+  --ring: oklch(0.72 0.14 85);
+
+  --chart-1: oklch(0.79 0.16 85);
+  --chart-2: oklch(0.7 0.16 50);
+  --chart-3: oklch(0.58 0.16 32);
+  --chart-4: oklch(0.55 0.07 135);
+  --chart-5: oklch(0.46 0.1 290);
+
+  --sidebar: oklch(0.955 0.018 78);
+  --sidebar-foreground: oklch(0.22 0.012 70);
+  --sidebar-primary: oklch(0.79 0.16 85);
+  --sidebar-primary-foreground: oklch(0.19 0.012 70);
+  --sidebar-accent: oklch(0.92 0.028 80);
+  --sidebar-accent-foreground: oklch(0.22 0.012 70);
+  --sidebar-border: oklch(0.88 0.016 78);
+  --sidebar-ring: oklch(0.72 0.14 85);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.155 0.012 65);
+  --foreground: oklch(0.96 0.012 88);
+
+  --card: oklch(0.2 0.014 70);
+  --card-foreground: oklch(0.96 0.012 88);
+  --popover: oklch(0.2 0.014 70);
+  --popover-foreground: oklch(0.96 0.012 88);
+
+  --primary: oklch(0.79 0.16 85);
+  --primary-foreground: oklch(0.18 0.012 70);
+
+  --secondary: oklch(0.27 0.014 72);
+  --secondary-foreground: oklch(0.96 0.012 88);
+  --muted: oklch(0.27 0.014 72);
+  --muted-foreground: oklch(0.72 0.014 80);
+  --accent: oklch(0.3 0.025 78);
+  --accent-foreground: oklch(0.96 0.012 88);
+
+  --destructive: oklch(0.7 0.19 25);
+
+  --success: oklch(0.72 0.14 145);
+  --warning: oklch(0.78 0.17 65);
+
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.79 0.16 85);
+
+  --chart-1: oklch(0.79 0.16 85);
+  --chart-2: oklch(0.68 0.16 50);
+  --chart-3: oklch(0.62 0.16 32);
+  --chart-4: oklch(0.62 0.07 135);
+  --chart-5: oklch(0.58 0.13 290);
+
+  --sidebar: oklch(0.19 0.014 72);
+  --sidebar-foreground: oklch(0.96 0.012 88);
+  --sidebar-primary: oklch(0.79 0.16 85);
+  --sidebar-primary-foreground: oklch(0.18 0.012 70);
+  --sidebar-accent: oklch(0.3 0.025 78);
+  --sidebar-accent-foreground: oklch(0.96 0.012 88);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.79 0.16 85);
 }
 
 /*
@@ -126,7 +159,7 @@
  */
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring/70;
   }
 
   html {
@@ -135,9 +168,79 @@
 
   body {
     @apply h-full overflow-hidden bg-background text-foreground;
+    font-family: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
 
   #root {
     @apply flex h-full flex-col overflow-hidden;
   }
+
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Native scrollbars. shadcn ScrollArea renders its own where used. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+    border: 2px solid var(--background);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
+  /*
+   * ──────────────────────────────────────────
+   * Custom titlebar (Windows titleBarOverlay)
+   * ──────────────────────────────────────────
+   * Electron's `titleBarStyle: 'hidden'` + `titleBarOverlay` paints a
+   * colored strip behind the system min/max/close buttons (top-right).
+   * The rest of the top strip is renderer-drawable, so we paint a
+   * matching `body::before` band across it and mark it draggable.
+   * Color is intentionally fixed (not theme-tracked) for consistent
+   * "branded chrome" identity across light + dark mode — matches the
+   * `titleBarOverlay.color` set in `src/main/index.ts`.
+   */
+  body {
+    padding-top: var(--titlebar-height);
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--titlebar-height);
+    background: oklch(0.19 0.014 72);
+    -webkit-app-region: drag;
+    z-index: 50;
+  }
+
+  /* shadcn Sidebar uses fixed positioning + h-svh; offset both so it
+     doesn't slide under the titlebar. !important is required because
+     Tailwind's `inset-y-0` utility (top: 0) lives in @layer utilities
+     and outranks @layer base in the cascade. */
+  [data-slot='sidebar-container'] {
+    top: var(--titlebar-height) !important;
+    height: calc(100svh - var(--titlebar-height)) !important;
+  }
+
+  /* SidebarProvider wraps everything in `min-h-svh`; with our 32px
+     titlebar offset that overflows by 32px and clips content. Cap it. */
+  .group\/sidebar-wrapper {
+    min-height: 0 !important;
+  }
+}
+
+:root {
+  --titlebar-height: 32px;
 }
