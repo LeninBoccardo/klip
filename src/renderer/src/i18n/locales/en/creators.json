@@ -1,4 +1,7 @@
 {
+  "card": {
+    "openAria": "Open creator: {{name}}"
+  },
   "filters": {
     "searchPlaceholder": "Search creators...",
     "status": {

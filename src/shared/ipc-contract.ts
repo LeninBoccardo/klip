@@ -139,6 +139,28 @@ export interface IpcContract {
     params: []
     result: { ok: boolean; error?: string }
   }
+  // Open an external URL in the user's default browser. The URL is
+  // host-allowlisted server-side (youtube.com / youtu.be only) so a
+  // compromised renderer cannot use the OS shell as a phishing trampoline.
+  'open-external-url': {
+    params: [url: string]
+    result: { ok: boolean; error?: string }
+  }
+  // Reveal an entity's media file in the OS file manager. The renderer
+  // passes (kind, id); the controller resolves through `IResolveMediaUrl`
+  // and shows the canonical path. Mirrors `open-media-externally`'s
+  // entity-reference pattern so the renderer never holds raw paths.
+  'reveal-entity-in-folder': {
+    params: [kind: 'video' | 'cut', id: string]
+    result: { ok: boolean; error?: string }
+  }
+  // Reveal a creator's directory (a folder, not a file) in the OS file
+  // manager. The folder is resolved server-side via `creatorRepo.findById`
+  // and joined under rootPath; renderer never holds creator paths.
+  'reveal-creator-folder': {
+    params: [creatorId: string]
+    result: { ok: boolean; error?: string }
+  }
 
   // ── Stats ──
   'get-storage-stats': { params: []; result: StorageStats }

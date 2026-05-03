@@ -1,5 +1,6 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useShortcut } from '@/hooks/use-shortcut'
 import { useTranslation } from 'react-i18next'
 import { useCollection, useCollectionItems, useDeleteCollection } from '@/hooks/use-collections'
 import { CollectionItemList } from '@components/features/collections/CollectionItemList'
@@ -22,6 +23,9 @@ function CollectionDetailPage(): React.ReactElement {
   const { t: tc } = useTranslation('common')
   const { collectionId } = Route.useParams()
   const navigate = useNavigate()
+  const router = useRouter()
+  useShortcut('escape', () => router.history.back())
+  useShortcut('backspace', () => router.history.back())
   const collectionQuery = useCollection(collectionId)
   const itemsQuery = useCollectionItems(collectionId)
   const deleteCollection = useDeleteCollection()

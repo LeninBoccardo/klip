@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCutsPaginated, useDeleteCut, useRestoreCut } from '@/hooks/use-cuts'
 import { useMultiSelect } from '@/hooks/use-multi-select'
+import { useListKeyboardNav } from '@/hooks/use-list-keyboard-nav'
 import {
   PageContainer,
   PageHeader,
@@ -68,6 +69,24 @@ function CutsPage(): React.ReactElement {
   })
   const deleteCut = useDeleteCut()
   const restoreCut = useRestoreCut()
+
+  const cutItems = data?.data ?? []
+  const { getItemProps } = useListKeyboardNav({
+    count: cutItems.length,
+    onOpen: (i) => {
+      const cut = cutItems[i]
+      if (cut?.videoId) navigate({ to: '/videos/$videoId', params: { videoId: cut.videoId } })
+    },
+    onDelete: (i) => {
+      const cut = cutItems[i]
+      if (!cut || cut.status === 'deleted') return
+      deleteCut.mutate(cut.id, {
+        onSuccess: () => toast.success(t('toasts.deleted', { name: cut.title })),
+        onError: (err) => toast.error(err.message)
+      })
+    },
+    enabled: !selectMode && addTarget === null
+  })
 
   const hasFilters =
     search.length > 0 || creatorId !== undefined || tags.length > 0 || statusFilter !== undefined
@@ -172,7 +191,7 @@ function CutsPage(): React.ReactElement {
           )}
 
           <ResponsiveGrid>
-            {data.data.map((cut) => {
+            {data.data.map((cut, i) => {
               const card = (
                 <MediaCard
                   entityKind="cut"
@@ -205,27 +224,34 @@ function CutsPage(): React.ReactElement {
               }
 
               return (
-                <EntityContextMenu
+                <div
                   key={cut.id}
-                  status={cut.status}
-                  onAddToCollection={() =>
-                    setAddTarget({ kind: 'cut', id: cut.id, title: cut.title })
-                  }
-                  onDelete={() =>
-                    deleteCut.mutate(cut.id, {
-                      onSuccess: () => toast.success(t('toasts.deleted', { name: cut.title })),
-                      onError: (err) => toast.error(err.message)
-                    })
-                  }
-                  onRestore={() =>
-                    restoreCut.mutate(cut.id, {
-                      onSuccess: () => toast.success(t('toasts.restored', { name: cut.title })),
-                      onError: (err) => toast.error(err.message)
-                    })
-                  }
+                  {...getItemProps(i)}
+                  className="rounded-xl outline-none ring-ring ring-offset-2 ring-offset-background data-[focused=true]:ring-2"
                 >
-                  {card}
-                </EntityContextMenu>
+                  <EntityContextMenu
+                    status={cut.status}
+                    title={cut.title}
+                    reveal={{ kind: 'cut', id: cut.id }}
+                    onAddToCollection={() =>
+                      setAddTarget({ kind: 'cut', id: cut.id, title: cut.title })
+                    }
+                    onDelete={() =>
+                      deleteCut.mutate(cut.id, {
+                        onSuccess: () => toast.success(t('toasts.deleted', { name: cut.title })),
+                        onError: (err) => toast.error(err.message)
+                      })
+                    }
+                    onRestore={() =>
+                      restoreCut.mutate(cut.id, {
+                        onSuccess: () => toast.success(t('toasts.restored', { name: cut.title })),
+                        onError: (err) => toast.error(err.message)
+                      })
+                    }
+                  >
+                    {card}
+                  </EntityContextMenu>
+                </div>
               )
             })}
           </ResponsiveGrid>

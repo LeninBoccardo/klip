@@ -226,6 +226,27 @@ const rows: Row[] = [
     ]
   },
   { channel: 'open-log-folder', accept: [], reject: [['extra']] },
+  {
+    channel: 'open-external-url',
+    accept: ['https://youtube.com/watch?v=abc'],
+    reject: [
+      ['not a url'],
+      [''],
+      [42],
+      // 4097-char URL > max
+      ['https://youtube.com/' + 'x'.repeat(4097)]
+    ]
+  },
+  {
+    channel: 'reveal-entity-in-folder',
+    accept: ['video', 'v-1'],
+    reject: [['creator', 'c-1'], ['video', ''], ['video']]
+  },
+  {
+    channel: 'reveal-creator-folder',
+    accept: ['creator-1'],
+    reject: [[''], [42], []]
+  },
 
   // ── Stats ──
   { channel: 'get-storage-stats', accept: [], reject: [['extra']] },

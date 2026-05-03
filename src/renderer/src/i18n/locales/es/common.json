@@ -18,8 +18,22 @@
     "apply": "Aplicar",
     "copy": "Copiar",
     "copyAll": "Copiar todo",
+    "copyTitle": "Copiar título",
+    "copyLink": "Copiar enlace",
+    "copyName": "Copiar nombre",
+    "copyTag": "Copiar etiqueta",
+    "openOnYoutube": "Abrir en YouTube",
+    "revealInFolder": "Mostrar en carpeta",
+    "openFolder": "Abrir carpeta",
     "reload": "Recargar",
     "refresh": "Actualizar"
+  },
+  "toasts": {
+    "copied": "Copiado al portapapeles",
+    "copyFailed": "Error al copiar: {{message}}",
+    "revealFailed": "Error al mostrar en carpeta: {{message}}",
+    "openExternalFailed": "Error al abrir enlace: {{message}}",
+    "openFolderFailed": "Error al abrir carpeta: {{message}}"
   },
   "states": {
     "loading": "Cargando…",
@@ -31,6 +45,9 @@
       "updating_db": "Actualizando base de datos…",
       "reconciling": "Reconciliando…"
     }
+  },
+  "a11y": {
+    "skipToMain": "Saltar al contenido principal"
   },
   "errors": {
     "notFoundTitle": "Página no encontrada",

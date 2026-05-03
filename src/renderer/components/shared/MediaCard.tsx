@@ -43,8 +43,21 @@ export function MediaCard({
 
   return (
     <Card
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? t('card.openAria', { title }) : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
       className={cn(
-        'group overflow-hidden transition-colors hover:bg-accent/50 cursor-pointer',
+        'group overflow-hidden transition-colors hover:bg-accent/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         status === 'deleted' && 'opacity-60',
         className
       )}

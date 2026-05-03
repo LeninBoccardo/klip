@@ -12,5 +12,9 @@
     "value": "Licença MIT"
   },
   "builtWith": "Construído Com",
-  "sourceCode": "Código-fonte"
+  "sourceCode": "Código-fonte",
+  "shortcuts": {
+    "title": "Atalhos de teclado",
+    "hint": "Pressione ? em qualquer lugar do app para abrir o painel rápido."
+  }
 }

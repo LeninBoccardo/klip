@@ -66,6 +66,9 @@ const api = {
   openMediaExternally: createTypedInvoker('open-media-externally'),
   openPathInShell: createTypedInvoker('open-path-in-shell'),
   openLogFolder: createTypedInvoker('open-log-folder'),
+  openExternalUrl: createTypedInvoker('open-external-url'),
+  revealEntityInFolder: createTypedInvoker('reveal-entity-in-folder'),
+  revealCreatorFolder: createTypedInvoker('reveal-creator-folder'),
 
   // ── Stats ──
   getStorageStats: createTypedInvoker('get-storage-stats'),

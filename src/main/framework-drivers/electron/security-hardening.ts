@@ -9,7 +9,7 @@ import log from 'electron-log/main'
  * tight — the only legitimate "open externally" target today is the original
  * YouTube video page.
  */
-const EXTERNAL_HOST_ALLOWLIST: readonly string[] = [
+export const EXTERNAL_HOST_ALLOWLIST: readonly string[] = [
   'youtube.com',
   'www.youtube.com',
   'm.youtube.com',
@@ -17,7 +17,7 @@ const EXTERNAL_HOST_ALLOWLIST: readonly string[] = [
   'youtu.be'
 ] as const
 
-function isHostAllowed(hostname: string): boolean {
+export function isHostAllowed(hostname: string): boolean {
   const lower = hostname.toLowerCase()
   return EXTERNAL_HOST_ALLOWLIST.includes(lower)
 }

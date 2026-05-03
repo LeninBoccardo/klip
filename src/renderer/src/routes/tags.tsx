@@ -2,9 +2,11 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAllDistinctTags } from '@/hooks/use-tags'
+import { useListKeyboardNav } from '@/hooks/use-list-keyboard-nav'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { RenameTagDialog } from '@components/features/tags/RenameTagDialog'
 import { DeleteTagDialog } from '@components/features/tags/DeleteTagDialog'
+import { TagContextMenu } from '@components/features/tags/TagContextMenu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
 import { Button } from '@ui/button'
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@ui/input-group'
@@ -62,6 +64,19 @@ function TagsPage(): React.ReactElement {
   }
 
   const hasFilter = filter.trim().length > 0
+
+  const { getItemProps } = useListKeyboardNav({
+    count: visible.length,
+    onOpen: (i) => {
+      const tag = visible[i]
+      if (tag) setRenameTarget(tag)
+    },
+    onDelete: (i) => {
+      const tag = visible[i]
+      if (tag) setDeleteTarget(tag)
+    },
+    enabled: renameTarget === null && deleteTarget === null
+  })
 
   return (
     <PageContainer>
@@ -162,9 +177,18 @@ function TagsPage(): React.ReactElement {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visible.map((tag) => (
-                <TableRow key={tag.tag}>
-                  <TableCell className="font-mono text-sm">{tag.tag}</TableCell>
+              {visible.map((tag, i) => (
+                <TagContextMenu
+                  key={tag.tag}
+                  tag={tag.tag}
+                  onRename={() => setRenameTarget(tag)}
+                  onDelete={() => setDeleteTarget(tag)}
+                >
+                  <TableRow
+                    {...getItemProps(i)}
+                    className="data-[focused=true]:bg-accent/50"
+                  >
+                    <TableCell className="font-mono text-sm">{tag.tag}</TableCell>
                   <TableCell className="text-right tabular-nums">{tag.videoCount}</TableCell>
                   <TableCell className="text-right tabular-nums">{tag.cutCount}</TableCell>
                   <TableCell className="text-right font-medium tabular-nums">
@@ -190,7 +214,8 @@ function TagsPage(): React.ReactElement {
                       </Button>
                     </div>
                   </TableCell>
-                </TableRow>
+                  </TableRow>
+                </TagContextMenu>
               ))}
             </TableBody>
           </Table>

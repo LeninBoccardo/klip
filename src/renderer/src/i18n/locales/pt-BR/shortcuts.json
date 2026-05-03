@@ -4,6 +4,8 @@
   "groups": {
     "global": "Global",
     "navigation": "Navegação",
+    "list": "Listas e grades",
+    "forms": "Formulários",
     "player": "Player"
   },
   "entries": {
@@ -17,6 +19,12 @@
     "navTags": "Ir para etiquetas",
     "navActivity": "Ir para atividades",
     "navSearch": "Ir para a busca em transcrições",
+    "navBack": "Voltar à página anterior",
+    "listNext": "Focar próximo item",
+    "listPrev": "Focar item anterior",
+    "listOpen": "Abrir item focado",
+    "listDelete": "Excluir item focado",
+    "formsSubmit": "Enviar formulário",
     "playerPlayPause": "Tocar / pausar",
     "playerPauseK": "Pausar",
     "playerSeekBack10": "Voltar 10s",

@@ -3,15 +3,16 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreatorsPaginated, useDeleteCreator, useRestoreCreator } from '@/hooks/use-creators'
 import { CreatorCard } from '@components/features/creators/CreatorCard'
+import { CreatorContextMenu } from '@components/features/creators/CreatorContextMenu'
 import { CreatorFilters } from '@components/features/creators/CreatorFilters'
 import { RegisterCreatorDialog } from '@components/features/creators/RegisterCreatorDialog'
 import {
   PageContainer,
   PageHeader,
   ResponsiveGrid,
-  PaginationControls,
-  EntityContextMenu
+  PaginationControls
 } from '@/components/shared'
+import { useListKeyboardNav } from '@/hooks/use-list-keyboard-nav'
 import { Button } from '@ui/button'
 import {
   Empty,
@@ -61,6 +62,20 @@ function LibraryPage(): React.ReactElement {
       onError: (err) => toast.error(t('toasts.restoreFailed', { message: err.message }))
     })
   }
+
+  const items = data?.data ?? []
+  const { getItemProps } = useListKeyboardNav({
+    count: items.length,
+    onOpen: (i) => {
+      const c = items[i]
+      if (c) navigate({ to: '/creators/$creatorId', params: { creatorId: c.id } })
+    },
+    onDelete: (i) => {
+      const c = items[i]
+      if (c && c.status !== 'deleted') handleDelete(c.id, c.name)
+    },
+    enabled: !registerOpen
+  })
 
   return (
     <PageContainer>
@@ -131,20 +146,27 @@ function LibraryPage(): React.ReactElement {
       {!isLoading && data && data.data.length > 0 && (
         <>
           <ResponsiveGrid columns="wide">
-            {data.data.map((creator) => (
-              <EntityContextMenu
+            {data.data.map((creator, i) => (
+              <div
                 key={creator.id}
-                status={creator.status}
-                onDelete={() => handleDelete(creator.id, creator.name)}
-                onRestore={() => handleRestore(creator.id, creator.name)}
+                {...getItemProps(i)}
+                className="rounded-xl outline-none ring-ring ring-offset-2 ring-offset-background data-[focused=true]:ring-2"
               >
-                <CreatorCard
-                  creator={creator}
-                  onClick={() =>
-                    navigate({ to: '/creators/$creatorId', params: { creatorId: creator.id } })
-                  }
-                />
-              </EntityContextMenu>
+                <CreatorContextMenu
+                  creatorId={creator.id}
+                  creatorName={creator.name}
+                  status={creator.status}
+                  onDelete={() => handleDelete(creator.id, creator.name)}
+                  onRestore={() => handleRestore(creator.id, creator.name)}
+                >
+                  <CreatorCard
+                    creator={creator}
+                    onClick={() =>
+                      navigate({ to: '/creators/$creatorId', params: { creatorId: creator.id } })
+                    }
+                  />
+                </CreatorContextMenu>
+              </div>
             ))}
           </ResponsiveGrid>
 

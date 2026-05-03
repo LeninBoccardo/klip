@@ -221,11 +221,24 @@ function AppBreadcrumb(): React.ReactElement | null {
   )
 }
 
+function SkipToContent(): React.ReactElement {
+  const { t } = useTranslation('common')
+  return (
+    <a
+      href="#main-content"
+      className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-2 focus-visible:top-2 focus-visible:z-50 focus-visible:rounded focus-visible:bg-background focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:text-foreground focus-visible:shadow focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      {t('a11y.skipToMain')}
+    </a>
+  )
+}
+
 const RootLayout = (): React.ReactElement => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="klip-theme">
       <PreferencesBootstrap />
       <TooltipProvider>
+        <SkipToContent />
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset className="flex h-full flex-col overflow-hidden">
@@ -236,9 +249,9 @@ const RootLayout = (): React.ReactElement => (
               <CommandPaletteController />
               <ThemeToggle />
             </header>
-            <div className="flex-1 overflow-hidden">
+            <main id="main-content" tabIndex={-1} className="flex-1 overflow-hidden">
               <Outlet />
-            </div>
+            </main>
           </SidebarInset>
         </SidebarProvider>
         <Toaster richColors closeButton />

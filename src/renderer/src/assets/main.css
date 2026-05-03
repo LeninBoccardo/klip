@@ -249,3 +249,17 @@
 :root {
   --titlebar-height: 32px;
 }
+
+/* Honor the user's reduced-motion preference at the global CSS layer.
+   Disables decorative animations and transitions everywhere; per-surface
+   logic that needs finer control should use `useReducedMotion`. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -204,6 +204,14 @@ export const ipcSchemas = {
   // controller additionally validates containment under rootPath.
   'open-path-in-shell': z.tuple([z.string().min(1).max(4096)]),
   'open-log-folder': z.tuple([]),
+  // Bounded URL: 4096 chars covers any reasonable youtube link. Host
+  // allowlist enforced in the controller, not here, so the schema layer
+  // stays generic.
+  'open-external-url': z.tuple([z.string().url().max(4096)]),
+  // Mirrors `open-media-externally` shape; controller resolves through
+  // `IResolveMediaUrl` and shows the canonical path in the OS file manager.
+  'reveal-entity-in-folder': z.tuple([z.enum(['video', 'cut']), z.string().min(1)]),
+  'reveal-creator-folder': z.tuple([z.string().min(1)]),
 
   // ── Stats ──
   'get-storage-stats': z.tuple([]),

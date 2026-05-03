@@ -7,6 +7,7 @@ import { CollectionContextMenu } from '@components/features/collections/Collecti
 import { CreateCollectionDialog } from '@components/features/collections/CreateCollectionDialog'
 import { RenameCollectionDialog } from '@components/features/collections/RenameCollectionDialog'
 import { PageContainer, PageHeader, PaginationControls, ResponsiveGrid } from '@/components/shared'
+import { useListKeyboardNav } from '@/hooks/use-list-keyboard-nav'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
 import { Empty, EmptyContent, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
@@ -37,6 +38,20 @@ function CollectionsPage(): React.ReactElement {
       onError: (err) => toast.error(t('toasts.deleteFailed', { message: err.message }))
     })
   }
+
+  const items = data?.data ?? []
+  const { getItemProps } = useListKeyboardNav({
+    count: items.length,
+    onOpen: (i) => {
+      const c = items[i]
+      if (c) navigate({ to: '/collections/$collectionId', params: { collectionId: c.id } })
+    },
+    onDelete: (i) => {
+      const c = items[i]
+      if (c) handleDelete(c)
+    },
+    enabled: !createOpen && editing === null
+  })
 
   return (
     <PageContainer>
@@ -73,22 +88,27 @@ function CollectionsPage(): React.ReactElement {
       ) : (
         <>
           <ResponsiveGrid columns="wide">
-            {data.data.map((c) => (
-              <CollectionContextMenu
+            {data.data.map((c, i) => (
+              <div
                 key={c.id}
-                onEdit={() => setEditing(c)}
-                onDelete={() => handleDelete(c)}
+                {...getItemProps(i)}
+                className="rounded-xl outline-none ring-ring ring-offset-2 ring-offset-background data-[focused=true]:ring-2"
               >
-                <CollectionCard
-                  collection={c}
-                  onClick={() =>
-                    navigate({
-                      to: '/collections/$collectionId',
-                      params: { collectionId: c.id }
-                    })
-                  }
-                />
-              </CollectionContextMenu>
+                <CollectionContextMenu
+                  onEdit={() => setEditing(c)}
+                  onDelete={() => handleDelete(c)}
+                >
+                  <CollectionCard
+                    collection={c}
+                    onClick={() =>
+                      navigate({
+                        to: '/collections/$collectionId',
+                        params: { collectionId: c.id }
+                      })
+                    }
+                  />
+                </CollectionContextMenu>
+              </div>
             ))}
           </ResponsiveGrid>
 

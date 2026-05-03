@@ -180,7 +180,11 @@ app.whenReady().then(() => {
     container.useCases.deleteTagGlobally
   )
   registerSearchController(container.useCases.searchAll, container.useCases.searchTranscripts)
-  registerShellController(container.useCases.resolveMediaUrl, container.rootPathRef)
+  registerShellController(
+    container.useCases.resolveMediaUrl,
+    container.rootPathRef,
+    container.repositories.creator
+  )
   registerStatsController(container.useCases.getStorageStats, container.useCases.getLibraryStats)
   registerCollectionController({
     create: container.useCases.createCollection,

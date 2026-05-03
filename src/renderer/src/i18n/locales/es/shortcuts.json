@@ -4,6 +4,8 @@
   "groups": {
     "global": "Global",
     "navigation": "Navegación",
+    "list": "Listas y cuadrículas",
+    "forms": "Formularios",
     "player": "Reproductor"
   },
   "entries": {
@@ -17,6 +19,12 @@
     "navTags": "Ir a etiquetas",
     "navActivity": "Ir a actividad",
     "navSearch": "Ir a búsqueda en transcripciones",
+    "navBack": "Volver a la página anterior",
+    "listNext": "Enfocar siguiente elemento",
+    "listPrev": "Enfocar elemento anterior",
+    "listOpen": "Abrir elemento enfocado",
+    "listDelete": "Eliminar elemento enfocado",
+    "formsSubmit": "Enviar formulario",
     "playerPlayPause": "Reproducir / pausar",
     "playerPauseK": "Pausar",
     "playerSeekBack10": "Retroceder 10s",

@@ -157,9 +157,20 @@ export function BulkImportDialog({
     return 'secondary'
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault()
+      if (!rows && !previewing && text.trim().length > 0) {
+        void handlePreview()
+      } else if (rows && !submitting && includedRows.length > 0) {
+        void handleSubmit()
+      }
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : handleClose())}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl" onKeyDown={handleKeyDown}>
         <DialogHeader>
           <DialogTitle>{t('bulkImport.title')}</DialogTitle>
           <DialogDescription>{t('bulkImport.description')}</DialogDescription>

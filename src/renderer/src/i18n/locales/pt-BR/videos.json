@@ -1,6 +1,7 @@
 {
   "card": {
-    "shortBadge": "Short"
+    "shortBadge": "Short",
+    "openAria": "Abrir vídeo: {{title}}"
   },
   "detail": {
     "uploaded": "Publicado em {{date}}",

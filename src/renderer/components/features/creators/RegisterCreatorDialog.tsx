@@ -194,7 +194,16 @@ function RegisterForm({
     .toUpperCase()
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          e.preventDefault()
+          e.currentTarget.requestSubmit()
+        }
+      }}
+      className="space-y-4"
+    >
       <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
         <Avatar className="size-12">
           <AvatarImage src={preview.avatarUrl ?? undefined} alt={preview.channelName} />

@@ -12,5 +12,9 @@
     "value": "MIT License"
   },
   "builtWith": "Built With",
-  "sourceCode": "Source Code"
+  "sourceCode": "Source Code",
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "hint": "Press ? anywhere in the app for the quick overlay."
+  }
 }

@@ -38,7 +38,7 @@ export function DownloadProgressCard({
           </Badge>
         </ItemTitle>
         <Progress value={progress.percent} className="h-2" />
-        <ItemDescription>
+        <ItemDescription role="status" aria-live="polite" aria-atomic="true">
           {Math.round(progress.percent)}%{progress.speed && ` · ${progress.speed}`}
           {progress.eta && ` · ${t('progress.etaPrefix')} ${progress.eta}`}
         </ItemDescription>

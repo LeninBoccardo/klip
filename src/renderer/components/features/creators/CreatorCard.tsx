@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -12,6 +13,7 @@ interface CreatorCardProps {
 }
 
 export function CreatorCard({ creator, onClick, className }: CreatorCardProps): React.ReactElement {
+  const { t } = useTranslation('creators')
   const initials = creator.name
     .split(/\s+/)
     .map((w) => w[0])
@@ -25,8 +27,21 @@ export function CreatorCard({ creator, onClick, className }: CreatorCardProps): 
 
   return (
     <Card
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? t('card.openAria', { name: creator.name }) : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
       className={cn(
-        'group cursor-pointer transition-colors hover:bg-accent/50',
+        'group cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         creator.status === 'deleted' && 'opacity-60',
         className
       )}

@@ -4,7 +4,7 @@
  * `keys` field to `useShortcut`. Adding a new shortcut means a single edit
  * here plus a translation key in `shortcuts.json`.
  */
-export type ShortcutGroup = 'global' | 'navigation' | 'player'
+export type ShortcutGroup = 'global' | 'navigation' | 'list' | 'forms' | 'player'
 
 export interface ShortcutEntry {
   id: string
@@ -33,6 +33,16 @@ export const SHORTCUTS: readonly ShortcutEntry[] = [
   { id: 'nav.tags', group: 'navigation', keys: 'g t', descriptionKey: 'entries.navTags' },
   { id: 'nav.activity', group: 'navigation', keys: 'g a', descriptionKey: 'entries.navActivity' },
   { id: 'nav.search', group: 'navigation', keys: 'g s', descriptionKey: 'entries.navSearch' },
+  { id: 'nav.back', group: 'navigation', keys: 'escape', descriptionKey: 'entries.navBack' },
+
+  // ── List navigation (active when a grid/table has keyboard focus) ──
+  { id: 'list.next', group: 'list', keys: 'j', descriptionKey: 'entries.listNext' },
+  { id: 'list.prev', group: 'list', keys: 'k', descriptionKey: 'entries.listPrev' },
+  { id: 'list.open', group: 'list', keys: 'enter', descriptionKey: 'entries.listOpen' },
+  { id: 'list.delete', group: 'list', keys: 'd', descriptionKey: 'entries.listDelete' },
+
+  // ── Forms (in dialogs and multi-line inputs) ──
+  { id: 'forms.submit', group: 'forms', keys: 'mod+enter', descriptionKey: 'entries.formsSubmit' },
 
   // ── Player (active when persistent player is in detail mode) ──
   { id: 'player.playPause', group: 'player', keys: ' ', descriptionKey: 'entries.playerPlayPause' },
@@ -88,7 +98,13 @@ export const SHORTCUTS: readonly ShortcutEntry[] = [
   }
 ] as const
 
-export const GROUPS: readonly ShortcutGroup[] = ['global', 'navigation', 'player'] as const
+export const GROUPS: readonly ShortcutGroup[] = [
+  'global',
+  'navigation',
+  'list',
+  'forms',
+  'player'
+] as const
 
 export function shortcutsByGroup(group: ShortcutGroup): ShortcutEntry[] {
   return SHORTCUTS.filter((s) => s.group === group)

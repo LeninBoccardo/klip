@@ -1,7 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useVideoById, useFetchVideoDetail, useTranscript } from '@/hooks/use-videos'
 import { usePlayerStore } from '@/hooks/use-player-store'
+import { useShortcut } from '@/hooks/use-shortcut'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
@@ -37,6 +38,7 @@ export const Route = createFileRoute('/videos/$videoId')({
 function VideoDetailPage(): React.ReactElement {
   const { t } = useTranslation('videos')
   const { videoId } = Route.useParams()
+  const router = useRouter()
   const { data: video, isLoading } = useVideoById(videoId)
   const fetchDetail = useFetchVideoDetail()
   const transcriptQuery = useTranscript(videoId)
@@ -45,6 +47,9 @@ function VideoDetailPage(): React.ReactElement {
   const setMode = usePlayerStore((s) => s.setMode)
   const activeVideoId = usePlayerStore((s) => s.videoId)
   const playerMode = usePlayerStore((s) => s.mode)
+
+  useShortcut('escape', () => router.history.back())
+  useShortcut('backspace', () => router.history.back())
 
   // If the user navigates to this page while the same video is in mini /
   // paused mode, promote the player back to in-page detail attachment so the

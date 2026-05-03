@@ -18,8 +18,22 @@
     "apply": "Apply",
     "copy": "Copy",
     "copyAll": "Copy All",
+    "copyTitle": "Copy title",
+    "copyLink": "Copy link",
+    "copyName": "Copy name",
+    "copyTag": "Copy tag",
+    "openOnYoutube": "Open on YouTube",
+    "revealInFolder": "Reveal in folder",
+    "openFolder": "Open folder",
     "reload": "Reload",
     "refresh": "Refresh"
+  },
+  "toasts": {
+    "copied": "Copied to clipboard",
+    "copyFailed": "Failed to copy: {{message}}",
+    "revealFailed": "Failed to reveal in folder: {{message}}",
+    "openExternalFailed": "Failed to open link: {{message}}",
+    "openFolderFailed": "Failed to open folder: {{message}}"
   },
   "states": {
     "loading": "Loading…",
@@ -31,6 +45,9 @@
       "updating_db": "Updating database…",
       "reconciling": "Reconciling…"
     }
+  },
+  "a11y": {
+    "skipToMain": "Skip to main content"
   },
   "errors": {
     "notFoundTitle": "Page not found",

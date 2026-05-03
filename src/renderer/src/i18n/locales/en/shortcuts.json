@@ -4,6 +4,8 @@
   "groups": {
     "global": "Global",
     "navigation": "Navigation",
+    "list": "Lists & grids",
+    "forms": "Forms",
     "player": "Player"
   },
   "entries": {
@@ -17,6 +19,12 @@
     "navTags": "Go to tags",
     "navActivity": "Go to activity",
     "navSearch": "Go to transcript search",
+    "navBack": "Back to previous page",
+    "listNext": "Focus next item",
+    "listPrev": "Focus previous item",
+    "listOpen": "Open focused item",
+    "listDelete": "Delete focused item",
+    "formsSubmit": "Submit form",
     "playerPlayPause": "Play / pause",
     "playerPauseK": "Pause",
     "playerSeekBack10": "Seek -10s",

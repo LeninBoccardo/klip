@@ -32,6 +32,8 @@ export function VirtualAuditList({ entries }: VirtualAuditListProps): React.Reac
   return (
     <div ref={scrollParentRef} className="max-h-[calc(100vh-280px)] overflow-y-auto">
       <ul
+        aria-live="polite"
+        aria-relevant="additions"
         className="relative w-full"
         style={{ height: `${virtualizer.getTotalSize()}px` }}
       >
