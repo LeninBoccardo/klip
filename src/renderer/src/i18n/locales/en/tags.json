@@ -7,6 +7,46 @@
     "createOption": "Create “{{name}}”",
     "removeAria": "Remove tag {{tag}}"
   },
+  "manage": {
+    "pageTitle": "Tags",
+    "pageDescription": "Rename, merge, and delete tags across your library",
+    "searchPlaceholder": "Filter tags...",
+    "empty": {
+      "title": "No tags yet",
+      "withoutFilters": "Tag your videos and cuts to manage them here.",
+      "withFilters": "No tags match the current filter."
+    },
+    "table": {
+      "tag": "Tag",
+      "videos": "Videos",
+      "cuts": "Cuts",
+      "total": "Total",
+      "actions": "Actions"
+    },
+    "actions": {
+      "rename": "Rename",
+      "delete": "Delete"
+    },
+    "rename": {
+      "title": "Rename tag",
+      "description": "Rewrite this tag across every video and cut that carries it.",
+      "fromLabel": "Current name",
+      "toLabel": "New name",
+      "submit": "Rename",
+      "mergeWarning": "“{{name}}” already exists. Saving will merge them."
+    },
+    "delete": {
+      "title": "Delete tag",
+      "description": "Remove “{{name}}” from {{videoCount}} video(s) and {{cutCount}} cut(s). This can be undone by re-adding the tag.",
+      "submit": "Delete"
+    },
+    "toasts": {
+      "renamed": "Renamed “{{from}}” to “{{to}}” ({{videos}} videos, {{cuts}} cuts)",
+      "renameFailed": "Rename failed: {{message}}",
+      "deleted": "Removed “{{name}}” from {{videos}} videos and {{cuts}} cuts",
+      "deleteFailed": "Delete failed: {{message}}"
+    }
+  },
   "bulk": {
     "selected_one": "{{count}} selected",
     "selected_other": "{{count}} selected",

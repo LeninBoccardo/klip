@@ -103,6 +103,20 @@ const rows: Row[] = [
     accept: ['v-1', 200],
     reject: [['v-1', 0], ['v-1', 5001], ['v-1', 1.5], ['v-1', Infinity], [42]]
   },
+  {
+    channel: 'move-videos-to-creator',
+    accept: [{ videoIds: ['v-1', 'v-2'], targetCreatorId: 'mrbeast' }],
+    reject: [
+      // empty videoIds
+      [{ videoIds: [], targetCreatorId: 'mrbeast' }],
+      // empty targetCreatorId
+      [{ videoIds: ['v-1'], targetCreatorId: '' }],
+      // batch over 5K cap
+      [{ videoIds: Array(5001).fill('v-1'), targetCreatorId: 'mrbeast' }],
+      // wrong shape
+      [{ videoIds: 'v-1', targetCreatorId: 'mrbeast' }]
+    ]
+  },
 
   // ── Cuts ──
   { channel: 'get-cuts-paginated', accept: [validCutQueryParams], reject: [[{}]] },
@@ -173,6 +187,24 @@ const rows: Row[] = [
       ['query', 1e6]
     ]
   },
+  {
+    channel: 'search-transcripts',
+    accept: [{ query: 'hello', limit: 10, offset: 0 }],
+    reject: [
+      // missing required fields
+      [{ query: 'hello', limit: 10 }],
+      [{ query: 'hello', offset: 0 }],
+      // limit out of bounds
+      [{ query: 'hello', limit: 0, offset: 0 }],
+      [{ query: 'hello', limit: 201, offset: 0 }],
+      // offset out of bounds
+      [{ query: 'hello', limit: 10, offset: -1 }],
+      // query too long (1024 cap)
+      [{ query: longString(1025), limit: 10, offset: 0 }],
+      // wrong types
+      [{ query: 42, limit: 10, offset: 0 }]
+    ]
+  },
 
   // ── Shell ──
   {
@@ -218,6 +250,11 @@ const rows: Row[] = [
       [longString(65), 'new'],
       ['old', longString(65)]
     ]
+  },
+  {
+    channel: 'delete-tag-globally',
+    accept: ['wip'],
+    reject: [[''], [longString(65)], [42]]
   },
 
   // ── Settings ──

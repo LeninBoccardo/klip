@@ -62,6 +62,7 @@ export class FetchVideoDetail implements IFetchVideoDetail {
       description: detail.description ?? video.description,
       isShort: detail.isShort,
       transcriptPath,
+      transcriptText,
       detailFetchedAt: now,
       updatedAt: now
     })

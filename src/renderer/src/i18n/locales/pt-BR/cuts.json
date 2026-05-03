@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Cortes",
+    "description": "Explore todos os cortes da sua biblioteca"
+  },
+  "filters": {
+    "searchPlaceholder": "Buscar títulos de cortes...",
+    "creatorAll": "Todos os criadores",
+    "tagsPlaceholder": "Filtrar por tags...",
+    "tagsClear": "Limpar",
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "recent": "Mais recentes",
+      "oldest": "Mais antigos",
+      "longest": "Mais longos",
+      "shortest": "Mais curtos"
+    },
+    "status": {
+      "active": "Ativos",
+      "all": "Todos",
+      "deleted": "Excluídos",
+      "missing": "Ausentes"
+    }
+  },
+  "empty": {
+    "title": "Nenhum corte ainda",
+    "withoutFilters": "Os cortes que você criar aparecerão aqui.",
+    "withFilters": "Nenhum corte corresponde aos filtros atuais."
+  },
+  "toasts": {
+    "deleted": "{{name}} excluído",
+    "restored": "{{name}} restaurado"
+  }
+}

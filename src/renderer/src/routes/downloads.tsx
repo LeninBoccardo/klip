@@ -1,16 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useFetchVideoInfo, useDownloadVideo } from '@/hooks/use-downloads'
+import { useAppStore } from '@/hooks/use-app-store'
 import { UrlInput } from '@components/features/downloads/UrlInput'
 import { VideoInfoPreview } from '@components/features/downloads/VideoInfoPreview'
 import { CreatorSelector } from '@components/features/downloads/CreatorSelector'
 import { ActiveDownloadsList } from '@components/features/downloads/ActiveDownloadsList'
+import { BulkImportDialog } from '@components/features/downloads/BulkImportDialog'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Button } from '@ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/card'
 import { Separator } from '@ui/separator'
-import { Loader2, Download } from 'lucide-react'
+import { Loader2, Download, ListPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import type { VideoInfo } from '@shared/types'
 
@@ -27,6 +29,10 @@ function DownloadsPage(): React.ReactElement {
   const fetchInfo = useFetchVideoInfo()
   const download = useDownloadVideo()
 
+  const pendingDropUrl = useAppStore((s) => s.pendingDropUrl)
+  const setPendingDropUrl = useAppStore((s) => s.setPendingDropUrl)
+  const [bulkOpen, setBulkOpen] = useState(false)
+
   const handleFetchInfo = (url: string): void => {
     setVideoInfo(null)
     fetchInfo.mutate(url, {
@@ -41,6 +47,16 @@ function DownloadsPage(): React.ReactElement {
       onError: (err) => toast.error(t('newDownload.fetchInfoFailed', { message: err.message }))
     })
   }
+
+  useEffect(() => {
+    if (!pendingDropUrl) return
+    const url = pendingDropUrl
+    setPendingDropUrl(null)
+    handleFetchInfo(url)
+    // handleFetchInfo is recreated on every render but only depends on stable
+    // references; we intentionally run this effect once per pending URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDropUrl])
 
   const handleDownload = (): void => {
     if (!fetchedUrl || !creatorName.trim()) {
@@ -65,8 +81,12 @@ function DownloadsPage(): React.ReactElement {
       <PageHeader title={t('page.title')} description={t('page.description')} />
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">{t('newDownload.cardTitle')}</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)}>
+            <ListPlus className="mr-2 size-4" />
+            {t('bulkImport.openButton')}
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <UrlInput onSubmit={handleFetchInfo} isLoading={fetchInfo.isPending} />
@@ -97,6 +117,8 @@ function DownloadsPage(): React.ReactElement {
           <ActiveDownloadsList />
         </CardContent>
       </Card>
+
+      <BulkImportDialog open={bulkOpen} onOpenChange={setBulkOpen} />
     </PageContainer>
   )
 }

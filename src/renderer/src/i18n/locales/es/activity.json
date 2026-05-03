@@ -1,0 +1,37 @@
+{
+  "page": {
+    "title": "Actividad",
+    "description": "Cambios recientes en creadores, videos, cortes y colecciones"
+  },
+  "loadMore": "Cargar más",
+  "empty": {
+    "title": "Aún no hay actividad",
+    "description": "Los cambios en tu biblioteca aparecerán aquí a medida que ocurran."
+  },
+  "history": {
+    "buttonLabel": "Historial",
+    "sheetTitle": "Historial de {{name}}",
+    "sheetDescription": "Cambios registrados para este(a) {{kind}}",
+    "empty": "Aún no hay historial registrado."
+  },
+  "entity": {
+    "creator": "Creador",
+    "video": "Video",
+    "cut": "Corte",
+    "collection": "Colección",
+    "unknown": "Elemento"
+  },
+  "action": {
+    "created": "Creado",
+    "updated": "Actualizado",
+    "deleted": "Eliminado",
+    "cascade_deleted": "Eliminado por el padre",
+    "status_changed": "Estado cambiado",
+    "probe_status_changed": "Análisis actualizado",
+    "bulk_path_update": "Ruta actualizada",
+    "item_added": "Elemento añadido",
+    "item_removed": "Elemento eliminado",
+    "reordered": "Reordenado",
+    "unknown": "Cambiado"
+  }
+}

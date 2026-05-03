@@ -10,7 +10,8 @@ import type {
   TagAggregation,
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
-  RenameTagGloballyResult
+  RenameTagGloballyResult,
+  DeleteTagGloballyResult
 } from '@shared/types'
 
 /**
@@ -64,6 +65,19 @@ export function useRenameTagGlobally(): UseMutationResult<
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ oldTag, newTag }) => window.api.renameTagGlobally(oldTag, newTag),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.tags.all })
+      qc.invalidateQueries({ queryKey: queryKeys.videos.all })
+      qc.invalidateQueries({ queryKey: queryKeys.cuts.all })
+    }
+  })
+}
+
+/** Remove a tag from every active video and cut that carries it. */
+export function useDeleteTagGlobally(): UseMutationResult<DeleteTagGloballyResult, Error, string> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (tag: string) => window.api.deleteTagGlobally(tag),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.tags.all })
       qc.invalidateQueries({ queryKey: queryKeys.videos.all })

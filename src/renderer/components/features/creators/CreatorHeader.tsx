@@ -1,6 +1,14 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Item, ItemMedia, ItemContent, ItemTitle, ItemDescription } from '@/components/ui/item'
+import {
+  Item,
+  ItemMedia,
+  ItemContent,
+  ItemTitle,
+  ItemDescription,
+  ItemActions
+} from '@/components/ui/item'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { HistoryButton } from '@/components/features/activity/HistoryButton'
 import { mediaUrl } from '@/lib/format'
 import type { CreatorDto } from '@shared/dtos'
 
@@ -35,6 +43,9 @@ export function CreatorHeader({ creator }: CreatorHeaderProps): React.ReactEleme
         </ItemTitle>
         <ItemDescription>{creator.folderName}</ItemDescription>
       </ItemContent>
+      <ItemActions>
+        <HistoryButton entityType="creator" entityId={creator.id} entityName={creator.name} />
+      </ItemActions>
     </Item>
   )
 }

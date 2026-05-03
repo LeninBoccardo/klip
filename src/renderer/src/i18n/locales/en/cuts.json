@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Cuts",
+    "description": "Browse all cuts across your library"
+  },
+  "filters": {
+    "searchPlaceholder": "Search cut titles...",
+    "creatorAll": "All creators",
+    "tagsPlaceholder": "Filter by tags...",
+    "tagsClear": "Clear",
+    "sortLabel": "Sort by",
+    "sort": {
+      "recent": "Most recent",
+      "oldest": "Oldest first",
+      "longest": "Longest",
+      "shortest": "Shortest"
+    },
+    "status": {
+      "active": "Active",
+      "all": "All",
+      "deleted": "Deleted",
+      "missing": "Missing"
+    }
+  },
+  "empty": {
+    "title": "No cuts yet",
+    "withoutFilters": "Cuts you create will appear here.",
+    "withFilters": "No cuts match the current filters."
+  },
+  "toasts": {
+    "deleted": "Deleted {{name}}",
+    "restored": "Restored {{name}}"
+  }
+}

@@ -1,8 +1,11 @@
 {
   "groupLabel": "Navigation",
   "library": "Library",
+  "cuts": "Cuts",
+  "tags": "Tags",
   "collections": "Collections",
   "downloads": "Downloads",
+  "activity": "Activity",
   "settings": "Settings",
   "about": "About",
   "search": "Search",

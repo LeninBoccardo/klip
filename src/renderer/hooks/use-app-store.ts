@@ -14,6 +14,12 @@ interface AppState {
   /** Blocking operation (non-dismissable dialog) — null when idle */
   blockingOperation: BlockingOperation | null
 
+  /**
+   * URL handed off from a drag-and-drop or other one-shot ingestion path.
+   * Set by the global drop handler; consumed by the downloads page on mount.
+   */
+  pendingDropUrl: string | null
+
   /** Insert or update a download progress entry */
   upsertDownload: (progress: DownloadProgress) => void
   /** Remove a completed/cancelled download from the map */
@@ -27,11 +33,14 @@ interface AppState {
   updateBlockingProgress: (progress: MigrateRootProgress) => void
   /** End the blocking operation (closes dialog) */
   endBlockingOperation: () => void
+
+  setPendingDropUrl: (url: string | null) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
   activeDownloads: {},
   blockingOperation: null,
+  pendingDropUrl: null,
 
   upsertDownload: (progress) =>
     set((state) => ({
@@ -64,5 +73,7 @@ export const useAppStore = create<AppState>((set) => ({
       blockingOperation: state.blockingOperation ? { ...state.blockingOperation, progress } : null
     })),
 
-  endBlockingOperation: () => set({ blockingOperation: null })
+  endBlockingOperation: () => set({ blockingOperation: null }),
+
+  setPendingDropUrl: (url) => set({ pendingDropUrl: url })
 }))

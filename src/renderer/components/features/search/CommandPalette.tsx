@@ -12,14 +12,15 @@ import {
   CommandShortcut
 } from '@ui/command'
 import { Badge } from '@ui/badge'
-import { useSearchAll } from '@/hooks/use-search'
+import { useSearchAll, useSearchTranscripts } from '@/hooks/use-search'
 import {
   useRecentEntities,
   type RecentEntity,
   type RecentEntityKind
 } from '@/hooks/use-recent-entities'
 import { toast } from 'sonner'
-import { User, Film, Scissors, Tag, Loader2, Clock } from 'lucide-react'
+import { User, Film, Scissors, Tag, Loader2, Clock, Captions, ArrowRight } from 'lucide-react'
+import { TranscriptSnippet } from './TranscriptSnippet'
 
 /**
  * Global command palette for cross-entity search (Cmd/Ctrl+K, `/`).
@@ -45,6 +46,7 @@ export function CommandPalette({
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const search = useSearchAll(query)
+  const transcriptSearch = useSearchTranscripts(query, { limit: 3 })
   const { recents, addRecent } = useRecentEntities()
 
   // Reset the input when the palette closes so reopening starts fresh.
@@ -89,6 +91,17 @@ export function CommandPalette({
 
   const handleTagSelect = (tag: string): void => {
     toast.info(t('tagFilterToast', { tag }))
+    close()
+  }
+
+  const handleTranscriptSelect = (videoId: string, title: string): void => {
+    addRecent({ kind: 'video', id: videoId, label: title })
+    navigate({ to: '/videos/$videoId', params: { videoId } })
+    close()
+  }
+
+  const handleSeeAllTranscripts = (): void => {
+    navigate({ to: '/search', search: { q: trimmed } })
     close()
   }
 
@@ -138,9 +151,13 @@ export function CommandPalette({
           <CommandEmpty>{t('empty.error')}</CommandEmpty>
         )}
 
-        {!showRecents && !isLoading && data && isEmpty(data) && (
-          <CommandEmpty>{t('empty.noResults', { query: trimmed })}</CommandEmpty>
-        )}
+        {!showRecents &&
+          !isLoading &&
+          data &&
+          isEmpty(data) &&
+          (transcriptSearch.data?.hits.length ?? 0) === 0 && (
+            <CommandEmpty>{t('empty.noResults', { query: trimmed })}</CommandEmpty>
+          )}
 
         {!showRecents && data && data.creators.length > 0 && (
           <CommandGroup heading={t('groups.creators')}>
@@ -212,6 +229,40 @@ export function CommandPalette({
                   </CommandShortcut>
                 </CommandItem>
               ))}
+            </CommandGroup>
+          </>
+        )}
+
+        {!showRecents && transcriptSearch.data && transcriptSearch.data.hits.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading={t('groups.transcripts')}>
+              {transcriptSearch.data.hits.map((hit) => (
+                <CommandItem
+                  key={`transcript:${hit.videoId}`}
+                  value={`transcript-${hit.videoId}-${hit.title}`}
+                  onSelect={() => handleTranscriptSelect(hit.videoId, hit.title)}
+                >
+                  <Captions />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate">{hit.title}</span>
+                    {hit.snippet && (
+                      <TranscriptSnippet
+                        snippet={hit.snippet}
+                        className="line-clamp-2 text-xs text-muted-foreground"
+                      />
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+              <CommandItem
+                value={`transcripts-see-all-${trimmed}`}
+                onSelect={handleSeeAllTranscripts}
+                className="text-primary"
+              >
+                <ArrowRight />
+                <span>{t('transcripts.seeAll')}</span>
+              </CommandItem>
             </CommandGroup>
           </>
         )}

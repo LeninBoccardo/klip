@@ -14,6 +14,8 @@ import enCollections from './locales/en/collections.json'
 import enPlayer from './locales/en/player.json'
 import enAbout from './locales/en/about.json'
 import enTags from './locales/en/tags.json'
+import enCuts from './locales/en/cuts.json'
+import enActivity from './locales/en/activity.json'
 
 import ptBRCommon from './locales/pt-BR/common.json'
 import ptBRNavigation from './locales/pt-BR/navigation.json'
@@ -27,6 +29,8 @@ import ptBRCollections from './locales/pt-BR/collections.json'
 import ptBRPlayer from './locales/pt-BR/player.json'
 import ptBRAbout from './locales/pt-BR/about.json'
 import ptBRTags from './locales/pt-BR/tags.json'
+import ptBRCuts from './locales/pt-BR/cuts.json'
+import ptBRActivity from './locales/pt-BR/activity.json'
 
 import esCommon from './locales/es/common.json'
 import esNavigation from './locales/es/navigation.json'
@@ -40,6 +44,8 @@ import esCollections from './locales/es/collections.json'
 import esPlayer from './locales/es/player.json'
 import esAbout from './locales/es/about.json'
 import esTags from './locales/es/tags.json'
+import esCuts from './locales/es/cuts.json'
+import esActivity from './locales/es/activity.json'
 
 /**
  * i18next bootstrap — synchronous and offline. All resources are statically
@@ -60,7 +66,9 @@ export const resources = {
     collections: enCollections,
     player: enPlayer,
     about: enAbout,
-    tags: enTags
+    tags: enTags,
+    cuts: enCuts,
+    activity: enActivity
   },
   'pt-BR': {
     common: ptBRCommon,
@@ -74,7 +82,9 @@ export const resources = {
     collections: ptBRCollections,
     player: ptBRPlayer,
     about: ptBRAbout,
-    tags: ptBRTags
+    tags: ptBRTags,
+    cuts: ptBRCuts,
+    activity: ptBRActivity
   },
   es: {
     common: esCommon,
@@ -88,7 +98,9 @@ export const resources = {
     collections: esCollections,
     player: esPlayer,
     about: esAbout,
-    tags: esTags
+    tags: esTags,
+    cuts: esCuts,
+    activity: esActivity
   }
 } as const
 
@@ -109,7 +121,9 @@ void i18n.use(initReactI18next).init({
     'collections',
     'player',
     'about',
-    'tags'
+    'tags',
+    'cuts',
+    'activity'
   ],
   interpolation: {
     // React already escapes by default — double-escaping breaks accents.

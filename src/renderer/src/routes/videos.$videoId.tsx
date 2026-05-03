@@ -27,6 +27,7 @@ import { useEffect, useState } from 'react'
 import { CommentsTab } from '@components/features/videos/CommentsTab'
 import { EditableTagsCard } from '@components/features/videos/EditableTagsCard'
 import { DetailPlayerSlot } from '@components/features/player/DetailPlayerSlot'
+import { HistoryButton } from '@components/features/activity/HistoryButton'
 
 export const Route = createFileRoute('/videos/$videoId')({
   component: VideoDetailPage
@@ -109,6 +110,7 @@ function VideoDetailPage(): React.ReactElement {
         }
         actions={
           <div className="flex items-center gap-2">
+            <HistoryButton entityType="video" entityId={video.id} entityName={video.title} />
             <Button variant="outline" onClick={handleOpenExternal}>
               <ExternalLink className="mr-2 size-4" />
               {t('detail.openExternally')}

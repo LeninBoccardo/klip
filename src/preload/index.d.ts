@@ -22,6 +22,7 @@ import type {
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
   RenameTagGloballyResult,
+  DeleteTagGloballyResult,
   SearchAllResult,
   CreateCollectionRequest,
   RenameCollectionRequest,
@@ -30,7 +31,11 @@ import type {
   RemoveFromCollectionRequest,
   ReorderCollectionRequest,
   RegisterCreatorRequest,
-  RegisterCreatorResult
+  RegisterCreatorResult,
+  MoveVideosToCreatorRequest,
+  MoveVideosToCreatorResult,
+  SearchTranscriptsParams,
+  TranscriptSearchResult
 } from '@shared/types'
 import type {
   CreatorDto,
@@ -69,6 +74,7 @@ interface KlipAPI {
   enrichAllVideos(): Promise<EnrichVideosResult>
   getTranscript(videoId: string): Promise<string | null>
   fetchVideoComments(videoId: string, maxComments?: number): Promise<VideoCommentsResult>
+  moveVideosToCreator(request: MoveVideosToCreatorRequest): Promise<MoveVideosToCreatorResult>
 
   // ── Cuts ──
   getCutsPaginated(params: CutQueryParams): Promise<PaginatedResult<CutDto>>
@@ -90,6 +96,7 @@ interface KlipAPI {
 
   // ── Search ──
   searchAll(query: string, limit?: number): Promise<SearchAllResult>
+  searchTranscripts(params: SearchTranscriptsParams): Promise<TranscriptSearchResult>
 
   // ── Shell ──
   openMediaExternally(kind: 'video' | 'cut', id: string): Promise<{ ok: boolean; error?: string }>
@@ -98,6 +105,7 @@ interface KlipAPI {
   getAllDistinctTags(): Promise<TagAggregation[]>
   bulkUpdateTags(request: BulkUpdateTagsRequest): Promise<BulkUpdateTagsResult>
   renameTagGlobally(oldTag: string, newTag: string): Promise<RenameTagGloballyResult>
+  deleteTagGlobally(tag: string): Promise<DeleteTagGloballyResult>
 
   // ── Settings ──
   getSettings(): Promise<Record<string, string>>

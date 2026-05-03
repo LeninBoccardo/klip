@@ -115,6 +115,14 @@ export const ipcSchemas = {
     z.tuple([z.string()]),
     z.tuple([z.string(), z.int().min(1).max(5000)])
   ]),
+  'move-videos-to-creator': z.tuple([
+    z.object({
+      // Same 5K cap as bulk-update-tags — protects the use case from XSS-driven
+      // oversized batches; matches the documented scaling baseline (audit 03).
+      videoIds: z.array(z.string().min(1)).min(1).max(5000),
+      targetCreatorId: z.string().min(1).max(200)
+    })
+  ]),
 
   // ── Cuts ──
   'get-cuts-paginated': z.tuple([cutQueryParamsSchema]),
@@ -178,6 +186,15 @@ export const ipcSchemas = {
   // exhaust the use case (default and per-surface caps applied there). The
   // explicit 100 cap matches the UI command-palette ceiling.
   'search-all': z.union([z.tuple([z.string()]), z.tuple([z.string(), z.int().min(1).max(100)])]),
+  'search-transcripts': z.tuple([
+    z.object({
+      // 1024 chars covers any plausible search and stops a renderer-XSS payload
+      // that builds a giant FTS phrase from blowing up the matcher.
+      query: z.string().max(1024),
+      limit: z.int().min(1).max(200),
+      offset: z.int().min(0).max(100_000)
+    })
+  ]),
 
   // ── Shell ──
   // Kind allowlist mirrors the contract; the controller maps these to
@@ -188,6 +205,7 @@ export const ipcSchemas = {
   'get-all-distinct-tags': z.tuple([]),
   'bulk-update-tags': z.tuple([bulkUpdateTagsRequestSchema]),
   'rename-tag-globally': z.tuple([tagSchema, tagSchema]),
+  'delete-tag-globally': z.tuple([tagSchema]),
 
   // ── Settings ──
   'get-settings': z.tuple([]),

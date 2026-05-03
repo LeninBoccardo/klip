@@ -71,5 +71,19 @@
     "editAria": "Edit tags",
     "updated": "Tags updated",
     "updateFailed": "Failed to update tags: {{message}}"
+  },
+  "move": {
+    "buttonLabel": "Move to creator",
+    "title": "Move {{count}} video(s) to a creator",
+    "description": "Select a destination creator. Files on disk are moved automatically.",
+    "creatorLabel": "Destination creator",
+    "creatorPlaceholder": "Pick a creator...",
+    "registerNew": "Register a new creator...",
+    "submit": "Move",
+    "movedToast_one": "Moved {{count}} video",
+    "movedToast_other": "Moved {{count}} videos",
+    "skippedNote": "{{count}} skipped (already in target or unavailable)",
+    "errorsNote": "{{count}} failed",
+    "moveFailed": "Move failed: {{message}}"
   }
 }

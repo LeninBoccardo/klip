@@ -1,8 +1,11 @@
 {
   "groupLabel": "Navegación",
   "library": "Biblioteca",
+  "cuts": "Cortes",
+  "tags": "Etiquetas",
   "collections": "Colecciones",
   "downloads": "Descargas",
+  "activity": "Actividad",
   "settings": "Configuración",
   "about": "Acerca de",
   "search": "Buscar",

@@ -21,6 +21,7 @@ import type {
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
   RenameTagGloballyResult,
+  DeleteTagGloballyResult,
   SearchAllResult,
   CreateCollectionRequest,
   RenameCollectionRequest,
@@ -29,7 +30,11 @@ import type {
   RemoveFromCollectionRequest,
   ReorderCollectionRequest,
   RegisterCreatorRequest,
-  RegisterCreatorResult
+  RegisterCreatorResult,
+  MoveVideosToCreatorRequest,
+  MoveVideosToCreatorResult,
+  SearchTranscriptsParams,
+  TranscriptSearchResult
 } from './types'
 import type {
   CreatorDto,
@@ -83,6 +88,10 @@ export interface IpcContract {
     params: [videoId: string, maxComments?: number]
     result: VideoCommentsResult
   }
+  'move-videos-to-creator': {
+    params: [request: MoveVideosToCreatorRequest]
+    result: MoveVideosToCreatorResult
+  }
 
   // ── Cuts ──
   'get-cuts-paginated': {
@@ -98,6 +107,10 @@ export interface IpcContract {
   'search-all': {
     params: [query: string, limit?: number]
     result: SearchAllResult
+  }
+  'search-transcripts': {
+    params: [params: SearchTranscriptsParams]
+    result: TranscriptSearchResult
   }
 
   // ── Shell ──
@@ -142,6 +155,10 @@ export interface IpcContract {
   'rename-tag-globally': {
     params: [oldTag: string, newTag: string]
     result: RenameTagGloballyResult
+  }
+  'delete-tag-globally': {
+    params: [tag: string]
+    result: DeleteTagGloballyResult
   }
 
   // ── Settings ──

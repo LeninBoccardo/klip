@@ -71,5 +71,19 @@
     "editAria": "Editar etiquetas",
     "updated": "Etiquetas actualizadas",
     "updateFailed": "Error al actualizar etiquetas: {{message}}"
+  },
+  "move": {
+    "buttonLabel": "Mover a creador",
+    "title": "Mover {{count}} video(s) a un creador",
+    "description": "Selecciona un creador de destino. Los archivos en disco se mueven automáticamente.",
+    "creatorLabel": "Creador de destino",
+    "creatorPlaceholder": "Elige un creador...",
+    "registerNew": "Registrar un nuevo creador...",
+    "submit": "Mover",
+    "movedToast_one": "{{count}} video movido",
+    "movedToast_other": "{{count}} videos movidos",
+    "skippedNote": "{{count}} omitido(s) (ya en destino o no disponible)",
+    "errorsNote": "{{count}} fallaron",
+    "moveFailed": "Error al mover: {{message}}"
   }
 }

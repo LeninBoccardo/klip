@@ -1,0 +1,37 @@
+{
+  "page": {
+    "title": "Atividade",
+    "description": "Mudanças recentes em criadores, vídeos, cortes e coleções"
+  },
+  "loadMore": "Carregar mais",
+  "empty": {
+    "title": "Nenhuma atividade ainda",
+    "description": "As alterações na sua biblioteca aparecerão aqui conforme acontecem."
+  },
+  "history": {
+    "buttonLabel": "Histórico",
+    "sheetTitle": "Histórico de {{name}}",
+    "sheetDescription": "Alterações registradas para este(a) {{kind}}",
+    "empty": "Nenhum histórico registrado ainda."
+  },
+  "entity": {
+    "creator": "Criador",
+    "video": "Vídeo",
+    "cut": "Corte",
+    "collection": "Coleção",
+    "unknown": "Item"
+  },
+  "action": {
+    "created": "Criado",
+    "updated": "Atualizado",
+    "deleted": "Excluído",
+    "cascade_deleted": "Excluído pelo pai",
+    "status_changed": "Status alterado",
+    "probe_status_changed": "Análise atualizada",
+    "bulk_path_update": "Caminho atualizado",
+    "item_added": "Item adicionado",
+    "item_removed": "Item removido",
+    "reordered": "Reordenado",
+    "unknown": "Alterado"
+  }
+}

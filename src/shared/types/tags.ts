@@ -35,3 +35,8 @@ export interface RenameTagGloballyResult {
   videosUpdated: number
   cutsUpdated: number
 }
+
+export interface DeleteTagGloballyResult {
+  videosUpdated: number
+  cutsUpdated: number
+}

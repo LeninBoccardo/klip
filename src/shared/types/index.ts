@@ -36,8 +36,19 @@ export type {
   TagAggregation,
   BulkUpdateTagsRequest,
   BulkUpdateTagsResult,
-  RenameTagGloballyResult
+  RenameTagGloballyResult,
+  DeleteTagGloballyResult
 } from './tags'
+export type { MoveVideosToCreatorRequest, MoveVideosToCreatorResult } from './move-videos'
+export type {
+  TranscriptSearchHit,
+  TranscriptSearchResult,
+  SearchTranscriptsParams
+} from './transcript-search'
+export {
+  TRANSCRIPT_SNIPPET_OPEN,
+  TRANSCRIPT_SNIPPET_CLOSE
+} from './transcript-search'
 export type { DbUpdateScope, DbUpdatedPayload } from './notification-events'
 export type { SearchAllResult } from './search'
 export type {

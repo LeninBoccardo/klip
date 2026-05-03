@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import type { SearchAllResult } from '@shared/types'
+import type { SearchAllResult, TranscriptSearchResult } from '@shared/types'
 
 const DEFAULT_DEBOUNCE_MS = 200
 const DEFAULT_LIMIT = 8
@@ -49,6 +49,36 @@ export function useSearchAll(
   return useQuery({
     queryKey: queryKeys.search.query(debounced, limit),
     queryFn: () => window.api.searchAll(debounced, limit),
+    enabled: debounced.length > 0,
+    staleTime: 5_000
+  })
+}
+
+interface UseSearchTranscriptsOptions {
+  /** Debounce window before firing the IPC call. Defaults to 200ms. */
+  debounceMs?: number
+  /** Page size. */
+  limit?: number
+  /** Pagination offset (rows). */
+  offset?: number
+}
+
+/**
+ * Reactive transcript-FTS hook. Same debounce + short-circuit semantics as
+ * `useSearchAll`. Hits include a snippet with `<<<term>>>` markers; consumers
+ * format them via {@link renderSnippet}.
+ */
+export function useSearchTranscripts(
+  query: string,
+  options: UseSearchTranscriptsOptions = {}
+): UseQueryResult<TranscriptSearchResult, Error> {
+  const debounced = useDebouncedValue(query.trim(), options.debounceMs ?? DEFAULT_DEBOUNCE_MS)
+  const limit = options.limit ?? DEFAULT_LIMIT
+  const offset = options.offset ?? 0
+
+  return useQuery({
+    queryKey: queryKeys.search.transcripts(debounced, limit, offset),
+    queryFn: () => window.api.searchTranscripts({ query: debounced, limit, offset }),
     enabled: debounced.length > 0,
     staleTime: 5_000
   })

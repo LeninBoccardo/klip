@@ -37,10 +37,14 @@ import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
+import type { IMoveVideosToCreator } from '@use-cases/IMoveVideosToCreator'
+import type { ISearchTranscripts } from '@use-cases/ISearchTranscripts'
+import type { IBackfillTranscriptIndex } from '@use-cases/IBackfillTranscriptIndex'
 import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
 import type { IGetAllDistinctTags } from '@use-cases/IGetAllDistinctTags'
 import type { IBulkUpdateTags } from '@use-cases/IBulkUpdateTags'
 import type { IRenameTagGlobally } from '@use-cases/IRenameTagGlobally'
+import type { IDeleteTagGlobally } from '@use-cases/IDeleteTagGlobally'
 import type { ISearchAll } from '@use-cases/ISearchAll'
 import type { ICreateCollection } from '@use-cases/ICreateCollection'
 import type { IRenameCollection } from '@use-cases/IRenameCollection'
@@ -63,7 +67,8 @@ import {
   AuditedCreatorRepository,
   AuditedVideoRepository,
   AuditedCutRepository,
-  AuditedCollectionRepository
+  AuditedCollectionRepository,
+  SqliteVideoTranscriptIndex
 } from './interface-adapters/repositories'
 import {
   NodeFileSystemReader,
@@ -100,6 +105,10 @@ import { ResolveMediaUrl } from '@use-cases/ResolveMediaUrl'
 import { GetAllDistinctTags } from '@use-cases/GetAllDistinctTags'
 import { BulkUpdateTags } from '@use-cases/BulkUpdateTags'
 import { RenameTagGlobally } from '@use-cases/RenameTagGlobally'
+import { DeleteTagGlobally } from '@use-cases/DeleteTagGlobally'
+import { MoveVideosToCreator } from '@use-cases/MoveVideosToCreator'
+import { SearchTranscripts } from '@use-cases/SearchTranscripts'
+import { BackfillTranscriptIndex } from '@use-cases/BackfillTranscriptIndex'
 import { SearchAll } from '@use-cases/SearchAll'
 import { CreateCollection } from '@use-cases/CreateCollection'
 import { RenameCollection } from '@use-cases/RenameCollection'
@@ -154,10 +163,14 @@ export interface AppContainer {
     fetchVideoDetail: IFetchVideoDetail
     enrichAllVideos: IEnrichAllVideos
     fetchVideoComments: IFetchVideoComments
+    moveVideosToCreator: IMoveVideosToCreator
+    searchTranscripts: ISearchTranscripts
+    backfillTranscriptIndex: IBackfillTranscriptIndex
     resolveMediaUrl: IResolveMediaUrl
     getAllDistinctTags: IGetAllDistinctTags
     bulkUpdateTags: IBulkUpdateTags
     renameTagGlobally: IRenameTagGlobally
+    deleteTagGlobally: IDeleteTagGlobally
     searchAll: ISearchAll
     createCollection: ICreateCollection
     renameCollection: IRenameCollection
@@ -319,6 +332,23 @@ export function createAppContainer(config: AppConfig): AppContainer {
   )
 
   const fetchVideoComments = new FetchVideoComments(videoRepo, videoDownloader)
+  const moveVideosToCreator = new MoveVideosToCreator(
+    videoRepo,
+    creatorRepo,
+    fsReader,
+    fsWriter,
+    pathResolver,
+    notifier,
+    rootPathRef
+  )
+
+  // ── Transcript FTS5 search + backfill ──
+  // The index talks to the raw better-sqlite3 handle since virtual tables
+  // aren't modelled by Drizzle. Backfill runs once at boot to seed the FTS
+  // table for any videos that pre-existed migration 0009.
+  const transcriptIndex = new SqliteVideoTranscriptIndex(database.raw)
+  const searchTranscripts = new SearchTranscripts(transcriptIndex)
+  const backfillTranscriptIndex = new BackfillTranscriptIndex(transcriptIndex, fsReader)
 
   // ── Tag aggregation + bulk + global rename use cases ──
   // Repos here are the audited decorators, so per-entity audit log entries
@@ -327,6 +357,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const getAllDistinctTags = new GetAllDistinctTags(videoRepo, cutRepo)
   const bulkUpdateTags = new BulkUpdateTags(videoRepo, cutRepo, transactionScope, notifier)
   const renameTagGlobally = new RenameTagGlobally(videoRepo, cutRepo, transactionScope, notifier)
+  const deleteTagGlobally = new DeleteTagGlobally(videoRepo, cutRepo, transactionScope, notifier)
 
   // Search reuses the audited read methods (delegated to inner repos) and the
   // tag aggregator so the palette stays consistent with the rest of the UI.
@@ -417,10 +448,14 @@ export function createAppContainer(config: AppConfig): AppContainer {
       fetchVideoDetail,
       enrichAllVideos,
       fetchVideoComments,
+      moveVideosToCreator,
+      searchTranscripts,
+      backfillTranscriptIndex,
       resolveMediaUrl,
       getAllDistinctTags,
       bulkUpdateTags,
       renameTagGlobally,
+      deleteTagGlobally,
       searchAll,
       createCollection,
       renameCollection,

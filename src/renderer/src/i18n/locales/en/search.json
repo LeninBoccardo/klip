@@ -13,7 +13,19 @@
     "creators": "Creators",
     "videos": "Videos",
     "cuts": "Cuts",
-    "tags": "Tags"
+    "tags": "Tags",
+    "transcripts": "In transcripts"
+  },
+  "transcripts": {
+    "seeAll": "See all transcript matches",
+    "pageTitle": "Transcript search",
+    "pageDescription": "Find any moment someone said something across your library.",
+    "placeholder": "Search inside transcripts...",
+    "noResults": "No transcript matches for “{{query}}”.",
+    "totalApproximate_one": "{{count}} match",
+    "totalApproximate_other": "{{count}} matches",
+    "totalCapped": "1000+ matches",
+    "loadMore": "Load more"
   },
   "kinds": {
     "creator": "creator",

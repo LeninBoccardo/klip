@@ -7,6 +7,46 @@
     "createOption": "Crear “{{name}}”",
     "removeAria": "Quitar etiqueta {{tag}}"
   },
+  "manage": {
+    "pageTitle": "Etiquetas",
+    "pageDescription": "Renombra, fusiona y elimina etiquetas en toda la biblioteca",
+    "searchPlaceholder": "Filtrar etiquetas...",
+    "empty": {
+      "title": "Aún no hay etiquetas",
+      "withoutFilters": "Etiqueta tus videos y cortes para gestionarlos aquí.",
+      "withFilters": "Ninguna etiqueta coincide con el filtro actual."
+    },
+    "table": {
+      "tag": "Etiqueta",
+      "videos": "Videos",
+      "cuts": "Cortes",
+      "total": "Total",
+      "actions": "Acciones"
+    },
+    "actions": {
+      "rename": "Renombrar",
+      "delete": "Eliminar"
+    },
+    "rename": {
+      "title": "Renombrar etiqueta",
+      "description": "Reescribe esta etiqueta en cada video y corte que la lleva.",
+      "fromLabel": "Nombre actual",
+      "toLabel": "Nuevo nombre",
+      "submit": "Renombrar",
+      "mergeWarning": "“{{name}}” ya existe. Guardar las fusionará."
+    },
+    "delete": {
+      "title": "Eliminar etiqueta",
+      "description": "Quitar “{{name}}” de {{videoCount}} video(s) y {{cutCount}} corte(s). Puedes deshacer agregando la etiqueta nuevamente.",
+      "submit": "Eliminar"
+    },
+    "toasts": {
+      "renamed": "“{{from}}” renombrada a “{{to}}” ({{videos}} videos, {{cuts}} cortes)",
+      "renameFailed": "Falló el renombrado: {{message}}",
+      "deleted": "“{{name}}” eliminada de {{videos}} videos y {{cuts}} cortes",
+      "deleteFailed": "Falló la eliminación: {{message}}"
+    }
+  },
   "bulk": {
     "selected_one": "{{count}} seleccionado",
     "selected_other": "{{count}} seleccionados",

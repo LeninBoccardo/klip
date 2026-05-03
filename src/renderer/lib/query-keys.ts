@@ -43,7 +43,9 @@ export const queryKeys = {
   },
   search: {
     all: ['search'] as const,
-    query: (query: string, limit: number) => ['search', 'all', query, limit] as const
+    query: (query: string, limit: number) => ['search', 'all', query, limit] as const,
+    transcripts: (query: string, limit: number, offset: number) =>
+      ['search', 'transcripts', query, limit, offset] as const
   },
   collections: {
     all: ['collections'] as const,

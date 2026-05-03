@@ -86,6 +86,7 @@ function pushSchema(db: AppDatabase): void {
       description TEXT,
       is_short INTEGER NOT NULL DEFAULT 0,
       transcript_path TEXT,
+      transcript_text TEXT,
       detail_fetched_at TEXT,
       status TEXT NOT NULL DEFAULT 'active',
       deleted_at TEXT,
@@ -203,4 +204,32 @@ function pushSchema(db: AppDatabase): void {
   db.run(
     sql`CREATE INDEX IF NOT EXISTS idx_collection_cuts_position ON collection_cuts(collection_id, position)`
   )
+
+  // ── Transcript FTS5 (mirrored in 0009_swift_silent_search.sql) ──
+  db.run(sql`
+    CREATE VIRTUAL TABLE IF NOT EXISTS videos_fts USING fts5(
+      video_id UNINDEXED,
+      title,
+      transcript_text,
+      tokenize = 'unicode61 remove_diacritics 2'
+    )
+  `)
+  db.run(sql`
+    CREATE TRIGGER IF NOT EXISTS videos_fts_after_insert AFTER INSERT ON videos BEGIN
+      INSERT INTO videos_fts (video_id, title, transcript_text)
+      VALUES (NEW.id, NEW.title, COALESCE(NEW.transcript_text, ''));
+    END
+  `)
+  db.run(sql`
+    CREATE TRIGGER IF NOT EXISTS videos_fts_after_update AFTER UPDATE OF title, transcript_text ON videos BEGIN
+      DELETE FROM videos_fts WHERE video_id = OLD.id;
+      INSERT INTO videos_fts (video_id, title, transcript_text)
+      VALUES (NEW.id, NEW.title, COALESCE(NEW.transcript_text, ''));
+    END
+  `)
+  db.run(sql`
+    CREATE TRIGGER IF NOT EXISTS videos_fts_after_delete AFTER DELETE ON videos BEGIN
+      DELETE FROM videos_fts WHERE video_id = OLD.id;
+    END
+  `)
 }

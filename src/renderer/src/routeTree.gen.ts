@@ -9,18 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TagsRouteImport } from './routes/tags'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as DownloadsRouteImport } from './routes/downloads'
+import { Route as CutsRouteImport } from './routes/cuts'
 import { Route as CollectionsRouteImport } from './routes/collections'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VideosVideoIdRouteImport } from './routes/videos.$videoId'
 import { Route as CreatorsCreatorIdRouteImport } from './routes/creators/$creatorId'
 import { Route as CollectionsCollectionIdRouteImport } from './routes/collections/$collectionId'
 
+const TagsRoute = TagsRouteImport.update({
+  id: '/tags',
+  path: '/tags',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DownloadsRoute = DownloadsRouteImport.update({
@@ -28,9 +42,19 @@ const DownloadsRoute = DownloadsRouteImport.update({
   path: '/downloads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CutsRoute = CutsRouteImport.update({
+  id: '/cuts',
+  path: '/cuts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsRoute = CollectionsRouteImport.update({
   id: '/collections',
   path: '/collections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -62,9 +86,13 @@ const CollectionsCollectionIdRoute = CollectionsCollectionIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/activity': typeof ActivityRoute
   '/collections': typeof CollectionsRouteWithChildren
+  '/cuts': typeof CutsRoute
   '/downloads': typeof DownloadsRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/tags': typeof TagsRoute
   '/collections/$collectionId': typeof CollectionsCollectionIdRoute
   '/creators/$creatorId': typeof CreatorsCreatorIdRoute
   '/videos/$videoId': typeof VideosVideoIdRoute
@@ -72,9 +100,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/activity': typeof ActivityRoute
   '/collections': typeof CollectionsRouteWithChildren
+  '/cuts': typeof CutsRoute
   '/downloads': typeof DownloadsRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/tags': typeof TagsRoute
   '/collections/$collectionId': typeof CollectionsCollectionIdRoute
   '/creators/$creatorId': typeof CreatorsCreatorIdRoute
   '/videos/$videoId': typeof VideosVideoIdRoute
@@ -83,9 +115,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/activity': typeof ActivityRoute
   '/collections': typeof CollectionsRouteWithChildren
+  '/cuts': typeof CutsRoute
   '/downloads': typeof DownloadsRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
+  '/tags': typeof TagsRoute
   '/collections/$collectionId': typeof CollectionsCollectionIdRoute
   '/creators/$creatorId': typeof CreatorsCreatorIdRoute
   '/videos/$videoId': typeof VideosVideoIdRoute
@@ -95,9 +131,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/activity'
     | '/collections'
+    | '/cuts'
     | '/downloads'
+    | '/search'
     | '/settings'
+    | '/tags'
     | '/collections/$collectionId'
     | '/creators/$creatorId'
     | '/videos/$videoId'
@@ -105,9 +145,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/activity'
     | '/collections'
+    | '/cuts'
     | '/downloads'
+    | '/search'
     | '/settings'
+    | '/tags'
     | '/collections/$collectionId'
     | '/creators/$creatorId'
     | '/videos/$videoId'
@@ -115,9 +159,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/activity'
     | '/collections'
+    | '/cuts'
     | '/downloads'
+    | '/search'
     | '/settings'
+    | '/tags'
     | '/collections/$collectionId'
     | '/creators/$creatorId'
     | '/videos/$videoId'
@@ -126,20 +174,38 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  ActivityRoute: typeof ActivityRoute
   CollectionsRoute: typeof CollectionsRouteWithChildren
+  CutsRoute: typeof CutsRoute
   DownloadsRoute: typeof DownloadsRoute
+  SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
+  TagsRoute: typeof TagsRoute
   CreatorsCreatorIdRoute: typeof CreatorsCreatorIdRoute
   VideosVideoIdRoute: typeof VideosVideoIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tags': {
+      id: '/tags'
+      path: '/tags'
+      fullPath: '/tags'
+      preLoaderRoute: typeof TagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/downloads': {
@@ -149,11 +215,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cuts': {
+      id: '/cuts'
+      path: '/cuts'
+      fullPath: '/cuts'
+      preLoaderRoute: typeof CutsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/collections': {
       id: '/collections'
       path: '/collections'
       fullPath: '/collections'
       preLoaderRoute: typeof CollectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -209,9 +289,13 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  ActivityRoute: ActivityRoute,
   CollectionsRoute: CollectionsRouteWithChildren,
+  CutsRoute: CutsRoute,
   DownloadsRoute: DownloadsRoute,
+  SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,
+  TagsRoute: TagsRoute,
   CreatorsCreatorIdRoute: CreatorsCreatorIdRoute,
   VideosVideoIdRoute: VideosVideoIdRoute,
 }

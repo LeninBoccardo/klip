@@ -13,9 +13,10 @@ import {
 } from '@ui/dialog'
 import { TagInput } from '@/components/shared/TagInput'
 import { useAllDistinctTags, useBulkUpdateTags } from '@/hooks/use-tags'
-import { Loader2, Tag, TagsIcon, X } from 'lucide-react'
+import { Loader2, Tag, TagsIcon, X, FolderInput } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TagEntityKind } from '@shared/types'
+import { MoveToCreatorDialog } from '@components/features/videos/MoveToCreatorDialog'
 
 interface BulkActionsBarProps {
   entityKind: TagEntityKind
@@ -43,8 +44,10 @@ export function BulkActionsBar({
 }: BulkActionsBarProps): React.ReactElement {
   const { t } = useTranslation('tags')
   const { t: tc } = useTranslation('common')
+  const { t: tv } = useTranslation('videos')
   const [mode, setMode] = useState<DialogMode>(null)
   const [draft, setDraft] = useState<string[]>([])
+  const [moveOpen, setMoveOpen] = useState(false)
   const allTags = useAllDistinctTags()
   const bulkUpdate = useBulkUpdateTags()
 
@@ -96,12 +99,30 @@ export function BulkActionsBar({
             <Tag className="mr-2 size-3" />
             {t('bulk.removeButton')}
           </Button>
+          {entityKind === 'video' && (
+            <Button size="sm" variant="outline" onClick={() => setMoveOpen(true)}>
+              <FolderInput className="mr-2 size-3" />
+              {tv('move.buttonLabel')}
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={onClear} className="ml-auto">
             <X className="mr-2 size-3" />
             {t('bulk.clear')}
           </Button>
         </CardContent>
       </Card>
+
+      {entityKind === 'video' && (
+        <MoveToCreatorDialog
+          open={moveOpen}
+          onOpenChange={setMoveOpen}
+          videoIds={selectedIds}
+          onMoved={() => {
+            onClear()
+            onMutationSuccess?.()
+          }}
+        />
+      )}
 
       <Dialog open={mode !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
         <DialogContent className="sm:max-w-md">

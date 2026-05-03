@@ -29,6 +29,7 @@ export const IpcChannels = {
   EnrichAllVideos: 'enrich-all-videos',
   GetTranscript: 'get-transcript',
   FetchVideoComments: 'fetch-video-comments',
+  MoveVideosToCreator: 'move-videos-to-creator',
 
   // ── Cuts ──
   GetCutsPaginated: 'get-cuts-paginated',
@@ -39,6 +40,7 @@ export const IpcChannels = {
 
   // ── Search ──
   SearchAll: 'search-all',
+  SearchTranscripts: 'search-transcripts',
 
   // ── Shell ──
   OpenMediaExternally: 'open-media-externally',
@@ -58,6 +60,7 @@ export const IpcChannels = {
   GetAllDistinctTags: 'get-all-distinct-tags',
   BulkUpdateTags: 'bulk-update-tags',
   RenameTagGlobally: 'rename-tag-globally',
+  DeleteTagGlobally: 'delete-tag-globally',
 
   // ── Settings ──
   GetSettings: 'get-settings',

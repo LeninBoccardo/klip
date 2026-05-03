@@ -1,0 +1,37 @@
+{
+  "page": {
+    "title": "Activity",
+    "description": "Recent changes across creators, videos, cuts, and collections"
+  },
+  "loadMore": "Load more",
+  "empty": {
+    "title": "No activity yet",
+    "description": "Mutations to your library will appear here as they happen."
+  },
+  "history": {
+    "buttonLabel": "History",
+    "sheetTitle": "{{name}} history",
+    "sheetDescription": "Mutations recorded for this {{kind}}",
+    "empty": "No history recorded yet."
+  },
+  "entity": {
+    "creator": "Creator",
+    "video": "Video",
+    "cut": "Cut",
+    "collection": "Collection",
+    "unknown": "Item"
+  },
+  "action": {
+    "created": "Created",
+    "updated": "Updated",
+    "deleted": "Deleted",
+    "cascade_deleted": "Deleted via parent",
+    "status_changed": "Status changed",
+    "probe_status_changed": "Probe updated",
+    "bulk_path_update": "Path updated",
+    "item_added": "Item added",
+    "item_removed": "Item removed",
+    "reordered": "Reordered",
+    "unknown": "Changed"
+  }
+}

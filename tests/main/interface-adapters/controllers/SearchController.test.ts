@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ISearchAll } from '@use-cases/ISearchAll'
+import type { ISearchTranscripts } from '@use-cases/ISearchTranscripts'
 
 const electron = vi.hoisted(() => {
   const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
@@ -18,10 +19,13 @@ vi.mock('electron', () => ({ ipcMain: electron.ipcMain }))
 
 import { registerSearchController } from '@main/interface-adapters/controllers/SearchController'
 
-function makeDeps(): { searchAll: ISearchAll } {
+function makeDeps(): { searchAll: ISearchAll; searchTranscripts: ISearchTranscripts } {
   return {
     searchAll: {
       execute: vi.fn().mockReturnValue({ creators: [], videos: [], cuts: [], tags: [] })
+    },
+    searchTranscripts: {
+      execute: vi.fn().mockReturnValue({ hits: [], totalApproximate: 0 })
     }
   }
 }
@@ -38,15 +42,23 @@ describe('SearchController', () => {
     electron.ipcMain.handle.mockClear()
   })
 
-  it('registers the "search-all" channel', () => {
+  it('registers both search channels', () => {
     const d = makeDeps()
-    registerSearchController(d.searchAll)
-    expect([...electron.handlers.keys()]).toEqual(['search-all'])
+    registerSearchController(d.searchAll, d.searchTranscripts)
+    expect([...electron.handlers.keys()].sort()).toEqual(['search-all', 'search-transcripts'])
+  })
+
+  it('"search-transcripts" forwards params to the use case', async () => {
+    const d = makeDeps()
+    registerSearchController(d.searchAll, d.searchTranscripts)
+    const params = { query: 'hello', limit: 10, offset: 0 }
+    await invoke('search-transcripts', params)
+    expect(d.searchTranscripts.execute).toHaveBeenCalledWith(params)
   })
 
   it('forwards the query and limit to the use case', async () => {
     const d = makeDeps()
-    registerSearchController(d.searchAll)
+    registerSearchController(d.searchAll, d.searchTranscripts)
 
     await invoke('search-all', 'cats', 5)
 
@@ -55,7 +67,7 @@ describe('SearchController', () => {
 
   it('passes a single-arg call through (limit defaults inside the use case)', async () => {
     const d = makeDeps()
-    registerSearchController(d.searchAll)
+    registerSearchController(d.searchAll, d.searchTranscripts)
 
     await invoke('search-all', 'cats')
 
@@ -72,7 +84,7 @@ describe('SearchController', () => {
       cuts: [],
       tags: [{ tag: 'music', videoCount: 1, cutCount: 0 }]
     })
-    registerSearchController(d.searchAll)
+    registerSearchController(d.searchAll, d.searchTranscripts)
 
     const result = await invoke<{ tags: { tag: string }[] }>('search-all', 'mus', 5)
 

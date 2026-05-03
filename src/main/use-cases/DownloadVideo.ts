@@ -181,6 +181,7 @@ export class DownloadVideo implements IDownloadVideo {
         description: info.description ?? null,
         isShort: false,
         transcriptPath: null,
+        transcriptText: null,
         detailFetchedAt: null,
         status: 'active',
         deletedAt: null,

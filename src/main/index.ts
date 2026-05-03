@@ -140,15 +140,20 @@ app.whenReady().then(() => {
     container.useCases.fetchVideoDetail,
     container.useCases.enrichAllVideos,
     container.useCases.fetchVideoComments,
-    container.ports.fsReader
+    container.ports.fsReader,
+    container.useCases.moveVideosToCreator
   )
   registerCutController(container.repositories.cut)
   registerTagController(
     container.useCases.getAllDistinctTags,
     container.useCases.bulkUpdateTags,
-    container.useCases.renameTagGlobally
+    container.useCases.renameTagGlobally,
+    container.useCases.deleteTagGlobally
   )
-  registerSearchController(container.useCases.searchAll)
+  registerSearchController(
+    container.useCases.searchAll,
+    container.useCases.searchTranscripts
+  )
   registerShellController(container.useCases.resolveMediaUrl)
   registerCollectionController({
     create: container.useCases.createCollection,
@@ -195,6 +200,20 @@ app.whenReady().then(() => {
     })
     .catch((error) =>
       console.error(`[klip] Media enrichment failed:`, redactError(error, rootPath))
+    )
+
+  // ── Backfill transcript FTS index (async, non-blocking) ──
+  // Idempotent — only touches videos that have a transcript_path but no
+  // transcript_text yet (i.e. rows that pre-existed migration 0009).
+  container.useCases.backfillTranscriptIndex
+    .execute()
+    .then((bf) => {
+      if (bf.indexed > 0 || bf.failed > 0 || bf.missing > 0) {
+        console.log(`[klip] Transcript FTS backfill complete:`, bf)
+      }
+    })
+    .catch((error) =>
+      console.error(`[klip] Transcript FTS backfill failed:`, redactError(error, rootPath))
     )
 
   // ── Start file watcher (runtime changes only, ignoreInitial: true) ──

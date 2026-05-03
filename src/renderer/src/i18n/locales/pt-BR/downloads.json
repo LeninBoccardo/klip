@@ -21,9 +21,43 @@
     "placeholder": "ex.: MrBeast"
   },
   "url": {
-    "placeholder": "Cole uma URL de vídeo...",
+    "placeholder": "Cole ou arraste uma URL de vídeo...",
     "fetchButton": "Buscar Informações",
     "invalid": "Insira uma URL válida"
+  },
+  "dropZone": {
+    "title": "Solte para baixar",
+    "description": "Solte aqui para buscar informações do link arrastado",
+    "invalidUrl": "Isso não parece ser uma URL válida"
+  },
+  "bulkImport": {
+    "openButton": "Importação em massa...",
+    "title": "Importar URLs em massa",
+    "description": "Cole até 100 URLs do YouTube, uma por linha. Buscamos as informações de cada uma e você atribui criadores antes de enfileirar downloads.",
+    "textareaPlaceholder": "https://youtube.com/watch?v=...\nhttps://youtu.be/...",
+    "previewButton": "Pré-visualizar",
+    "previewing": "Buscando informações...",
+    "tooMany": "Máximo de 100 URLs por vez. {{count}} informadas.",
+    "noUrls": "Informe pelo menos uma URL.",
+    "table": {
+      "include": "Incluir",
+      "url": "URL",
+      "title": "Título",
+      "creator": "Criador",
+      "status": "Status"
+    },
+    "status": {
+      "pending": "Pendente",
+      "ready": "Pronto",
+      "duplicate": "Duplicado",
+      "error": "Erro"
+    },
+    "creatorAuto": "Auto: {{name}}",
+    "submitButton": "Enfileirar {{count}} download(s)",
+    "queuedToast_one": "{{count}} download enfileirado",
+    "queuedToast_other": "{{count}} downloads enfileirados",
+    "queuedFailedNote": "{{count}} falharam ao enfileirar",
+    "previewFailed": "Falha ao buscar info de {{url}}: {{message}}"
   },
   "progress": {
     "etaPrefix": "ETA"

@@ -53,6 +53,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     description: null,
     isShort: false,
     transcriptPath: null,
+    transcriptText: null,
     detailFetchedAt: null,
     status: 'active',
     deletedAt: null,

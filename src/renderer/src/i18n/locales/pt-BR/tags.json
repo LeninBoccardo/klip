@@ -7,6 +7,46 @@
     "createOption": "Criar “{{name}}”",
     "removeAria": "Remover tag {{tag}}"
   },
+  "manage": {
+    "pageTitle": "Tags",
+    "pageDescription": "Renomeie, mescle e exclua tags em toda a biblioteca",
+    "searchPlaceholder": "Filtrar tags...",
+    "empty": {
+      "title": "Nenhuma tag ainda",
+      "withoutFilters": "Marque vídeos e cortes para gerenciá-los aqui.",
+      "withFilters": "Nenhuma tag corresponde ao filtro atual."
+    },
+    "table": {
+      "tag": "Tag",
+      "videos": "Vídeos",
+      "cuts": "Cortes",
+      "total": "Total",
+      "actions": "Ações"
+    },
+    "actions": {
+      "rename": "Renomear",
+      "delete": "Excluir"
+    },
+    "rename": {
+      "title": "Renomear tag",
+      "description": "Reescreve essa tag em cada vídeo e corte que a carrega.",
+      "fromLabel": "Nome atual",
+      "toLabel": "Novo nome",
+      "submit": "Renomear",
+      "mergeWarning": "“{{name}}” já existe. Salvar mesclará as duas."
+    },
+    "delete": {
+      "title": "Excluir tag",
+      "description": "Remover “{{name}}” de {{videoCount}} vídeo(s) e {{cutCount}} corte(s). Você pode desfazer adicionando a tag novamente.",
+      "submit": "Excluir"
+    },
+    "toasts": {
+      "renamed": "“{{from}}” renomeada para “{{to}}” ({{videos}} vídeos, {{cuts}} cortes)",
+      "renameFailed": "Falha ao renomear: {{message}}",
+      "deleted": "“{{name}}” removida de {{videos}} vídeos e {{cuts}} cortes",
+      "deleteFailed": "Falha ao excluir: {{message}}"
+    }
+  },
   "bulk": {
     "selected_one": "{{count}} selecionado",
     "selected_other": "{{count}} selecionados",

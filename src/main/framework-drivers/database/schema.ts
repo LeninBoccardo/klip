@@ -74,6 +74,7 @@ export const videos = sqliteTable(
     description: text('description'),
     isShort: integer('is_short', { mode: 'boolean' }).notNull().default(false),
     transcriptPath: text('transcript_path'),
+    transcriptText: text('transcript_text'),
     detailFetchedAt: text('detail_fetched_at'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),

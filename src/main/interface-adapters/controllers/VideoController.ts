@@ -3,6 +3,7 @@ import type { IFileSystemReader } from '@domain/ports'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
+import type { IMoveVideosToCreator } from '@use-cases/IMoveVideosToCreator'
 import { parseVtt } from '@domain/types'
 import { createTypedHandler } from './create-typed-handler'
 import { toVideoDto, mapPaginated } from './dto-mappers'
@@ -25,7 +26,8 @@ export function registerVideoController(
   fetchVideoDetail: IFetchVideoDetail,
   enrichAllVideos: IEnrichAllVideos,
   fetchVideoComments: IFetchVideoComments,
-  fsReader: IFileSystemReader
+  fsReader: IFileSystemReader,
+  moveVideosToCreator: IMoveVideosToCreator
 ): void {
   createTypedHandler('get-videos-paginated', async (_event, params) => {
     return mapPaginated(videoRepo.findPaginated(params), toVideoDto)
@@ -61,5 +63,9 @@ export function registerVideoController(
 
   createTypedHandler('fetch-video-comments', async (_event, videoId, maxComments) => {
     return fetchVideoComments.execute(videoId, maxComments)
+  })
+
+  createTypedHandler('move-videos-to-creator', async (_event, request) => {
+    return moveVideosToCreator.execute(request)
   })
 }

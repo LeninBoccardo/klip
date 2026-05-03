@@ -4,6 +4,7 @@ import type { IFileSystemReader } from '@domain/ports'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
+import type { IMoveVideosToCreator } from '@use-cases/IMoveVideosToCreator'
 
 const electron = vi.hoisted(() => {
   const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
@@ -45,12 +46,16 @@ function makeDeps(): {
   fetchVideoDetail: IFetchVideoDetail
   enrichAllVideos: IEnrichAllVideos
   fetchVideoComments: IFetchVideoComments
+  moveVideosToCreator: IMoveVideosToCreator
   fsReader: IFileSystemReader
 } {
   return {
     fetchVideoDetail: { execute: vi.fn() },
     enrichAllVideos: { execute: vi.fn() },
     fetchVideoComments: { execute: vi.fn() },
+    moveVideosToCreator: {
+      execute: vi.fn().mockResolvedValue({ moved: 0, skipped: 0, errors: {} })
+    },
     fsReader: {
       directoryExists: vi.fn(),
       fileExists: vi.fn(),
@@ -74,14 +79,15 @@ describe('VideoController', () => {
     electron.ipcMain.handle.mockClear()
   })
 
-  it('registers all eight video channels', () => {
+  it('registers all video channels', () => {
     const d = makeDeps()
     registerVideoController(
       makeRepo(),
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     expect([...electron.handlers.keys()].sort()).toEqual(
       [
@@ -92,9 +98,26 @@ describe('VideoController', () => {
         'get-transcript',
         'get-video-by-id',
         'get-videos-paginated',
+        'move-videos-to-creator',
         'restore-video'
       ].sort()
     )
+  })
+
+  it('"move-videos-to-creator" delegates to MoveVideosToCreator use case', async () => {
+    const repo = makeRepo()
+    const d = makeDeps()
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.fsReader,
+      d.moveVideosToCreator
+    )
+    const request = { videoIds: ['v-1', 'v-2'], targetCreatorId: 'mrbeast' }
+    await invoke('move-videos-to-creator', request)
+    expect(d.moveVideosToCreator.execute).toHaveBeenCalledWith(request)
   })
 
   it('"fetch-video-comments" delegates to FetchVideoComments use case', async () => {
@@ -111,7 +134,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     const result = await invoke<{ totalFetched: number }>('fetch-video-comments', 'video-1', 100)
     expect(d.fetchVideoComments.execute).toHaveBeenCalledWith('video-1', 100)
@@ -126,7 +150,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     const params = { page: 1, pageSize: 10, creatorId: 'c-1' }
     await invoke('get-videos-paginated', params)
@@ -141,7 +166,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     await invoke('get-video-by-id', 'video-1')
     expect(repo.findById).toHaveBeenCalledWith('video-1')
@@ -155,7 +181,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     await invoke('delete-video', 'video-1')
     expect(repo.updateStatus).toHaveBeenCalledWith('video-1', 'deleted', expect.any(String))
@@ -169,7 +196,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     await invoke('restore-video', 'video-1')
     expect(repo.updateStatus).toHaveBeenCalledWith('video-1', 'active', null)
@@ -197,7 +225,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     const result = await invoke<{ likeCount: number }>('fetch-video-detail', 'video-1')
     expect(d.fetchVideoDetail.execute).toHaveBeenCalledWith('video-1')
@@ -218,7 +247,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     const result = await invoke<{ enriched: number }>('enrich-all-videos')
     expect(d.enrichAllVideos.execute).toHaveBeenCalled()
@@ -240,7 +270,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     const result = await invoke('get-transcript', 'video-1')
     expect(result).toBe('Hello')
@@ -258,7 +289,8 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
-      d.fsReader
+      d.fsReader,
+      d.moveVideosToCreator
     )
     const result = await invoke('get-transcript', 'video-1')
     expect(result).toBeNull()

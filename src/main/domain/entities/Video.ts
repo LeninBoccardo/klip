@@ -22,6 +22,8 @@ export interface Video {
   description: string | null
   isShort: boolean
   transcriptPath: string | null
+  /** Plain text extracted from the VTT, populated by FetchVideoDetail and indexed by videos_fts. */
+  transcriptText: string | null
   detailFetchedAt: string | null
   status: EntityStatus
   deletedAt: string | null

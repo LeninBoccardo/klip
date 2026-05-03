@@ -353,6 +353,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       description: null,
       isShort: false,
       transcriptPath: null,
+      transcriptText: null,
       detailFetchedAt: null,
       status: 'active',
       deletedAt: null,

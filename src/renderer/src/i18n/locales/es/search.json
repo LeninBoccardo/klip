@@ -13,7 +13,19 @@
     "creators": "Creadores",
     "videos": "Videos",
     "cuts": "Cortes",
-    "tags": "Etiquetas"
+    "tags": "Etiquetas",
+    "transcripts": "En transcripciones"
+  },
+  "transcripts": {
+    "seeAll": "Ver todas las coincidencias en transcripciones",
+    "pageTitle": "Búsqueda en transcripciones",
+    "pageDescription": "Encuentra cualquier momento en que se dijo algo en tu biblioteca.",
+    "placeholder": "Buscar dentro de transcripciones...",
+    "noResults": "Sin coincidencias en transcripciones para “{{query}}”.",
+    "totalApproximate_one": "{{count}} coincidencia",
+    "totalApproximate_other": "{{count}} coincidencias",
+    "totalCapped": "Más de 1000 coincidencias",
+    "loadMore": "Cargar más"
   },
   "kinds": {
     "creator": "creador",

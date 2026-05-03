@@ -35,6 +35,8 @@ import { CommandPalette } from '@/components/features/search/CommandPalette'
 import { PersistentPlayer } from '@/components/features/player/PersistentPlayer'
 import { PreferencesBootstrap } from '@components/PreferencesBootstrap'
 import { usePlaybackSettingMirror } from '@/hooks/use-playback-setting'
+import { useDropUrl } from '@/hooks/use-drop-url'
+import { DropZoneOverlay } from '@/components/features/downloads/DropZoneOverlay'
 import { Button } from '@ui/button'
 import { Search } from 'lucide-react'
 
@@ -43,6 +45,11 @@ function GlobalListeners(): React.ReactElement {
   useDownloadProgressListener()
   usePlaybackSettingMirror()
   return <UpdaterToastWatcher />
+}
+
+function GlobalDropZone(): React.ReactElement {
+  const active = useDropUrl()
+  return <DropZoneOverlay active={active} />
 }
 
 /**
@@ -149,10 +156,23 @@ function UpdaterToastWatcher(): null {
  * Map route paths to navigation translation keys for breadcrumbs. Add new
  * routes here when introducing top-level pages.
  */
-const ROUTE_KEYS: Record<string, 'library' | 'collections' | 'downloads' | 'settings' | 'about'> = {
+const ROUTE_KEYS: Record<
+  string,
+  | 'library'
+  | 'cuts'
+  | 'tags'
+  | 'collections'
+  | 'downloads'
+  | 'activity'
+  | 'settings'
+  | 'about'
+> = {
   '/': 'library',
+  '/cuts': 'cuts',
+  '/tags': 'tags',
   '/collections': 'collections',
   '/downloads': 'downloads',
+  '/activity': 'activity',
   '/settings': 'settings',
   '/about': 'about'
 }
@@ -224,6 +244,7 @@ const RootLayout = (): React.ReactElement => (
         <Toaster richColors closeButton />
         <BlockingOperationDialog />
         <PersistentPlayer />
+        <GlobalDropZone />
         <GlobalListeners />
         <TanStackRouterDevtools />
       </TooltipProvider>

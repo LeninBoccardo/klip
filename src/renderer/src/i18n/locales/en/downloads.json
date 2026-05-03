@@ -21,9 +21,43 @@
     "placeholder": "e.g. MrBeast"
   },
   "url": {
-    "placeholder": "Paste a video URL...",
+    "placeholder": "Paste or drag a video URL...",
     "fetchButton": "Fetch Info",
     "invalid": "Enter a valid URL"
+  },
+  "dropZone": {
+    "title": "Drop to download",
+    "description": "Release to fetch info for the dropped link",
+    "invalidUrl": "That doesn't look like a valid URL"
+  },
+  "bulkImport": {
+    "openButton": "Bulk import...",
+    "title": "Bulk import URLs",
+    "description": "Paste up to 100 YouTube URLs, one per line. We'll fetch info for each and let you assign creators before queuing downloads.",
+    "textareaPlaceholder": "https://youtube.com/watch?v=...\nhttps://youtu.be/...",
+    "previewButton": "Preview",
+    "previewing": "Fetching info...",
+    "tooMany": "Up to 100 URLs at a time. {{count}} provided.",
+    "noUrls": "Enter at least one URL.",
+    "table": {
+      "include": "Include",
+      "url": "URL",
+      "title": "Title",
+      "creator": "Creator",
+      "status": "Status"
+    },
+    "status": {
+      "pending": "Pending",
+      "ready": "Ready",
+      "duplicate": "Duplicate",
+      "error": "Error"
+    },
+    "creatorAuto": "Auto: {{name}}",
+    "submitButton": "Queue {{count}} download(s)",
+    "queuedToast_one": "Queued {{count}} download",
+    "queuedToast_other": "Queued {{count}} downloads",
+    "queuedFailedNote": "{{count}} failed to queue",
+    "previewFailed": "Failed to fetch info for {{url}}: {{message}}"
   },
   "progress": {
     "etaPrefix": "ETA"

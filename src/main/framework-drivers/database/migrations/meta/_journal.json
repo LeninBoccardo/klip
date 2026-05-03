@@ -64,6 +64,13 @@
       "when": 1777764587812,
       "tag": "0008_shallow_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1778198400000,
+      "tag": "0009_swift_silent_search",
+      "breakpoints": true
     }
   ]
 }

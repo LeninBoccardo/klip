@@ -11,7 +11,9 @@ import type {
   PaginatedResult,
   VideoDetailWithTranscript,
   EnrichVideosResult,
-  VideoCommentsResult
+  VideoCommentsResult,
+  MoveVideosToCreatorRequest,
+  MoveVideosToCreatorResult
 } from '@shared/types'
 import type { VideoDto } from '@shared/dtos'
 
@@ -83,5 +85,20 @@ export function useFetchVideoComments(): UseMutationResult<
   return useMutation({
     mutationFn: ({ videoId, maxComments = 500 }: { videoId: string; maxComments?: number }) =>
       window.api.fetchVideoComments(videoId, maxComments)
+  })
+}
+
+export function useMoveVideosToCreator(): UseMutationResult<
+  MoveVideosToCreatorResult,
+  Error,
+  MoveVideosToCreatorRequest
+> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (request: MoveVideosToCreatorRequest) => window.api.moveVideosToCreator(request),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.videos.all })
+      qc.invalidateQueries({ queryKey: queryKeys.creators.all })
+    }
   })
 }

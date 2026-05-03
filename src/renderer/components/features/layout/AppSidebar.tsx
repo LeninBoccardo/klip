@@ -11,9 +11,27 @@ import {
   SidebarMenuButton,
   SidebarMenuItem
 } from '@/components/ui/sidebar'
-import { LayoutGrid, Download, Settings, Clapperboard, Info, ListMusic } from 'lucide-react'
+import {
+  LayoutGrid,
+  Download,
+  Settings,
+  Clapperboard,
+  Info,
+  ListMusic,
+  Scissors,
+  Tags as TagsIcon,
+  Activity as ActivityIcon
+} from 'lucide-react'
 
-type NavKey = 'library' | 'collections' | 'downloads' | 'settings' | 'about'
+type NavKey =
+  | 'library'
+  | 'cuts'
+  | 'tags'
+  | 'collections'
+  | 'downloads'
+  | 'activity'
+  | 'settings'
+  | 'about'
 
 const navItems: ReadonlyArray<{
   key: NavKey
@@ -21,8 +39,11 @@ const navItems: ReadonlyArray<{
   icon: React.ComponentType
 }> = [
   { key: 'library', to: '/', icon: LayoutGrid },
+  { key: 'cuts', to: '/cuts', icon: Scissors },
+  { key: 'tags', to: '/tags', icon: TagsIcon },
   { key: 'collections', to: '/collections', icon: ListMusic },
   { key: 'downloads', to: '/downloads', icon: Download },
+  { key: 'activity', to: '/activity', icon: ActivityIcon },
   { key: 'settings', to: '/settings', icon: Settings },
   { key: 'about', to: '/about', icon: Info }
 ]

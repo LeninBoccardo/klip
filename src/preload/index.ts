@@ -38,6 +38,7 @@ const api = {
   enrichAllVideos: createTypedInvoker('enrich-all-videos'),
   getTranscript: createTypedInvoker('get-transcript'),
   fetchVideoComments: createTypedInvoker('fetch-video-comments'),
+  moveVideosToCreator: createTypedInvoker('move-videos-to-creator'),
 
   // ── Cuts ──
   getCutsPaginated: createTypedInvoker('get-cuts-paginated'),
@@ -59,6 +60,7 @@ const api = {
 
   // ── Search ──
   searchAll: createTypedInvoker('search-all'),
+  searchTranscripts: createTypedInvoker('search-transcripts'),
 
   // ── Shell ──
   openMediaExternally: createTypedInvoker('open-media-externally'),
@@ -67,6 +69,7 @@ const api = {
   getAllDistinctTags: createTypedInvoker('get-all-distinct-tags'),
   bulkUpdateTags: createTypedInvoker('bulk-update-tags'),
   renameTagGlobally: createTypedInvoker('rename-tag-globally'),
+  deleteTagGlobally: createTypedInvoker('delete-tag-globally'),
 
   // ── Settings ──
   getSettings: createTypedInvoker('get-settings'),
