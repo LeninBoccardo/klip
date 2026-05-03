@@ -31,11 +31,6 @@ protocol.registerSchemesAsPrivileged([
 //    crashes leave a trail at <userData>/logs/klip.log.
 initLogger(app)
 
-// ── Defence-in-depth security: deny external navigation + lock permissions.
-//    Must run before app.whenReady so the global web-contents-created hook
-//    catches the first window's contents.
-applySecurityHardening()
-
 // ── Test-only overrides ──
 // E2E tests need to point the user-data path at a temp directory so they
 // never touch the developer's real DB. `app.setPath` must run before
@@ -121,6 +116,13 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // ── Defence-in-depth security: deny external navigation + lock permissions.
+  //    Wired here (not at module load) because `session.defaultSession` throws
+  //    if accessed before app-ready. The global `web-contents-created` listener
+  //    is still registered before `createWindow()` below, so the first window's
+  //    contents are caught.
+  applySecurityHardening()
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
