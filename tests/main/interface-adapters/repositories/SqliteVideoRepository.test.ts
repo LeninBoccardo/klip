@@ -173,9 +173,15 @@ describe('SqliteVideoRepository', () => {
       expect(result.data[0].id).toBe('v-other')
     })
 
-    it('filters by search term on title', () => {
+    it('filters by search term on title (asserts the matching row, not just the count)', () => {
+      // The previous version asserted only `total === 1`; if the LIKE clause
+      // hit a different column (description, url, …) the test would still
+      // pass because the fixture has a single row whose title contains
+      // "Video 01". Now we verify the actual row identity.
       const result = videoRepo.findPaginated({ page: 1, pageSize: 50, search: 'Video 01' })
       expect(result.total).toBe(1)
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].title).toContain('Video 01')
     })
 
     it('sorts by title ascending', () => {

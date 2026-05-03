@@ -4,28 +4,7 @@ import { existsSync, mkdirSync } from 'fs'
 import type { IFileWatcher } from '@domain/ports'
 import type { FileEvent, FileEventType } from '@domain/types'
 import { redactPath, redactError } from '@domain/types/redact'
-
-/**
- * Regex that matches paths relevant to the Klip folder structure.
- *
- * Accepts (relative to root):
- *   {creator}/creator.json
- *   {creator}/downloads/{videoId}/{file}
- *   {creator}/cuts/{cutId}/{file}
- *   {creator}/                          (dir events)
- *   {creator}/downloads/{videoId}/      (dir events)
- *   {creator}/cuts/{cutId}/             (dir events)
- *
- * Rejects anything outside this structure (e.g. random .txt in root).
- */
-const RELEVANT_PATH_RE = /[\\/][^\\/]+[\\/](?:creator\.json$|(?:downloads|cuts)[\\/])/i
-
-/**
- * Combined regex: path must be inside the folder structure AND have a relevant extension.
- * Merges the old RELEVANT_PATH_RE + RELEVANT_FILE_RE into one test for file events.
- */
-const RELEVANT_FILE_COMBINED_RE =
-  /[\\/][^\\/]+[\\/](?:downloads|cuts)[\\/].*(?:\.(?:mp4|mkv|webm|jpg|jpeg|png|webp)|(?:meta|cut-data|creator)\.json)$/i
+import { isRelevantPath } from './chokidar-path-filter'
 
 /** Retry interval when root directory doesn't exist yet (ms) */
 const ROOT_RETRY_INTERVAL = 3000
@@ -136,7 +115,7 @@ export class ChokidarWatcher implements IFileWatcher {
 
     for (const eventType of events) {
       this.watcher.on(eventType, (filePath: string) => {
-        if (this.callback && this.isRelevant(filePath, eventType)) {
+        if (this.callback && isRelevantPath(filePath, this.rootPath, eventType)) {
           this.callback({ type: eventType, path: filePath })
         }
       })
@@ -147,30 +126,5 @@ export class ChokidarWatcher implements IFileWatcher {
     })
 
     console.log(`[klip] File watcher started on: ${redactPath(this.rootPath, this.rootPath)}`)
-  }
-
-  /**
-   * Pre-filter: only emit events for paths matching the known folder structure.
-   * Directory events (addDir/unlinkDir) are accepted if they look like
-   * creator/video/cut directories. File events require a relevant extension.
-   */
-  private isRelevant(filePath: string, eventType: FileEventType): boolean {
-    // Strip rootPath prefix to get relative path for matching
-    const relative = filePath.slice(this.rootPath.length)
-
-    // Directory events: accept creator dirs and entity subdirs
-    if (eventType === 'addDir' || eventType === 'unlinkDir') {
-      return RELEVANT_PATH_RE.test(relative + '/') || this.isCreatorDir(relative)
-    }
-
-    // File events: single combined regex for structure + extension
-    return RELEVANT_FILE_COMBINED_RE.test(relative) || RELEVANT_PATH_RE.test(relative)
-  }
-
-  /** Check if a relative path looks like a top-level creator directory (one segment) */
-  private isCreatorDir(relative: string): boolean {
-    // relative is like "/CreatorName" or "\\CreatorName"
-    const trimmed = relative.replace(/^[/\\]+/, '').replace(/[/\\]+$/, '')
-    return trimmed.length > 0 && !trimmed.includes('/') && !trimmed.includes('\\')
   }
 }

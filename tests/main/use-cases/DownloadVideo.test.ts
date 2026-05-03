@@ -423,7 +423,12 @@ describe('DownloadVideo', () => {
     )
   })
 
-  it('should not notify error when download is cancelled', async () => {
+  it('should not notify error when download throws the cancellation sentinel', async () => {
+    // The suppression contract inside performDownload keys on the exact
+    // string `Error('Download cancelled')` — the driver throws this when
+    // SIGTERM lands on yt-dlp. A regression that changes the sentinel (or
+    // the equality check) would re-emit a spurious 'error' progress event
+    // to the UI.
     vi.mocked(downloader.download).mockRejectedValue(new Error('Download cancelled'))
 
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
@@ -435,6 +440,31 @@ describe('DownloadVideo', () => {
         (c) => c[0] === 'download-progress' && (c[1] as DownloadProgress)?.status === 'error'
       )
     expect(errorCalls.length).toBe(0)
+  })
+
+  it('still emits the error progress event when the rejection is NOT the cancel sentinel', async () => {
+    // Negative-control for the suppression: any other error message must
+    // surface to the UI. Without this guard, the previous test would pass
+    // even if the suppression catch-all swallowed every error.
+    vi.mocked(downloader.download).mockRejectedValue(new Error('Network unreachable'))
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    const errorCalls = vi
+      .mocked(notifier.notify)
+      .mock.calls.filter(
+        (c) => c[0] === 'download-progress' && (c[1] as DownloadProgress)?.status === 'error'
+      )
+    expect(errorCalls.length).toBeGreaterThan(0)
+  })
+
+  it('exposes a cancel() method that delegates to the downloader port', () => {
+    // The public cancel API — distinct from the in-flight suppression logic
+    // above. Hooked up via DownloadController; if this delegation breaks,
+    // the cancel button in the UI silently no-ops.
+    useCase.cancel('dl-abc')
+    expect(downloader.cancel).toHaveBeenCalledWith('dl-abc')
   })
 
   // ── Edge: existing active creator (no upsert/updateStatus needed) ──

@@ -4,6 +4,7 @@ import { join } from 'path'
 import type { IBinaryResolver, IVideoDownloader, DownloadOptions } from '@domain/ports'
 import type { ChannelInfo, DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
 import type { VideoComment, VideoDetail } from '@shared/types'
+import { parseProgressLine, pickChannelAvatar } from './yt-dlp-helpers'
 
 /**
  * yt-dlp–backed implementation of IVideoDownloader.
@@ -383,7 +384,7 @@ export class YtDlpDownloader implements IVideoDownloader {
       proc.stdout.on('data', (chunk: Buffer) => {
         const lines = chunk.toString().split('\n').filter(Boolean)
         for (const line of lines) {
-          const progress = this.parseProgressLine(line, downloadId, url)
+          const progress = parseProgressLine(line, downloadId, url)
           if (progress) {
             onProgress(progress)
           }
@@ -478,35 +479,6 @@ export class YtDlpDownloader implements IVideoDownloader {
   // ── Private helpers ──
 
   /**
-   * Parse a yt-dlp progress template line.
-   * Expected format: "  42.5%|  2.50MiB/s|00:15"
-   */
-  private parseProgressLine(
-    line: string,
-    downloadId: string,
-    url: string
-  ): DownloadProgress | null {
-    const parts = line.split('|')
-    if (parts.length < 3) return null
-
-    const percentStr = parts[0].trim().replace('%', '')
-    const percent = parseFloat(percentStr)
-    if (isNaN(percent)) return null
-
-    const speed = parts[1]?.trim() || null
-    const eta = parts[2]?.trim() || null
-
-    return {
-      downloadId,
-      url,
-      percent,
-      speed: speed === 'N/A' ? null : speed,
-      eta: eta === 'N/A' ? null : eta,
-      status: 'downloading'
-    }
-  }
-
-  /**
    * Read the yt-dlp info JSON written alongside the downloaded file
    * and construct a DownloadResult.
    */
@@ -575,49 +547,4 @@ export class YtDlpDownloader implements IVideoDownloader {
       viewCount
     }
   }
-}
-
-interface YtDlpThumbnail {
-  url: string
-  width?: number
-  height?: number
-  id?: string
-}
-
-/**
- * Pick the channel avatar URL from a yt-dlp `thumbnails` array.
- *
- * yt-dlp's flat-playlist output for a YouTube channel exposes both the wide
- * banner and the square avatar in the same array. We want the avatar:
- *   1. Prefer entries whose `id` contains "avatar" (yt-dlp tags them).
- *   2. Otherwise prefer near-square (aspect ratio 0.8–1.25), largest by area.
- *   3. Fall back to the largest by area regardless of shape.
- */
-function pickChannelAvatar(thumbnails: unknown): string | null {
-  if (!Array.isArray(thumbnails) || thumbnails.length === 0) return null
-
-  const candidates = thumbnails.filter(
-    (t): t is YtDlpThumbnail => !!t && typeof (t as { url?: unknown }).url === 'string'
-  )
-  if (candidates.length === 0) return null
-
-  const tagged = candidates.filter((t) => t.id?.toLowerCase().includes('avatar'))
-  if (tagged.length > 0) return largestByArea(tagged).url
-
-  const square = candidates.filter((t) => {
-    if (!t.width || !t.height) return false
-    const ratio = t.width / t.height
-    return ratio >= 0.8 && ratio <= 1.25
-  })
-  if (square.length > 0) return largestByArea(square).url
-
-  return largestByArea(candidates).url
-}
-
-function largestByArea<T extends { width?: number; height?: number }>(items: T[]): T {
-  return items.reduce((best, t) => {
-    const area = (t.width ?? 0) * (t.height ?? 0)
-    const bestArea = (best.width ?? 0) * (best.height ?? 0)
-    return area > bestArea ? t : best
-  })
 }

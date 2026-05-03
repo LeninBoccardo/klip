@@ -262,10 +262,17 @@ describe('RegisterCreator', () => {
     expect(persisted.notes).toBeNull()
   })
 
-  it('still returns success when folder creation throws (warning logged)', async () => {
+  it('still returns success when folder creation throws, and surfaces the error to console.warn', async () => {
     vi.mocked(fsWriter.ensureDirectory).mockImplementation(() => {
       throw new Error('EACCES')
     })
+
+    // Spy *before* execute(): a silent swallow would let this test pass even
+    // if the code lost the console.warn — without the assertion, a future
+    // refactor could drop the log and we'd never notice. Reconcile is the
+    // safety net for missing folders, but operators still need a visible
+    // signal that the FS write failed.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const result = await useCase.execute({
       channelInfo: baseChannelInfo,
@@ -277,6 +284,16 @@ describe('RegisterCreator', () => {
 
     expect(result.creatorId).toBe('new-creator-id')
     expect(creatorRepo.upsertWithPrevious).toHaveBeenCalledTimes(1)
+
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(warnSpy.mock.calls[0][0]).toMatch(/Folder creation failed for "x"/)
+    // The error message must travel into the log so devs can diagnose
+    // permission issues without re-running with extra instrumentation.
+    expect(warnSpy.mock.calls[0]).toEqual(
+      expect.arrayContaining([expect.stringContaining('EACCES')])
+    )
+
+    warnSpy.mockRestore()
   })
 
   it('skips channelId duplicate check when channelInfo.channelId is empty', async () => {

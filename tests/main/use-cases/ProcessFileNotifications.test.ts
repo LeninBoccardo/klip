@@ -122,18 +122,57 @@ describe('ProcessFileNotifications', () => {
       expect(mockNotifier.notify).toHaveBeenCalledWith('db-updated', { scope: ['all'] })
     })
 
-    it('does NOT call reconcile or notify when all events collapse to IGNORE', async () => {
-      // add + unlink on same path → IGNORE → empty after collapse
+    // The flush short-circuit hinges on the collapse layer producing zero
+    // surviving events. Each row exercises one of the IGNORE rules so a
+    // regression that re-emits transient pairs can't slip past with a
+    // file-event-only test.
+    it.each([
+      {
+        name: 'add + unlink on same path (file)',
+        events: [makeEvent('/root/f', 'add'), makeEvent('/root/f', 'unlink')]
+      },
+      {
+        name: 'addDir + unlinkDir on same path',
+        events: [makeEvent('/root/d', 'addDir'), makeEvent('/root/d', 'unlinkDir')]
+      },
+      {
+        name: 'two independent IGNORE pairs on different paths',
+        events: [
+          makeEvent('/root/f1', 'add'),
+          makeEvent('/root/f1', 'unlink'),
+          makeEvent('/root/f2', 'add'),
+          makeEvent('/root/f2', 'unlink')
+        ]
+      }
+    ])(
+      'does NOT call reconcile or notify when collapse erases everything ($name)',
+      async ({ events }) => {
+        vi.mocked(mockQueue.drain).mockResolvedValue(events)
+
+        await triggerFlush()
+
+        expect(mockReconcile.execute).not.toHaveBeenCalled()
+        expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
+        expect(mockNotifier.notify).not.toHaveBeenCalled()
+      }
+    )
+
+    it('still reconciles for paths that survive collapse when other paths got erased', async () => {
+      // Without this, the previous test's expectations would also pass for an
+      // implementation that collapsed *everything* unconditionally — i.e. a
+      // bug where the flush short-circuits even when surviving events exist.
       vi.mocked(mockQueue.drain).mockResolvedValue([
-        makeEvent('/root/f', 'add'),
-        makeEvent('/root/f', 'unlink')
+        // creatorA: add+unlink → IGNORE
+        makeEvent('/root/creatorA/downloads/v1/file.mp4', 'add'),
+        makeEvent('/root/creatorA/downloads/v1/file.mp4', 'unlink'),
+        // creatorB: surviving change → must reconcile
+        makeEvent('/root/creatorB/downloads/v2/file.mp4', 'change')
       ])
 
       await triggerFlush()
 
-      expect(mockReconcile.execute).not.toHaveBeenCalled()
-      expect(mockReconcile.executeForCreator).not.toHaveBeenCalled()
-      expect(mockNotifier.notify).not.toHaveBeenCalled()
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledTimes(1)
+      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'creatorB')
     })
 
     it('does NOT call reconcile or notify when buffer is empty', async () => {

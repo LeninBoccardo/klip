@@ -949,6 +949,28 @@ describe('ReconcileDirectory', () => {
       expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
     })
 
+    it('marks the creator missing when only the display name appears on disk (negative control)', () => {
+      // Mirror image of the previous test — guards against a regression that
+      // looked up `name` instead of `folderName`. With a buggy implementation,
+      // the disk listing would contain 'Mr Beast' which matches `name`, so
+      // markMissing would stay at 0 and the previous test would still pass.
+      // This case exposes the bug because folderName has no matching dir.
+      creatorRepo.findAll = vi
+        .fn()
+        .mockReturnValue([
+          makeCreator({ id: 'mr-beast', folderName: 'mr-beast', name: 'Mr Beast' })
+        ])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['Mr Beast']
+        return []
+      })
+
+      const result = useCase.execute(ROOT)
+
+      expect(result.creatorsMarkedMissing).toBe(1)
+      expect(creatorRepo.updateStatus).toHaveBeenCalledWith('mr-beast', 'missing', null)
+    })
+
     it('builds video/cut paths using folderName, not display name', () => {
       creatorRepo.findAll = vi
         .fn()
