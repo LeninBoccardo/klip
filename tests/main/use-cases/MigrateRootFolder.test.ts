@@ -235,15 +235,22 @@ describe('MigrateRootFolder', () => {
     expect(mocks.reconcile.execute).toHaveBeenCalledWith('/new/root')
   })
 
-  it('pushes progress events during migration', async () => {
+  it('pushes progress events in the expected phase sequence (moving×3 → updating_db → reconciling)', async () => {
     await useCase.execute('/new/root')
 
     const calls = vi.mocked(mocks.notifier.notify).mock.calls
     const progressCalls = calls.filter(([ch]) => ch === 'migrate-root-progress')
 
-    // 3 move events + 1 updating_db + 1 reconciling = 5
-    expect(progressCalls.length).toBe(5)
+    // The whole sequence is asserted — `length === 5` plus a single
+    // `[0].phase === 'moving'` would pass even if events 1+2 were reordered
+    // or duplicated. The blocking-operation dialog drives its progress bar
+    // off the current count, so moving=1/3 → moving=3/3 must be monotonic.
+    const phases = progressCalls.map(([, payload]) => (payload as { phase: string }).phase)
+    expect(phases).toEqual(['moving', 'moving', 'moving', 'updating_db', 'reconciling'])
+
     expect(progressCalls[0][1]).toMatchObject({ phase: 'moving', current: 1, total: 3 })
+    expect(progressCalls[1][1]).toMatchObject({ phase: 'moving', current: 2, total: 3 })
+    expect(progressCalls[2][1]).toMatchObject({ phase: 'moving', current: 3, total: 3 })
     expect(progressCalls[3][1]).toMatchObject({ phase: 'updating_db' })
     expect(progressCalls[4][1]).toMatchObject({ phase: 'reconciling' })
   })

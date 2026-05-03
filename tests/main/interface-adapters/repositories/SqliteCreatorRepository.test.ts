@@ -180,14 +180,20 @@ describe('SqliteCreatorRepository', () => {
       expect(result.data[0].name).toBe('Creator 25')
     })
 
-    it('falls back to default sort column for unknown sortBy', () => {
+    it('falls back to default sort (name asc) for an unknown / injection-attempt sortBy', () => {
+      // The fallback is the actual SQL-injection defense — `sortBy` is
+      // string-interpolated into the ORDER BY clause, so a regression that
+      // skipped the allowlist would either crash (bad column) or
+      // round-trip the raw input. Asserting the first row alone could pass
+      // for "no sort at all" too; pin the full asc-ordered sequence so a
+      // regression that reverses or shuffles is detectable.
       const result = repo.findPaginated({
         page: 1,
         pageSize: 3,
         sortBy: 'INVALID; DROP TABLE creators;--'
       })
       expect(result.data).toHaveLength(3)
-      expect(result.data[0].name).toBe('Creator 01')
+      expect(result.data.map((c) => c.name)).toEqual(['Creator 01', 'Creator 02', 'Creator 03'])
     })
 
     it('returns empty data for a page beyond the total', () => {

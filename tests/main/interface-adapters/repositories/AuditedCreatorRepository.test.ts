@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   SqliteCreatorRepository,
   SqliteVideoRepository,
@@ -145,6 +145,36 @@ describe('AuditedCreatorRepository', () => {
     repo.upsert(makeCreator())
     const result = repo.findPaginated({ page: 1, pageSize: 10 })
     expect(result.total).toBe(1)
+  })
+
+  // ── Spy-based delegation: confirms each read method actually calls the
+  // inner repo's same-named method, with the same args. The "shape only"
+  // tests above could pass for an audited method that hardcoded a fake
+  // result; these guard against that drift.
+  it('forwards reads to the inner repo with identical arguments', () => {
+    const findAllSpy = vi.spyOn(innerRepo, 'findAll')
+    const findByIdSpy = vi.spyOn(innerRepo, 'findById')
+    const findByFolderNameSpy = vi.spyOn(innerRepo, 'findByFolderName')
+    const findByYoutubeChannelIdSpy = vi.spyOn(innerRepo, 'findByYoutubeChannelId')
+    const findAllActiveSpy = vi.spyOn(innerRepo, 'findAllActive')
+    const findPaginatedSpy = vi.spyOn(innerRepo, 'findPaginated')
+    const searchByNameSpy = vi.spyOn(innerRepo, 'searchByName')
+
+    repo.findAll()
+    repo.findById('creator-1')
+    repo.findByFolderName('creator-1')
+    repo.findByYoutubeChannelId('UCXYZ')
+    repo.findAllActive()
+    repo.findPaginated({ page: 2, pageSize: 5, sortBy: 'name' })
+    repo.searchByName('alice', 10)
+
+    expect(findAllSpy).toHaveBeenCalledTimes(1)
+    expect(findByIdSpy).toHaveBeenCalledWith('creator-1')
+    expect(findByFolderNameSpy).toHaveBeenCalledWith('creator-1')
+    expect(findByYoutubeChannelIdSpy).toHaveBeenCalledWith('UCXYZ')
+    expect(findAllActiveSpy).toHaveBeenCalledTimes(1)
+    expect(findPaginatedSpy).toHaveBeenCalledWith({ page: 2, pageSize: 5, sortBy: 'name' })
+    expect(searchByNameSpy).toHaveBeenCalledWith('alice', 10)
   })
 
   // ── upsert: create ──

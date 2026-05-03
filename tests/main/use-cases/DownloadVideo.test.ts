@@ -200,14 +200,47 @@ describe('DownloadVideo', () => {
     )
   })
 
-  it('should return a downloadId immediately', async () => {
+  it('returns a downloadId and threads it through the queued notification + downloader call', async () => {
+    // Without these stronger assertions, a regression that returned one id
+    // to the caller but passed a different id to the downloader (or to the
+    // 'queued' progress event) would slip past — the cancel button keys off
+    // the returned id, so divergence orphans the cancel API.
+    await useCase.execute({
+      url: 'https://youtube.com/watch?v=abc123',
+      creatorName: 'TestCreator'
+    })
+    await awaitEnqueuedTask()
+
+    // 'queued' progress event captures the id the renderer will track.
+    const queuedCall = vi
+      .mocked(notifier.notify)
+      .mock.calls.find(
+        ([ch, payload]) =>
+          ch === 'download-progress' && (payload as DownloadProgress).status === 'queued'
+      )
+    expect(queuedCall).toBeDefined()
+    const queuedId = (queuedCall![1] as DownloadProgress).downloadId
+
+    // The downloader must be invoked with the same id (cancel() keys off it).
+    expect(downloader.download).toHaveBeenCalledWith(
+      expect.objectContaining({ downloadId: queuedId }),
+      expect.any(Function)
+    )
+  })
+
+  it('returns the same downloadId to the caller as the one passed to the downloader', async () => {
     const result = await useCase.execute({
       url: 'https://youtube.com/watch?v=abc123',
       creatorName: 'TestCreator'
     })
+    await awaitEnqueuedTask()
+
     expect(result.downloadId).toBeDefined()
     expect(typeof result.downloadId).toBe('string')
-    expect(result.downloadId.length).toBeGreaterThan(0)
+    expect(downloader.download).toHaveBeenCalledWith(
+      expect.objectContaining({ downloadId: result.downloadId }),
+      expect.any(Function)
+    )
   })
 
   it('should notify queued status on execute', async () => {

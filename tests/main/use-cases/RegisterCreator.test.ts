@@ -249,6 +249,41 @@ describe('RegisterCreator', () => {
     expect(persisted.tags[3]).toBe('tag-0')
   })
 
+  it('keeps exactly 64 tags when given exactly 64 (boundary)', async () => {
+    // Off-by-one boundary: the previous test only verifies "more than 64
+    // gets truncated". A buggy `slice(0, 63)` or `slice(0, 65)` would not
+    // be caught by it. Pin both sides of the cap.
+    const exactly64 = Array.from({ length: 64 }, (_, i) => `tag-${i}`)
+    await useCase.execute({
+      channelInfo: baseChannelInfo,
+      displayName: 'X',
+      folderName: 'x',
+      notes: null,
+      tags: exactly64
+    })
+
+    const persisted = vi.mocked(creatorRepo.upsertWithPrevious).mock.calls[0][0]
+    expect(persisted.tags.length).toBe(64)
+    expect(persisted.tags[0]).toBe('tag-0')
+    expect(persisted.tags[63]).toBe('tag-63')
+  })
+
+  it('truncates to 64 when given exactly 65 (boundary)', async () => {
+    const exactly65 = Array.from({ length: 65 }, (_, i) => `tag-${i}`)
+    await useCase.execute({
+      channelInfo: baseChannelInfo,
+      displayName: 'X',
+      folderName: 'x',
+      notes: null,
+      tags: exactly65
+    })
+
+    const persisted = vi.mocked(creatorRepo.upsertWithPrevious).mock.calls[0][0]
+    expect(persisted.tags.length).toBe(64)
+    // `tag-64` (the 65th) was dropped.
+    expect(persisted.tags).not.toContain('tag-64')
+  })
+
   it('coerces empty notes to null', async () => {
     await useCase.execute({
       channelInfo: baseChannelInfo,

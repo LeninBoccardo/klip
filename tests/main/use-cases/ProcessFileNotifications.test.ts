@@ -195,7 +195,13 @@ describe('ProcessFileNotifications', () => {
       await flushFn()
     }
 
-    it('calls executeForCreator for each affected creator when < threshold', async () => {
+    it('calls executeForCreatorBatch with the deduped creator list when < threshold', async () => {
+      // The use case batches into one call with all affected creators so the
+      // batch method can wrap the per-creator reconciles in a single
+      // transaction. Asserting only `executeForCreator` would let a
+      // regression that called the per-creator method N times outside the
+      // batch (and outside the transaction) slip past — that's exactly the
+      // shape the M5 work was supposed to prevent.
       vi.mocked(mockQueue.drain).mockResolvedValue([
         makeEvent('/root/creatorA/downloads/v1/video.mp4', 'add'),
         makeEvent('/root/creatorB/cuts/c1/cut.mp4', 'add')
@@ -204,9 +210,10 @@ describe('ProcessFileNotifications', () => {
       await triggerFlush()
 
       expect(mockReconcile.execute).not.toHaveBeenCalled()
-      expect(mockReconcile.executeForCreator).toHaveBeenCalledTimes(2)
-      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'creatorA')
-      expect(mockReconcile.executeForCreator).toHaveBeenCalledWith('/root', 'creatorB')
+      expect(mockReconcile.executeForCreatorBatch).toHaveBeenCalledTimes(1)
+      const [rootArg, namesArg] = vi.mocked(mockReconcile.executeForCreatorBatch).mock.calls[0]
+      expect(rootArg).toBe('/root')
+      expect([...namesArg].sort()).toEqual(['creatorA', 'creatorB'])
     })
 
     it('deduplicates creators: multiple events for same creator → single executeForCreator', async () => {

@@ -35,47 +35,58 @@ describe('composition-root smoke test', () => {
     }
   })
 
-  it('wires every dependency declared on AppContainer with a non-null instance', () => {
+  it('wires every dependency declared on AppContainer with a non-null instance of the right class', () => {
     database = createTestDb()
     const container = createAppContainer({ database, defaultRootPath: '/fake/root', isDev: true })
 
-    // Repositories
-    expect(container.repositories.creator).toBeDefined()
-    expect(container.repositories.video).toBeDefined()
-    expect(container.repositories.cut).toBeDefined()
-    expect(container.repositories.settings).toBeDefined()
-    expect(container.repositories.operation).toBeDefined()
-    expect(container.repositories.auditLog).toBeDefined()
+    // Asserting the constructor names (rather than just `.toBeDefined()`)
+    // catches a regression that wires a null-returning getter or the wrong
+    // concrete class — `.toBeDefined()` would happily pass for `{}` or the
+    // raw Sqlite* repo where the audited decorator was expected.
+    const expectedCtor = (obj: object, name: string): void =>
+      expect(obj.constructor.name).toBe(name)
 
-    // Ports
-    expect(container.ports.fsReader).toBeDefined()
-    expect(container.ports.fsWriter).toBeDefined()
-    expect(container.ports.pathResolver).toBeDefined()
-    expect(container.ports.transactionScope).toBeDefined()
-    expect(container.ports.notifier).toBeDefined()
-    expect(container.ports.debouncer).toBeDefined()
-    expect(container.ports.binaryResolver).toBeDefined()
-    expect(container.ports.videoDownloader).toBeDefined()
-    expect(container.ports.mediaProbe).toBeDefined()
-    expect(container.ports.downloadQueue).toBeDefined()
-    expect(container.ports.idGenerator).toBeDefined()
-    expect(container.ports.updater).toBeDefined()
+    // Repositories — audited decorators (not raw Sqlite repos) for the three
+    // entity types that go through audit; raw for the rest.
+    expectedCtor(container.repositories.creator, 'AuditedCreatorRepository')
+    expectedCtor(container.repositories.video, 'AuditedVideoRepository')
+    expectedCtor(container.repositories.cut, 'AuditedCutRepository')
+    expectedCtor(container.repositories.settings, 'SqliteSettingsRepository')
+    expectedCtor(container.repositories.operation, 'SqliteOperationRepository')
+    expectedCtor(container.repositories.auditLog, 'SqliteAuditLogRepository')
 
-    // Use cases
-    expect(container.useCases.reconcile).toBeDefined()
-    expect(container.useCases.processNotifications).toBeDefined()
-    expect(container.useCases.fetchVideoInfo).toBeDefined()
-    expect(container.useCases.downloadVideo).toBeDefined()
-    expect(container.useCases.probeMediaFile).toBeDefined()
-    expect(container.useCases.recoverOperations).toBeDefined()
-    expect(container.useCases.enrichMedia).toBeDefined()
-    expect(container.useCases.fetchChannelInfo).toBeDefined()
-    expect(container.useCases.migrateRootFolder).toBeDefined()
-    expect(container.useCases.resolveMediaUrl).toBeDefined()
+    // Ports — concrete impls.
+    expectedCtor(container.ports.fsReader, 'NodeFileSystemReader')
+    expectedCtor(container.ports.fsWriter, 'NodeFileSystemWriter')
+    expectedCtor(container.ports.pathResolver, 'NodePathResolver')
+    expectedCtor(container.ports.transactionScope, 'SqliteTransactionScope')
+    expectedCtor(container.ports.notifier, 'ElectronNotifier')
+    expectedCtor(container.ports.debouncer, 'NodeDebouncer')
+    expectedCtor(container.ports.binaryResolver, 'ElectronBinaryResolver')
+    expectedCtor(container.ports.videoDownloader, 'YtDlpDownloader')
+    expectedCtor(container.ports.mediaProbe, 'FfprobeMediaProbe')
+    expectedCtor(container.ports.downloadQueue, 'PQueueDownloadQueue')
+    expectedCtor(container.ports.idGenerator, 'NodeIdGenerator')
+    // Dev mode swaps the real updater for the no-op DisabledUpdater
+    // (composition-root.ts:224 — `isDev: true` is what this test passes in).
+    expectedCtor(container.ports.updater, 'DisabledUpdater')
+
+    // Use cases — pin to the concrete class names so a regression that
+    // injects a stub or wraps with a decorator surfaces.
+    expectedCtor(container.useCases.reconcile, 'ReconcileDirectory')
+    expectedCtor(container.useCases.processNotifications, 'ProcessFileNotifications')
+    expectedCtor(container.useCases.fetchVideoInfo, 'FetchVideoInfo')
+    expectedCtor(container.useCases.downloadVideo, 'DownloadVideo')
+    expectedCtor(container.useCases.probeMediaFile, 'ProbeMediaFile')
+    expectedCtor(container.useCases.recoverOperations, 'RecoverOperations')
+    expectedCtor(container.useCases.enrichMedia, 'EnrichMediaMetadata')
+    expectedCtor(container.useCases.fetchChannelInfo, 'FetchChannelInfo')
+    expectedCtor(container.useCases.migrateRootFolder, 'MigrateRootFolder')
+    expectedCtor(container.useCases.resolveMediaUrl, 'ResolveMediaUrl')
 
     // Services + ref
-    expect(container.services.fileWatcher).toBeDefined()
-    expect(container.services.klipMediaProtocol).toBeDefined()
+    expectedCtor(container.services.fileWatcher, 'ChokidarWatcher')
+    expectedCtor(container.services.klipMediaProtocol, 'KlipMediaProtocolHandler')
     expect(container.rootPathRef.value).toBe('/fake/root')
 
     // Cleanly tear down (closes DB, etc.).

@@ -169,6 +169,53 @@ describe('SqliteOperationRepository', () => {
     expect(updated?.error).toBeNull()
   })
 
+  it('roundtrips a v2 MigrateRoot payload (partial rollback, per-folder status)', () => {
+    // Crash-recovery hinges on SqliteOperationRepository preserving the v2
+    // schema verbatim. The use-case test asserts what we hand to updatePayload;
+    // this asserts what comes back after a real persist+read so a future
+    // serialization regression (e.g. losing a key, lossy stringification of
+    // booleans) doesn't slip past in JSON.stringify-only mocks.
+    const v2Payload = {
+      version: 2,
+      oldRoot: '/old/root',
+      newRoot: '/new/root',
+      folders: ['creator-a', 'creator-b'],
+      moves: [
+        { folder: 'creator-a', status: 'moved' as const },
+        { folder: 'creator-b', status: 'rolled-back' as const }
+      ],
+      partial: true
+    }
+    repo.create(makeOperation({ id: 'op-mig-1', type: 'migrate_root' }))
+    repo.updatePayload('op-mig-1', JSON.stringify(v2Payload))
+
+    const reloaded = repo.findById('op-mig-1')
+    expect(JSON.parse(reloaded!.payload)).toEqual(v2Payload)
+  })
+
+  it('preserves moves[] order across persist+read (insertion order matters for recovery)', () => {
+    // Recovery walks `moves` in order; a hash-mapped JSON column would
+    // shuffle it. better-sqlite3 stores the raw string so order is stable —
+    // pin that contract.
+    const ordered = {
+      version: 2,
+      oldRoot: '/o',
+      newRoot: '/n',
+      folders: ['x', 'y', 'z'],
+      moves: [
+        { folder: 'z', status: 'moved' as const },
+        { folder: 'a', status: 'moved' as const },
+        { folder: 'm', status: 'rolled-back' as const }
+      ]
+    }
+    repo.create(makeOperation({ id: 'op-ord', type: 'migrate_root' }))
+    repo.updatePayload('op-ord', JSON.stringify(ordered))
+
+    const reloaded = repo.findById('op-ord')
+    const parsed = JSON.parse(reloaded!.payload)
+    expect(parsed.moves.map((m: { folder: string }) => m.folder)).toEqual(['z', 'a', 'm'])
+  })
+
   // ── Edge cases ──
 
   it('creates operation with all types', () => {
