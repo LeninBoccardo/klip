@@ -26,7 +26,7 @@ function DashboardPage(): React.ReactElement {
 
       {isLoading || !stats ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-24 rounded-xl" />
             ))}
@@ -38,7 +38,7 @@ function DashboardPage(): React.ReactElement {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
             <StatCard
               label={t('stats.creators')}
               value={stats.creators.total.toString()}

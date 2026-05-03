@@ -239,10 +239,17 @@
     height: calc(100svh - var(--titlebar-height)) !important;
   }
 
-  /* SidebarProvider wraps everything in `min-h-svh`; with our 32px
-     titlebar offset that overflows by 32px and clips content. Cap it. */
-  .group\/sidebar-wrapper {
+  /* The sidebar wrapper ships with `min-h-svh`, which under our 32px
+     titlebar padding overflows the body by 32px (causing a window-level
+     scrollbar and pushing detail-page content above the fold). Replace
+     the min-height with an explicit, titlebar-aware height so the
+     wrapper is a definite container — that lets `SidebarInset`'s
+     `flex-1 flex-col` size correctly without needing per-call-site
+     `h-full` overrides at every layout root. */
+  [data-slot='sidebar-wrapper'] {
+    height: calc(100svh - var(--titlebar-height)) !important;
     min-height: 0 !important;
+    overflow: hidden;
   }
 }
 

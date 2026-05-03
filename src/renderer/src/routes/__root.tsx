@@ -40,6 +40,7 @@ import { PreferencesBootstrap } from '@components/PreferencesBootstrap'
 import { usePlaybackSettingMirror } from '@/hooks/use-playback-setting'
 import { useDropUrl } from '@/hooks/use-drop-url'
 import { useShortcut } from '@/hooks/use-shortcut'
+import { useNarrowViewport } from '@/hooks/use-narrow-viewport'
 import { DropZoneOverlay } from '@/components/features/downloads/DropZoneOverlay'
 import { Button } from '@ui/button'
 import { Search } from 'lucide-react'
@@ -221,6 +222,54 @@ function AppBreadcrumb(): React.ReactElement | null {
   )
 }
 
+/**
+ * Wraps `SidebarProvider` with controlled `open` state that auto-collapses
+ * the sidebar below ~960px viewport width. The user can still toggle
+ * manually via the sidebar trigger or Ctrl/Cmd+B; this only fires on
+ * viewport change, not every render. When the viewport widens back, we
+ * restore the open state the user had before the auto-collapse so a
+ * deliberate collapse isn't undone by a resize.
+ */
+function ResponsiveSidebarProvider({
+  children
+}: {
+  children: React.ReactNode
+}): React.ReactElement {
+  const narrow = useNarrowViewport()
+  const [open, setOpen] = useState(true)
+  const userPreferenceRef = useRef(true)
+  const prevNarrowRef = useRef(narrow)
+
+  useEffect(() => {
+    if (narrow === prevNarrowRef.current) return
+    prevNarrowRef.current = narrow
+    if (narrow) {
+      // Stash the user's current preference before the auto-collapse so
+      // we can restore it when the viewport widens again.
+      userPreferenceRef.current = open
+      setOpen(false)
+    } else {
+      setOpen(userPreferenceRef.current)
+    }
+  }, [narrow, open])
+
+  const handleOpenChange = useCallback((next: boolean) => {
+    setOpen(next)
+    // Manual toggle while the viewport is wide updates the preference;
+    // a manual toggle while narrow does not (the user is overriding the
+    // auto-collapse for one session and we don't want to remember it).
+    if (!prevNarrowRef.current) {
+      userPreferenceRef.current = next
+    }
+  }, [])
+
+  return (
+    <SidebarProvider open={open} onOpenChange={handleOpenChange}>
+      {children}
+    </SidebarProvider>
+  )
+}
+
 function SkipToContent(): React.ReactElement {
   const { t } = useTranslation('common')
   return (
@@ -239,9 +288,9 @@ const RootLayout = (): React.ReactElement => (
       <PreferencesBootstrap />
       <TooltipProvider>
         <SkipToContent />
-        <SidebarProvider>
+        <ResponsiveSidebarProvider>
           <AppSidebar />
-          <SidebarInset className="flex h-full flex-col overflow-hidden">
+          <SidebarInset className="overflow-hidden">
             <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
@@ -249,11 +298,11 @@ const RootLayout = (): React.ReactElement => (
               <CommandPaletteController />
               <ThemeToggle />
             </header>
-            <main id="main-content" tabIndex={-1} className="flex-1 overflow-hidden">
+            <div id="main-content" tabIndex={-1} className="flex-1 overflow-hidden">
               <Outlet />
-            </main>
+            </div>
           </SidebarInset>
-        </SidebarProvider>
+        </ResponsiveSidebarProvider>
         <Toaster richColors closeButton />
         <BlockingOperationDialog />
         <PersistentPlayer />

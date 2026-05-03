@@ -48,6 +48,13 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 936,
+    // Below ~1024px the layout starts cramping (sidebar + content + sidebar
+    // header chrome leaves <600px of usable width). Pin a sensible floor so
+    // we don't have to support arbitrary tiny widths; matches Tailwind's
+    // `lg` breakpoint so the responsive grids we already write target the
+    // narrowest size users can actually reach.
+    minWidth: 1024,
+    minHeight: 720,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
