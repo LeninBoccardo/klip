@@ -11,6 +11,7 @@ import type {
 import type { DownloadRequest, DownloadProgress, VideoInfo } from '@domain/types'
 import { slugify } from '@domain/types'
 import { redactError } from '@domain/types/redact'
+import { classifyDownloadError } from '@domain/types/download-error'
 import type { Video, Creator } from '@domain/entities'
 import type { IDownloadVideo, DownloadVideoResult } from './IDownloadVideo'
 import type { IFetchVideoInfo } from './IFetchVideoInfo'
@@ -60,7 +61,8 @@ export class DownloadVideo implements IDownloadVideo {
       percent: 0,
       speed: null,
       eta: null,
-      status: 'queued'
+      status: 'queued',
+      creatorName: creatorName.trim()
     })
 
     // Enqueue — the task runs when a concurrency slot opens. `performDownload`
@@ -72,8 +74,9 @@ export class DownloadVideo implements IDownloadVideo {
     //   - the inner catch in `performDownload` itself throws (e.g. notifier
     //     fails to deliver the original `error` event)
     // Without this, the UI is stuck in `queued` forever.
+    const trimmedCreator = creatorName.trim()
     this.downloadQueue
-      .enqueue(() => this.performDownload(downloadId, url, creatorName.trim()))
+      .enqueue(() => this.performDownload(downloadId, url, trimmedCreator))
       .catch((err) => {
         this.notifier.notify('download-progress', {
           downloadId,
@@ -81,7 +84,9 @@ export class DownloadVideo implements IDownloadVideo {
           percent: 0,
           speed: null,
           eta: null,
-          status: 'error'
+          status: 'error',
+          creatorName: trimmedCreator,
+          retriable: classifyDownloadError(err) === 'retriable'
         })
         console.error(
           `[klip] Download queue error (${downloadId}):`,
@@ -148,7 +153,9 @@ export class DownloadVideo implements IDownloadVideo {
         const now = Date.now()
         if (TERMINAL.includes(progress.status) || now - lastEmitMs >= 200) {
           lastEmitMs = now
-          this.notifier.notify('download-progress', progress)
+          // Inject creatorName so the renderer always has it for retry,
+          // even on driver-emitted events that don't know the creator.
+          this.notifier.notify('download-progress', { ...progress, creatorName })
         }
       }
 
@@ -199,14 +206,17 @@ export class DownloadVideo implements IDownloadVideo {
         return
       }
 
-      // Notify error
+      // Notify error with retriable classification so the UI can decide
+      // whether to show a Retry button.
       this.notifier.notify('download-progress', {
         downloadId,
         url,
         percent: 0,
         speed: null,
         eta: null,
-        status: 'error'
+        status: 'error',
+        creatorName,
+        retriable: classifyDownloadError(error) === 'retriable'
       })
 
       console.error(

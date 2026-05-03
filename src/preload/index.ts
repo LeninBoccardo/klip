@@ -64,6 +64,11 @@ const api = {
 
   // ── Shell ──
   openMediaExternally: createTypedInvoker('open-media-externally'),
+  openPathInShell: createTypedInvoker('open-path-in-shell'),
+
+  // ── Stats ──
+  getStorageStats: createTypedInvoker('get-storage-stats'),
+  getLibraryStats: createTypedInvoker('get-library-stats'),
 
   // ── Tags ──
   getAllDistinctTags: createTypedInvoker('get-all-distinct-tags'),

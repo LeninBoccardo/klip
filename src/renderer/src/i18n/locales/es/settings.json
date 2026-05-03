@@ -11,7 +11,8 @@
       "dark": "Oscuro",
       "system": "Sistema"
     },
-    "toggleAria": "Cambiar tema"
+    "toggleAria": "Cambiar tema",
+    "replayTour": "Reabrir tour de bienvenida"
   },
   "language": {
     "title": "Idioma",
@@ -29,6 +30,14 @@
     "rootLabel": "Directorio raíz",
     "notSet": "No definido",
     "changeButton": "Cambiar Carpeta Raíz",
+    "stats": {
+      "videos": "Videos",
+      "cuts": "Cortes",
+      "total": "Total",
+      "note": "Suma de tamaños de archivo registrados en la base de datos. No incluye archivos no rastreados en disco.",
+      "openInShell": "Abrir en el explorador de archivos",
+      "openFailed": "Error al abrir la carpeta raíz"
+    },
     "confirm": {
       "title": "¿Mover todos los archivos a una nueva ubicación?",
       "body": "Esto moverá todas las carpetas de creadores desde la raíz actual al destino seleccionado. La carpeta de destino debe estar vacía.",

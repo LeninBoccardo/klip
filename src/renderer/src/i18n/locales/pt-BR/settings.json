@@ -11,7 +11,8 @@
       "dark": "Escuro",
       "system": "Sistema"
     },
-    "toggleAria": "Alternar tema"
+    "toggleAria": "Alternar tema",
+    "replayTour": "Reabrir tour de boas-vindas"
   },
   "language": {
     "title": "Idioma",
@@ -29,6 +30,14 @@
     "rootLabel": "Diretório raiz",
     "notSet": "Não definido",
     "changeButton": "Alterar Pasta Raiz",
+    "stats": {
+      "videos": "Vídeos",
+      "cuts": "Cortes",
+      "total": "Total",
+      "note": "Soma dos tamanhos de arquivo registrados no banco. Arquivos não rastreados no disco não são incluídos.",
+      "openInShell": "Abrir no gerenciador de arquivos",
+      "openFailed": "Falha ao abrir a pasta raiz"
+    },
     "confirm": {
       "title": "Mover todos os arquivos para um novo local?",
       "body": "Isso moverá todas as pastas de criadores da raiz atual para o destino selecionado. A pasta de destino deve estar vazia.",

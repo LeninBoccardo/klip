@@ -11,7 +11,8 @@
       "dark": "Dark",
       "system": "System"
     },
-    "toggleAria": "Toggle theme"
+    "toggleAria": "Toggle theme",
+    "replayTour": "Replay welcome tour"
   },
   "language": {
     "title": "Language",
@@ -29,6 +30,14 @@
     "rootLabel": "Root directory",
     "notSet": "Not set",
     "changeButton": "Change Root Folder",
+    "stats": {
+      "videos": "Videos",
+      "cuts": "Cuts",
+      "total": "Total",
+      "note": "Sum of file sizes tracked in the database. Untracked files on disk are not included.",
+      "openInShell": "Open in file manager",
+      "openFailed": "Failed to open root folder"
+    },
     "confirm": {
       "title": "Move all files to a new location?",
       "body": "This will move all creator folders from the current root to the selected destination. The target folder must be empty.",

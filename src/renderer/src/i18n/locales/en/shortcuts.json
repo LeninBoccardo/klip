@@ -1,0 +1,32 @@
+{
+  "title": "Keyboard shortcuts",
+  "description": "Press {{key}} again or Esc to close.",
+  "groups": {
+    "global": "Global",
+    "navigation": "Navigation",
+    "player": "Player"
+  },
+  "entries": {
+    "openPaletteMod": "Open command palette",
+    "openPaletteSlash": "Open command palette",
+    "openHelp": "Show keyboard shortcuts",
+    "navHome": "Go to library",
+    "navDashboard": "Go to dashboard",
+    "navDownloads": "Go to downloads",
+    "navCuts": "Go to cuts",
+    "navTags": "Go to tags",
+    "navActivity": "Go to activity",
+    "navSearch": "Go to transcript search",
+    "playerPlayPause": "Play / pause",
+    "playerPauseK": "Pause",
+    "playerSeekBack10": "Seek -10s",
+    "playerSeekForward10": "Seek +10s",
+    "playerSeekBack5": "Seek -5s",
+    "playerSeekForward5": "Seek +5s",
+    "playerVolumeUp": "Volume up",
+    "playerVolumeDown": "Volume down",
+    "playerMute": "Mute / unmute",
+    "playerFullscreen": "Toggle fullscreen",
+    "playerJumpPercent": "Jump to 0%–90%"
+  }
+}

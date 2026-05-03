@@ -6,7 +6,8 @@
   },
   "empty": {
     "title": "Aún no hay colecciones",
-    "description": "Crea tu primera colección para agrupar videos y cortes relacionados."
+    "description": "Crea tu primera colección para agrupar videos y cortes relacionados.",
+    "cta": "Crear una colección"
   },
   "card": {
     "items_one": "{{count}} elemento",
@@ -25,6 +26,7 @@
     "items": {
       "emptyTitle": "Aún no hay elementos",
       "emptyDescription": "Agrega videos y cortes desde el menú contextual de la biblioteca.",
+      "emptyCta": "Explorar biblioteca",
       "missingBadge": "Faltante",
       "unavailable": "(no disponible)",
       "moveUpAria": "Mover arriba",

@@ -183,4 +183,38 @@ export class SqliteCreatorRepository implements ICreatorRepository {
 
     return paginatedResult(rows.map(mapRow), count, params)
   }
+
+  // ── Aggregates ──
+
+  count(): number {
+    const [{ count }] = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(creators)
+      .where(eq(creators.status, 'active'))
+      .all()
+    return count
+  }
+
+  countByStatus(): Partial<Record<EntityStatus, number>> {
+    const rows = this.db
+      .select({ status: creators.status, count: sql<number>`count(*)` })
+      .from(creators)
+      .groupBy(creators.status)
+      .all()
+    const out: Partial<Record<EntityStatus, number>> = {}
+    for (const row of rows) {
+      out[row.status as EntityStatus] = row.count
+    }
+    return out
+  }
+
+  findNamesByIds(ids: string[]): Map<string, string> {
+    if (ids.length === 0) return new Map()
+    const rows = this.db
+      .select({ id: creators.id, name: creators.name })
+      .from(creators)
+      .where(inArray(creators.id, ids))
+      .all()
+    return new Map(rows.map((r) => [r.id, r.name]))
+  }
 }

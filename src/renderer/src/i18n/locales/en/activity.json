@@ -6,7 +6,8 @@
   "loadMore": "Load more",
   "empty": {
     "title": "No activity yet",
-    "description": "Mutations to your library will appear here as they happen."
+    "description": "Mutations to your library will appear here as they happen.",
+    "cta": "Browse library"
   },
   "history": {
     "buttonLabel": "History",

@@ -43,4 +43,25 @@ export interface IVideoRepository {
   findPaginated(params: VideoQueryParams): PaginatedResult<Video>
   /** Bulk-replace a path prefix in filePath and thumbnailPath columns */
   updateFilePathPrefix(oldPrefix: string, newPrefix: string): void
+  // ── Aggregates (used by dashboard + storage stats) ──
+  /** Total count of active videos. */
+  count(): number
+  /** Count of active videos grouped by status. Includes only existing buckets. */
+  countByStatus(): Partial<Record<EntityStatus, number>>
+  /** Count of active videos that have a transcript indexed. */
+  countTranscribed(): number
+  /** Sum of `duration` (seconds) across active videos. NULL durations skipped. */
+  sumDuration(): number
+  /** Sum of `fileSize` (bytes) across active videos. NULL sizes skipped. */
+  sumFileSize(): number
+  /**
+   * For each of the last `days` days (UTC), the count of active videos whose
+   * `downloadDate` falls on that day. Returns one row per day (zero-filled).
+   */
+  findDownloadCountsByDay(days: number): { date: string; count: number }[]
+  /**
+   * Top-N creators by active-video count. Returns at most `limit` rows
+   * sorted by count desc.
+   */
+  findTopCreators(limit: number): { creatorId: string; videoCount: number }[]
 }

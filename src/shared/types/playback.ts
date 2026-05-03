@@ -33,8 +33,14 @@ export const SETTING_KEYS = {
   rootPath: 'rootPath',
   playbackOnNavigate: 'playbackOnNavigate',
   theme: 'theme',
-  language: 'language'
+  language: 'language',
+  hasCompletedOnboarding: 'hasCompletedOnboarding'
 } as const
+
+/** Validator for `hasCompletedOnboarding` (string-encoded boolean). */
+export function isBooleanString(value: unknown): value is 'true' | 'false' {
+  return value === 'true' || value === 'false'
+}
 
 export function isPlaybackOnNavigate(value: unknown): value is PlaybackOnNavigate {
   return value === 'floating' || value === 'pause' || value === 'stop'

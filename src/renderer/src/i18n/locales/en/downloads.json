@@ -14,7 +14,8 @@
   "active": {
     "cardTitle": "Active Downloads",
     "emptyTitle": "No active downloads",
-    "emptyDescription": "Downloads will appear here in real time."
+    "emptyDescription": "Downloads will appear here in real time.",
+    "emptyCta": "Paste a URL above"
   },
   "creator": {
     "label": "Creator name",
@@ -61,5 +62,10 @@
   },
   "progress": {
     "etaPrefix": "ETA"
+  },
+  "retry": {
+    "button": "Retry",
+    "dismissAria": "Dismiss",
+    "failed": "Retry failed: {{message}}"
   }
 }

@@ -16,6 +16,7 @@ import { registerSettingsController } from './interface-adapters/controllers/Set
 import { registerAuditLogController } from './interface-adapters/controllers/AuditLogController'
 import { registerOperationController } from './interface-adapters/controllers/OperationController'
 import { registerUpdaterController } from './interface-adapters/controllers/UpdaterController'
+import { registerStatsController } from './interface-adapters/controllers/StatsController'
 import { join } from 'path'
 import { initializeDatabase } from './framework-drivers/database'
 
@@ -154,7 +155,8 @@ app.whenReady().then(() => {
     container.useCases.searchAll,
     container.useCases.searchTranscripts
   )
-  registerShellController(container.useCases.resolveMediaUrl)
+  registerShellController(container.useCases.resolveMediaUrl, container.rootPathRef)
+  registerStatsController(container.useCases.getStorageStats, container.useCases.getLibraryStats)
   registerCollectionController({
     create: container.useCases.createCollection,
     rename: container.useCases.renameCollection,

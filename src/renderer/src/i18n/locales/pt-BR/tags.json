@@ -14,7 +14,9 @@
     "empty": {
       "title": "Nenhuma tag ainda",
       "withoutFilters": "Marque vídeos e cortes para gerenciá-los aqui.",
-      "withFilters": "Nenhuma tag corresponde ao filtro atual."
+      "withFilters": "Nenhuma tag corresponde ao filtro atual.",
+      "ctaBrowse": "Explorar biblioteca",
+      "ctaClearFilter": "Limpar filtro"
     },
     "table": {
       "tag": "Tag",

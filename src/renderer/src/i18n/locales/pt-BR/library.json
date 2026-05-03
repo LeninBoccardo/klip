@@ -7,7 +7,10 @@
   "empty": {
     "title": "Nenhum criador encontrado",
     "withSearch": "Tente um termo de busca diferente.",
-    "withoutSearch": "Baixe um vídeo ou adicione pastas de criadores ao seu diretório raiz para começar."
+    "withoutSearch": "Baixe um vídeo ou adicione pastas de criadores ao seu diretório raiz para começar.",
+    "ctaRegister": "Cadastrar um criador",
+    "ctaDownload": "Baixar um vídeo",
+    "ctaClearSearch": "Limpar busca"
   },
   "toasts": {
     "deleted": "“{{name}}” excluído",

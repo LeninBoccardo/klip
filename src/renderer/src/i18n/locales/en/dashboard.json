@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Dashboard",
+    "description": "Library health, storage usage, and download activity at a glance."
+  },
+  "stats": {
+    "creators": "Creators",
+    "videos": "Videos",
+    "cuts": "Cuts",
+    "transcribed": "Transcribed",
+    "totalDuration": "Total duration",
+    "librarySize": "Library size"
+  },
+  "charts": {
+    "downloadsByDay": "Downloads · last 30 days",
+    "videosByStatus": "Videos by status",
+    "storageBreakdown": "Storage breakdown",
+    "topCreators": "Top creators by video count",
+    "noData": "Not enough data yet."
+  },
+  "status": {
+    "active": "Active",
+    "deleted": "Deleted",
+    "missing": "Missing"
+  },
+  "storage": {
+    "videos": "Videos",
+    "cuts": "Cuts"
+  },
+  "topCreators": {
+    "videoCount_one": "{{count}} video",
+    "videoCount_other": "{{count}} videos"
+  }
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
+import type { RootPathRef } from '@domain/ports'
 
 const electron = vi.hoisted(() => {
   const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
@@ -11,7 +12,7 @@ const electron = vi.hoisted(() => {
       }),
       on: vi.fn()
     },
-    shell: { openPath: vi.fn() }
+    shell: { openPath: vi.fn(), showItemInFolder: vi.fn() }
   }
 })
 
@@ -22,8 +23,14 @@ vi.mock('electron', () => ({
 
 import { registerShellController } from '@main/interface-adapters/controllers/ShellController'
 
-function makeDeps(): { resolveMediaUrl: IResolveMediaUrl } {
-  return { resolveMediaUrl: { resolve: vi.fn().mockReturnValue(null) } }
+function makeDeps(): {
+  resolveMediaUrl: IResolveMediaUrl
+  rootPath: RootPathRef
+} {
+  return {
+    resolveMediaUrl: { resolve: vi.fn().mockReturnValue(null) },
+    rootPath: { value: '/tmp/klip-root' }
+  }
 }
 
 async function invoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T> {
@@ -39,15 +46,17 @@ describe('ShellController', () => {
     electron.shell.openPath.mockReset()
   })
 
-  it('registers the open-media-externally channel', () => {
+  it('registers shell channels', () => {
     const d = makeDeps()
-    registerShellController(d.resolveMediaUrl)
-    expect([...electron.handlers.keys()]).toEqual(['open-media-externally'])
+    registerShellController(d.resolveMediaUrl, d.rootPath)
+    expect([...electron.handlers.keys()].sort()).toEqual(
+      ['open-media-externally', 'open-path-in-shell'].sort()
+    )
   })
 
   it('returns ok=false when the entity has no resolvable file', async () => {
     const d = makeDeps()
-    registerShellController(d.resolveMediaUrl)
+    registerShellController(d.resolveMediaUrl, d.rootPath)
 
     const result = await invoke<{ ok: boolean; error?: string }>(
       'open-media-externally',
@@ -64,7 +73,7 @@ describe('ShellController', () => {
     const d = makeDeps()
     vi.mocked(d.resolveMediaUrl.resolve).mockReturnValue('/canonical/path.mkv')
     electron.shell.openPath.mockResolvedValue('')
-    registerShellController(d.resolveMediaUrl)
+    registerShellController(d.resolveMediaUrl, d.rootPath)
 
     const result = await invoke<{ ok: boolean; error?: string }>(
       'open-media-externally',
@@ -85,7 +94,7 @@ describe('ShellController', () => {
     const d = makeDeps()
     vi.mocked(d.resolveMediaUrl.resolve).mockReturnValue('/canonical/path.mkv')
     electron.shell.openPath.mockResolvedValue('No application is associated')
-    registerShellController(d.resolveMediaUrl)
+    registerShellController(d.resolveMediaUrl, d.rootPath)
 
     const result = await invoke<{ ok: boolean; error?: string }>(
       'open-media-externally',
@@ -101,7 +110,7 @@ describe('ShellController', () => {
     const d = makeDeps()
     vi.mocked(d.resolveMediaUrl.resolve).mockReturnValue('/canonical/cut.mp4')
     electron.shell.openPath.mockResolvedValue('')
-    registerShellController(d.resolveMediaUrl)
+    registerShellController(d.resolveMediaUrl, d.rootPath)
 
     await invoke('open-media-externally', 'cut', 'cut-1')
 

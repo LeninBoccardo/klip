@@ -1,0 +1,43 @@
+{
+  "title": "Welcome to Klip",
+  "step": "Step {{current}} of {{total}}",
+  "actions": {
+    "next": "Next",
+    "back": "Back",
+    "finish": "Get started",
+    "skip": "Skip"
+  },
+  "steps": {
+    "root": {
+      "title": "Pick a folder for your library",
+      "description": "Klip will store videos, cuts, and metadata under this folder. You can change it later in Settings.",
+      "currentLabel": "Current folder",
+      "useDefault": "Keep this folder",
+      "change": "Choose another folder…"
+    },
+    "preferences": {
+      "title": "Make it yours",
+      "description": "Set the look and language. Both can be changed any time from Settings.",
+      "themeLabel": "Theme",
+      "languageLabel": "Language"
+    },
+    "tour": {
+      "title": "A quick tour",
+      "description": "Three things you can do right away.",
+      "cards": {
+        "download": {
+          "title": "Drop a YouTube URL",
+          "body": "Paste or drag any video URL on the Downloads page — Klip fetches metadata, organises it under the creator, and queues the download."
+        },
+        "organise": {
+          "title": "Organise by creator",
+          "body": "Each creator gets their own folder. Add tags, create collections, and reassign videos between creators when you change your mind."
+        },
+        "search": {
+          "title": "Search transcripts",
+          "body": "Find any moment someone said something. Press / to open the command palette, or g s to jump to full transcript search."
+        }
+      }
+    }
+  }
+}

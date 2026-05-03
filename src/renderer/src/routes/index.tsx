@@ -13,9 +13,9 @@ import {
   EntityContextMenu
 } from '@/components/shared'
 import { Button } from '@ui/button'
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
-import { Plus, Users } from 'lucide-react'
+import { Plus, Users, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import type { EntityStatus } from '@shared/types'
 
@@ -100,6 +100,24 @@ function LibraryPage(): React.ReactElement {
               {search ? t('empty.withSearch') : t('empty.withoutSearch')}
             </EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            {search ? (
+              <Button variant="outline" onClick={() => setSearch('')}>
+                {t('empty.ctaClearSearch')}
+              </Button>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Button onClick={() => setRegisterOpen(true)}>
+                  <Plus className="mr-2 size-4" />
+                  {t('empty.ctaRegister')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate({ to: '/downloads' })}>
+                  <Download className="mr-2 size-4" />
+                  {t('empty.ctaDownload')}
+                </Button>
+              </div>
+            )}
+          </EmptyContent>
         </Empty>
       )}
 

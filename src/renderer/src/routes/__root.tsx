@@ -2,6 +2,7 @@ import {
   createRootRoute,
   Outlet,
   useMatches,
+  useNavigate,
   Link,
   type ErrorComponentProps
 } from '@tanstack/react-router'
@@ -25,17 +26,20 @@ import { queryClient } from '@/lib/query-client'
 import { useDbListener } from '@/hooks/use-db-listener'
 import { useDownloadProgressListener } from '@/hooks/use-downloads'
 import { useUpdaterStatus, useInstallUpdate } from '@/hooks/use-updater'
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AppSidebar } from '@components/features/layout/AppSidebar'
 import { ThemeToggle } from '@components/features/layout/ThemeToggle'
 import { BlockingOperationDialog } from '@/components/shared'
 import { CommandPalette } from '@/components/features/search/CommandPalette'
+import { HelpOverlay } from '@/components/features/help/HelpOverlay'
+import { OnboardingWizard } from '@/components/features/onboarding/OnboardingWizard'
 import { PersistentPlayer } from '@/components/features/player/PersistentPlayer'
 import { PreferencesBootstrap } from '@components/PreferencesBootstrap'
 import { usePlaybackSettingMirror } from '@/hooks/use-playback-setting'
 import { useDropUrl } from '@/hooks/use-drop-url'
+import { useShortcut } from '@/hooks/use-shortcut'
 import { DropZoneOverlay } from '@/components/features/downloads/DropZoneOverlay'
 import { Button } from '@ui/button'
 import { Search } from 'lucide-react'
@@ -52,43 +56,14 @@ function GlobalDropZone(): React.ReactElement {
   return <DropZoneOverlay active={active} />
 }
 
-/**
- * Returns true while the active focus is in a text-entry surface — used to
- * suppress global single-key shortcuts (`/`) so they don't hijack typing.
- * The Cmd/Ctrl+K shortcut intentionally bypasses this since it's the
- * standard escape hatch from any input.
- */
-function isTextInputActive(): boolean {
-  const el = document.activeElement
-  if (!el) return false
-  const tag = el.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
-  if ((el as HTMLElement).isContentEditable) return true
-  return false
-}
-
 function CommandPaletteController(): React.ReactElement {
   const { t } = useTranslation('navigation')
   const [open, setOpen] = useState(false)
+  const togglePalette = useCallback(() => setOpen((prev) => !prev), [])
+  const openPalette = useCallback(() => setOpen(true), [])
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      const isCmdK = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k'
-      const isSlash = event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey
-
-      if (isCmdK) {
-        event.preventDefault()
-        setOpen((prev) => !prev)
-        return
-      }
-      if (isSlash && !isTextInputActive()) {
-        event.preventDefault()
-        setOpen(true)
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  useShortcut('mod+k', togglePalette)
+  useShortcut('/', openPalette)
 
   return (
     <>
@@ -108,6 +83,29 @@ function CommandPaletteController(): React.ReactElement {
       <CommandPalette open={open} onOpenChange={setOpen} />
     </>
   )
+}
+
+function GlobalShortcuts(): React.ReactElement {
+  const navigate = useNavigate()
+  const [helpOpen, setHelpOpen] = useState(false)
+
+  const goto = useCallback(
+    (to: string) => () => {
+      navigate({ to })
+    },
+    [navigate]
+  )
+
+  useShortcut('?', () => setHelpOpen((prev) => !prev))
+  useShortcut('g h', goto('/'))
+  useShortcut('g b', goto('/dashboard'))
+  useShortcut('g d', goto('/downloads'))
+  useShortcut('g c', goto('/cuts'))
+  useShortcut('g t', goto('/tags'))
+  useShortcut('g a', goto('/activity'))
+  useShortcut('g s', goto('/search'))
+
+  return <HelpOverlay open={helpOpen} onOpenChange={setHelpOpen} />
 }
 
 /**
@@ -159,6 +157,7 @@ function UpdaterToastWatcher(): null {
 const ROUTE_KEYS: Record<
   string,
   | 'library'
+  | 'dashboard'
   | 'cuts'
   | 'tags'
   | 'collections'
@@ -168,6 +167,7 @@ const ROUTE_KEYS: Record<
   | 'about'
 > = {
   '/': 'library',
+  '/dashboard': 'dashboard',
   '/cuts': 'cuts',
   '/tags': 'tags',
   '/collections': 'collections',
@@ -245,6 +245,8 @@ const RootLayout = (): React.ReactElement => (
         <BlockingOperationDialog />
         <PersistentPlayer />
         <GlobalDropZone />
+        <GlobalShortcuts />
+        <OnboardingWizard />
         <GlobalListeners />
         <TanStackRouterDevtools />
       </TooltipProvider>

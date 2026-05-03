@@ -161,4 +161,18 @@ export class AuditedCutRepository implements ICutRepository {
       })
     })
   }
+
+  // ── Aggregate pass-throughs (read-only, no audit needed) ──
+
+  count(): number {
+    return this.inner.count()
+  }
+
+  sumDuration(): number {
+    return this.inner.sumDuration()
+  }
+
+  sumFileSize(): number {
+    return this.inner.sumFileSize()
+  }
 }

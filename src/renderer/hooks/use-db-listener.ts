@@ -57,6 +57,11 @@ export function useDbListener(): void {
       if (includes('videos') || includes('cuts')) {
         queryClient.invalidateQueries({ queryKey: queryKeys.collections.all })
       }
+      // Stats / dashboard aggregates derive from creators+videos+cuts, so any
+      // scoped push invalidates them so the dashboard reflects the change.
+      if (includes('creators') || includes('videos') || includes('cuts')) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.stats.all })
+      }
 
       // Audit log + operations + settings are cross-cutting — refresh on any
       // `'all'` push. Targeted entity scopes don't touch them (the audit log

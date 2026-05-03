@@ -161,4 +161,34 @@ export class AuditedVideoRepository implements IVideoRepository {
       })
     })
   }
+
+  // ── Aggregate pass-throughs (read-only, no audit needed) ──
+
+  count(): number {
+    return this.inner.count()
+  }
+
+  countByStatus(): Partial<Record<EntityStatus, number>> {
+    return this.inner.countByStatus()
+  }
+
+  countTranscribed(): number {
+    return this.inner.countTranscribed()
+  }
+
+  sumDuration(): number {
+    return this.inner.sumDuration()
+  }
+
+  sumFileSize(): number {
+    return this.inner.sumFileSize()
+  }
+
+  findDownloadCountsByDay(days: number): { date: string; count: number }[] {
+    return this.inner.findDownloadCountsByDay(days)
+  }
+
+  findTopCreators(limit: number): { creatorId: string; videoCount: number }[] {
+    return this.inner.findTopCreators(limit)
+  }
 }

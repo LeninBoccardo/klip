@@ -14,7 +14,9 @@
     "empty": {
       "title": "Aún no hay etiquetas",
       "withoutFilters": "Etiqueta tus videos y cortes para gestionarlos aquí.",
-      "withFilters": "Ninguna etiqueta coincide con el filtro actual."
+      "withFilters": "Ninguna etiqueta coincide con el filtro actual.",
+      "ctaBrowse": "Explorar biblioteca",
+      "ctaClearFilter": "Limpiar filtro"
     },
     "table": {
       "tag": "Etiqueta",

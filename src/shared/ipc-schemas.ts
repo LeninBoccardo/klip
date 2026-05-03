@@ -200,6 +200,13 @@ export const ipcSchemas = {
   // Kind allowlist mirrors the contract; the controller maps these to
   // ResolveMediaUrl(kind, id, asset='file').
   'open-media-externally': z.tuple([z.enum(['video', 'cut']), z.string().min(1)]),
+  // Path bounded to defend the use-case from oversized payloads; the
+  // controller additionally validates containment under rootPath.
+  'open-path-in-shell': z.tuple([z.string().min(1).max(4096)]),
+
+  // ── Stats ──
+  'get-storage-stats': z.tuple([]),
+  'get-library-stats': z.tuple([]),
 
   // ── Tags ──
   'get-all-distinct-tags': z.tuple([]),

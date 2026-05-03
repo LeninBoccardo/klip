@@ -6,7 +6,8 @@
   "loadMore": "Carregar mais",
   "empty": {
     "title": "Nenhuma atividade ainda",
-    "description": "As alterações na sua biblioteca aparecerão aqui conforme acontecem."
+    "description": "As alterações na sua biblioteca aparecerão aqui conforme acontecem.",
+    "cta": "Explorar biblioteca"
   },
   "history": {
     "buttonLabel": "Histórico",

@@ -7,7 +7,7 @@ import { RenameCollectionDialog } from '@components/features/collections/RenameC
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
-import { Empty, EmptyHeader, EmptyTitle } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from '@ui/empty'
 import { Play, Pencil, Trash2, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { usePlayerStore } from '@/hooks/use-player-store'
@@ -84,11 +84,13 @@ function CollectionDetailPage(): React.ReactElement {
           <EmptyHeader>
             <EmptyTitle>{t('detail.notFound')}</EmptyTitle>
           </EmptyHeader>
+          <EmptyContent>
+            <Button variant="outline" onClick={() => navigate({ to: '/collections' })}>
+              <ArrowLeft className="mr-2 size-4" />
+              {t('detail.backToCollections')}
+            </Button>
+          </EmptyContent>
         </Empty>
-        <Button variant="outline" onClick={() => navigate({ to: '/collections' })}>
-          <ArrowLeft className="mr-2 size-4" />
-          {t('detail.backToCollections')}
-        </Button>
       </PageContainer>
     )
   }

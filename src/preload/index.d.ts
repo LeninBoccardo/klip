@@ -35,7 +35,9 @@ import type {
   MoveVideosToCreatorRequest,
   MoveVideosToCreatorResult,
   SearchTranscriptsParams,
-  TranscriptSearchResult
+  TranscriptSearchResult,
+  StorageStats,
+  LibraryStats
 } from '@shared/types'
 import type {
   CreatorDto,
@@ -100,6 +102,11 @@ interface KlipAPI {
 
   // ── Shell ──
   openMediaExternally(kind: 'video' | 'cut', id: string): Promise<{ ok: boolean; error?: string }>
+  openPathInShell(path: string): Promise<{ ok: boolean; error?: string }>
+
+  // ── Stats ──
+  getStorageStats(): Promise<StorageStats>
+  getLibraryStats(): Promise<LibraryStats>
 
   // ── Tags ──
   getAllDistinctTags(): Promise<TagAggregation[]>

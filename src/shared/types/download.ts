@@ -21,6 +21,19 @@ export interface DownloadProgress {
   speed: string | null
   eta: string | null
   status: DownloadStatus
+  /**
+   * Creator name the download was queued for. Carried in every event so the
+   * renderer can re-invoke the download on retry without holding session state.
+   * Optional because driver-level events (yt-dlp) emit before the use case
+   * wraps them; the use case fills it in for terminal events.
+   */
+  creatorName?: string
+  /**
+   * Set on `status: 'error'`. True when the failure is transient (network,
+   * 5xx, fragment) and a retry might succeed. False/undefined for terminal
+   * failures (deleted video, bad URL) — UI hides the Retry button.
+   */
+  retriable?: boolean
 }
 
 /** Successful download result returned by the downloader driver */

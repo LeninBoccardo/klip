@@ -5,6 +5,7 @@ import { useAuditLogRecent } from '@/hooks/use-audit-log'
 import { useAppStore } from '@/hooks/use-app-store'
 import { RootPathDisplay } from '@components/features/settings/RootPathDisplay'
 import { MigrateRootButton } from '@components/features/settings/MigrateRootButton'
+import { StorageStatsCard } from '@components/features/settings/StorageStatsCard'
 import { ReconcileButton } from '@components/features/settings/ReconcileButton'
 import { EnrichVideosButton } from '@components/features/settings/EnrichVideosButton'
 import { UpdatesCard } from '@components/features/settings/UpdatesCard'
@@ -59,13 +60,14 @@ function SettingsPage(): React.ReactElement {
           <CardTitle>{t('storage.title')}</CardTitle>
           <CardDescription>{t('storage.description')}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {rootLoading ? (
             <Skeleton className="h-10 w-full" />
           ) : (
             <>
               <RootPathDisplay rootPath={rootPath} />
               <MigrateRootButton currentRootPath={rootPath} />
+              <StorageStatsCard />
             </>
           )}
         </CardContent>

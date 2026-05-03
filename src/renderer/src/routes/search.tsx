@@ -12,7 +12,7 @@ import {
 } from '@ui/input-group'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Search as SearchIcon, Captions } from 'lucide-react'
 import { z } from 'zod'
 
@@ -99,6 +99,11 @@ function SearchPage(): React.ReactElement {
             <EmptyTitle>{t('transcripts.noResults', { query: trimmed })}</EmptyTitle>
             <EmptyDescription>{t('transcripts.pageDescription')}</EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            <Button variant="outline" onClick={() => onChange('')}>
+              {t('transcripts.noResultsCta')}
+            </Button>
+          </EmptyContent>
         </Empty>
       )}
 

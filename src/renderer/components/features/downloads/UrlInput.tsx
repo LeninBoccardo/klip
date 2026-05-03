@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +12,8 @@ import { Loader2, Link as LinkIcon } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+
+export const URL_INPUT_FOCUS_EVENT = 'klip:focus-url-input'
 
 interface UrlInputProps {
   onSubmit: (url: string) => void
@@ -35,6 +38,18 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps): React.ReactEle
     resolver: zodResolver(urlSchema)
   })
 
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const { ref: registerRef, ...registerProps } = register('url')
+
+  useEffect(() => {
+    const onFocusRequest = (): void => {
+      inputRef.current?.focus()
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    window.addEventListener(URL_INPUT_FOCUS_EVENT, onFocusRequest)
+    return () => window.removeEventListener(URL_INPUT_FOCUS_EVENT, onFocusRequest)
+  }, [])
+
   return (
     <form onSubmit={handleSubmit((data) => onSubmit(data.url))} className="flex items-start gap-2">
       <Field className="flex-1">
@@ -47,7 +62,11 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps): React.ReactEle
           <InputGroupInput
             placeholder={t('url.placeholder')}
             aria-invalid={!!errors.url}
-            {...register('url')}
+            {...registerProps}
+            ref={(node) => {
+              registerRef(node)
+              inputRef.current = node
+            }}
           />
         </InputGroup>
         <FieldError errors={[errors.url]} />

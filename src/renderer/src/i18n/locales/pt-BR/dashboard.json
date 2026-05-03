@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Painel",
+    "description": "Visão geral da biblioteca, uso de armazenamento e atividade de downloads."
+  },
+  "stats": {
+    "creators": "Criadores",
+    "videos": "Vídeos",
+    "cuts": "Cortes",
+    "transcribed": "Transcritos",
+    "totalDuration": "Duração total",
+    "librarySize": "Tamanho da biblioteca"
+  },
+  "charts": {
+    "downloadsByDay": "Downloads · últimos 30 dias",
+    "videosByStatus": "Vídeos por status",
+    "storageBreakdown": "Distribuição de armazenamento",
+    "topCreators": "Principais criadores por número de vídeos",
+    "noData": "Dados insuficientes ainda."
+  },
+  "status": {
+    "active": "Ativo",
+    "deleted": "Excluído",
+    "missing": "Ausente"
+  },
+  "storage": {
+    "videos": "Vídeos",
+    "cuts": "Cortes"
+  },
+  "topCreators": {
+    "videoCount_one": "{{count}} vídeo",
+    "videoCount_other": "{{count}} vídeos"
+  }
+}

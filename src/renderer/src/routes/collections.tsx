@@ -9,7 +9,7 @@ import { RenameCollectionDialog } from '@components/features/collections/RenameC
 import { PageContainer, PageHeader, PaginationControls, ResponsiveGrid } from '@/components/shared'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
-import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import type { CollectionDto } from '@shared/dtos'
@@ -63,6 +63,12 @@ function CollectionsPage(): React.ReactElement {
             <EmptyTitle>{t('empty.title')}</EmptyTitle>
             <EmptyDescription>{t('empty.description')}</EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 size-4" />
+              {t('empty.cta')}
+            </Button>
+          </EmptyContent>
         </Empty>
       ) : (
         <>

@@ -10,6 +10,8 @@ build
 .eslintcache
 *.log*
 coverage
+.idea
+.vscode
 
 # External binaries (downloaded via `npm run setup`)
 resources/bin/

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAllDistinctTags } from '@/hooks/use-tags'
@@ -13,7 +13,7 @@ import {
   InputGroupInput,
   InputGroupText
 } from '@ui/input-group'
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import { Search, Pencil, Trash2, Tags as TagsIcon } from 'lucide-react'
 import type { TagAggregation } from '@shared/types'
@@ -26,6 +26,7 @@ type SortKey = 'tag' | 'videoCount' | 'cutCount' | 'total'
 
 function TagsPage(): React.ReactElement {
   const { t } = useTranslation('tags')
+  const navigate = useNavigate()
   const { data: tags, isLoading } = useAllDistinctTags()
   const [filter, setFilter] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'total', desc: true })
@@ -101,6 +102,17 @@ function TagsPage(): React.ReactElement {
               {hasFilter ? t('manage.empty.withFilters') : t('manage.empty.withoutFilters')}
             </EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            {hasFilter ? (
+              <Button variant="outline" onClick={() => setFilter('')}>
+                {t('manage.empty.ctaClearFilter')}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => navigate({ to: '/' })}>
+                {t('manage.empty.ctaBrowse')}
+              </Button>
+            )}
+          </EmptyContent>
         </Empty>
       )}
 

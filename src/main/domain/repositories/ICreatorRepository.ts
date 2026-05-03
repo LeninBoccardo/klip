@@ -25,4 +25,11 @@ export interface ICreatorRepository {
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   delete(id: string): void
   findPaginated(params: PaginationParams): PaginatedResult<Creator>
+  // ── Aggregates (used by dashboard) ──
+  /** Total count of active creators. */
+  count(): number
+  /** Count of creators grouped by status. Includes only existing buckets. */
+  countByStatus(): Partial<Record<EntityStatus, number>>
+  /** Look up a batch of creators by id. Returns Map of id → name. */
+  findNamesByIds(ids: string[]): Map<string, string>
 }

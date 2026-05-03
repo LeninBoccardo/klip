@@ -14,7 +14,8 @@
   "active": {
     "cardTitle": "Descargas Activas",
     "emptyTitle": "Sin descargas activas",
-    "emptyDescription": "Las descargas aparecerán aquí en tiempo real."
+    "emptyDescription": "Las descargas aparecerán aquí en tiempo real.",
+    "emptyCta": "Pega una URL arriba"
   },
   "creator": {
     "label": "Nombre del creador",
@@ -61,5 +62,10 @@
   },
   "progress": {
     "etaPrefix": "ETA"
+  },
+  "retry": {
+    "button": "Reintentar",
+    "dismissAria": "Descartar",
+    "failed": "Error al reintentar: {{message}}"
   }
 }

@@ -52,5 +52,10 @@ export const queryKeys = {
     list: (params: PaginationParams) => ['collections', 'list', params] as const,
     detail: (id: string) => ['collections', 'detail', id] as const,
     items: (id: string) => ['collections', 'items', id] as const
+  },
+  stats: {
+    all: ['stats'] as const,
+    storage: ['stats', 'storage'] as const,
+    library: ['stats', 'library'] as const
   }
 } as const

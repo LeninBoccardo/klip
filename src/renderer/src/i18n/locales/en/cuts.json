@@ -25,7 +25,9 @@
   "empty": {
     "title": "No cuts yet",
     "withoutFilters": "Cuts you create will appear here.",
-    "withFilters": "No cuts match the current filters."
+    "withFilters": "No cuts match the current filters.",
+    "ctaBrowse": "Browse library",
+    "ctaClearFilters": "Clear filters"
   },
   "toasts": {
     "deleted": "Deleted {{name}}",

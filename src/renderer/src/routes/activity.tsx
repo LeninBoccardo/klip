@@ -1,11 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuditLogRecent } from '@/hooks/use-audit-log'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { AuditEntryRow } from '@components/features/activity/AuditEntryRow'
 import { Button } from '@ui/button'
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import { Activity as ActivityIcon } from 'lucide-react'
 
@@ -18,6 +18,7 @@ const MAX_LIMIT = 1000
 
 function ActivityPage(): React.ReactElement {
   const { t } = useTranslation('activity')
+  const navigate = useNavigate()
   const [limit, setLimit] = useState(PAGE_SIZE)
   const { data: entries, isLoading } = useAuditLogRecent(limit)
 
@@ -44,6 +45,11 @@ function ActivityPage(): React.ReactElement {
             <EmptyTitle>{t('empty.title')}</EmptyTitle>
             <EmptyDescription>{t('empty.description')}</EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            <Button variant="outline" onClick={() => navigate({ to: '/' })}>
+              {t('empty.cta')}
+            </Button>
+          </EmptyContent>
         </Empty>
       )}
 

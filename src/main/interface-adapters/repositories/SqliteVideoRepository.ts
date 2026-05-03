@@ -310,4 +310,109 @@ export class SqliteVideoRepository implements IVideoRepository {
 
     return paginatedResult(rows.map(mapRow), count, params)
   }
+
+  // ── Aggregates ──
+
+  count(): number {
+    const [{ count }] = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(videos)
+      .where(eq(videos.status, 'active'))
+      .all()
+    return count
+  }
+
+  countByStatus(): Partial<Record<EntityStatus, number>> {
+    const rows = this.db
+      .select({ status: videos.status, count: sql<number>`count(*)` })
+      .from(videos)
+      .groupBy(videos.status)
+      .all()
+    const out: Partial<Record<EntityStatus, number>> = {}
+    for (const row of rows) {
+      out[row.status as EntityStatus] = row.count
+    }
+    return out
+  }
+
+  countTranscribed(): number {
+    const [{ count }] = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(videos)
+      .where(
+        and(eq(videos.status, 'active'), sql`${videos.transcriptText} IS NOT NULL`)
+      )
+      .all()
+    return count
+  }
+
+  sumDuration(): number {
+    const [{ total }] = this.db
+      .select({ total: sql<number>`coalesce(sum(${videos.duration}), 0)` })
+      .from(videos)
+      .where(eq(videos.status, 'active'))
+      .all()
+    return total
+  }
+
+  sumFileSize(): number {
+    const [{ total }] = this.db
+      .select({ total: sql<number>`coalesce(sum(${videos.fileSize}), 0)` })
+      .from(videos)
+      .where(eq(videos.status, 'active'))
+      .all()
+    return total
+  }
+
+  findDownloadCountsByDay(days: number): { date: string; count: number }[] {
+    if (days <= 0) return []
+    // Group active videos by the date portion of `downloadDate` (an ISO string
+    // stored as TEXT). SQLite's `substr` is stable since the format is fixed
+    // by `new Date().toISOString()`.
+    const rows = this.db
+      .select({
+        date: sql<string>`substr(${videos.downloadDate}, 1, 10)`,
+        count: sql<number>`count(*)`
+      })
+      .from(videos)
+      .where(
+        and(
+          eq(videos.status, 'active'),
+          sql`${videos.downloadDate} IS NOT NULL`,
+          sql`date(${videos.downloadDate}) >= date('now', ${`-${days - 1} days`})`
+        )
+      )
+      .groupBy(sql`substr(${videos.downloadDate}, 1, 10)`)
+      .all()
+
+    // Zero-fill: build a Map keyed by date, then enumerate the last `days`
+    // dates in ascending order so the renderer can plot a contiguous line.
+    const counts = new Map<string, number>()
+    for (const row of rows) counts.set(row.date, row.count)
+
+    const out: { date: string; count: number }[] = []
+    const today = new Date()
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const d = new Date(today)
+      d.setUTCDate(today.getUTCDate() - i)
+      const iso = d.toISOString().slice(0, 10)
+      out.push({ date: iso, count: counts.get(iso) ?? 0 })
+    }
+    return out
+  }
+
+  findTopCreators(limit: number): { creatorId: string; videoCount: number }[] {
+    if (limit <= 0) return []
+    return this.db
+      .select({
+        creatorId: videos.creatorId,
+        videoCount: sql<number>`count(*)`
+      })
+      .from(videos)
+      .where(eq(videos.status, 'active'))
+      .groupBy(videos.creatorId)
+      .orderBy(sql`count(*) desc`)
+      .limit(limit)
+      .all()
+  }
 }

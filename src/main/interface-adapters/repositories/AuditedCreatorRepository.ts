@@ -162,4 +162,18 @@ export class AuditedCreatorRepository implements ICreatorRepository {
   findPaginated(params: PaginationParams): PaginatedResult<Creator> {
     return this.inner.findPaginated(params)
   }
+
+  // ── Aggregate pass-throughs (read-only, no audit needed) ──
+
+  count(): number {
+    return this.inner.count()
+  }
+
+  countByStatus(): Partial<Record<EntityStatus, number>> {
+    return this.inner.countByStatus()
+  }
+
+  findNamesByIds(ids: string[]): Map<string, string> {
+    return this.inner.findNamesByIds(ids)
+  }
 }

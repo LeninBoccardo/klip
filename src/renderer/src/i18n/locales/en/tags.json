@@ -14,7 +14,9 @@
     "empty": {
       "title": "No tags yet",
       "withoutFilters": "Tag your videos and cuts to manage them here.",
-      "withFilters": "No tags match the current filter."
+      "withFilters": "No tags match the current filter.",
+      "ctaBrowse": "Browse library",
+      "ctaClearFilter": "Clear filter"
     },
     "table": {
       "tag": "Tag",

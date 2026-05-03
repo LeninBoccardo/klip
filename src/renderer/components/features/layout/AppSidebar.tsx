@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/sidebar'
 import {
   LayoutGrid,
+  LineChart,
   Download,
   Settings,
   Clapperboard,
@@ -25,6 +26,7 @@ import {
 
 type NavKey =
   | 'library'
+  | 'dashboard'
   | 'cuts'
   | 'tags'
   | 'collections'
@@ -39,6 +41,7 @@ const navItems: ReadonlyArray<{
   icon: React.ComponentType
 }> = [
   { key: 'library', to: '/', icon: LayoutGrid },
+  { key: 'dashboard', to: '/dashboard', icon: LineChart },
   { key: 'cuts', to: '/cuts', icon: Scissors },
   { key: 'tags', to: '/tags', icon: TagsIcon },
   { key: 'collections', to: '/collections', icon: ListMusic },

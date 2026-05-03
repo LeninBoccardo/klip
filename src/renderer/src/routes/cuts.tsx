@@ -16,7 +16,7 @@ import {
 import { CutsFilters, sortKeyToParams, type CutsSortKey } from '@components/features/cuts/CutsFilters'
 import { AddToCollectionDialog } from '@components/features/collections/AddToCollectionDialog'
 import { Button } from '@ui/button'
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import { Scissors, CheckSquare, Square } from 'lucide-react'
 import { toast } from 'sonner'
@@ -109,6 +109,26 @@ function CutsPage(): React.ReactElement {
               {hasFilters ? t('empty.withFilters') : t('empty.withoutFilters')}
             </EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            {hasFilters ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearch('')
+                  setStatusFilter(undefined)
+                  setCreatorId(undefined)
+                  setTags([])
+                  setPage(1)
+                }}
+              >
+                {t('empty.ctaClearFilters')}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => navigate({ to: '/' })}>
+                {t('empty.ctaBrowse')}
+              </Button>
+            )}
+          </EmptyContent>
         </Empty>
       )}
 

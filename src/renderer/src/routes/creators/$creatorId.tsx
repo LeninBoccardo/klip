@@ -18,8 +18,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
 import { Skeleton } from '@ui/skeleton'
 import { Button } from '@ui/button'
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
-import { Film, Scissors, CheckSquare, Square } from 'lucide-react'
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Film, Scissors, CheckSquare, Square, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { AddToCollectionDialog } from '@components/features/collections/AddToCollectionDialog'
 import type { CollectionItemKind } from '@shared/types'
@@ -110,6 +110,12 @@ function VideosTab({ creatorId }: { creatorId: string }): React.ReactElement {
           <EmptyTitle>{t('detail.videos.emptyTitle')}</EmptyTitle>
           <EmptyDescription>{t('detail.videos.emptyDescription')}</EmptyDescription>
         </EmptyHeader>
+        <EmptyContent>
+          <Button onClick={() => navigate({ to: '/downloads' })}>
+            <Download className="mr-2 size-4" />
+            {t('detail.videos.emptyCta')}
+          </Button>
+        </EmptyContent>
       </Empty>
     )
   }
@@ -231,6 +237,7 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
   const { t } = useTranslation('creators')
   const { t: tc } = useTranslation('common')
   const { t: tl } = useTranslation('library')
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [selectMode, setSelectMode] = useState(false)
   const selection = useMultiSelect()
@@ -263,6 +270,11 @@ function CutsTab({ creatorId }: { creatorId: string }): React.ReactElement {
           <EmptyTitle>{t('detail.cuts.emptyTitle')}</EmptyTitle>
           <EmptyDescription>{t('detail.cuts.emptyDescription')}</EmptyDescription>
         </EmptyHeader>
+        <EmptyContent>
+          <Button variant="outline" onClick={() => navigate({ to: '/cuts' })}>
+            {t('detail.cuts.emptyCta')}
+          </Button>
+        </EmptyContent>
       </Empty>
     )
   }

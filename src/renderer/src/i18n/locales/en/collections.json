@@ -6,7 +6,8 @@
   },
   "empty": {
     "title": "No collections yet",
-    "description": "Create your first collection to group related videos and cuts."
+    "description": "Create your first collection to group related videos and cuts.",
+    "cta": "Create a collection"
   },
   "card": {
     "items_one": "{{count}} item",
@@ -25,6 +26,7 @@
     "items": {
       "emptyTitle": "No items yet",
       "emptyDescription": "Add videos and cuts from the library context menu.",
+      "emptyCta": "Browse library",
       "missingBadge": "Missing",
       "unavailable": "(unavailable)",
       "moveUpAria": "Move up",

@@ -1,0 +1,32 @@
+{
+  "title": "Atajos de teclado",
+  "description": "Presiona {{key}} otra vez o Esc para cerrar.",
+  "groups": {
+    "global": "Global",
+    "navigation": "Navegación",
+    "player": "Reproductor"
+  },
+  "entries": {
+    "openPaletteMod": "Abrir paleta de comandos",
+    "openPaletteSlash": "Abrir paleta de comandos",
+    "openHelp": "Mostrar atajos de teclado",
+    "navHome": "Ir a la biblioteca",
+    "navDashboard": "Ir al panel",
+    "navDownloads": "Ir a descargas",
+    "navCuts": "Ir a cortes",
+    "navTags": "Ir a etiquetas",
+    "navActivity": "Ir a actividad",
+    "navSearch": "Ir a búsqueda en transcripciones",
+    "playerPlayPause": "Reproducir / pausar",
+    "playerPauseK": "Pausar",
+    "playerSeekBack10": "Retroceder 10s",
+    "playerSeekForward10": "Avanzar 10s",
+    "playerSeekBack5": "Retroceder 5s",
+    "playerSeekForward5": "Avanzar 5s",
+    "playerVolumeUp": "Subir volumen",
+    "playerVolumeDown": "Bajar volumen",
+    "playerMute": "Silenciar / activar",
+    "playerFullscreen": "Alternar pantalla completa",
+    "playerJumpPercent": "Saltar a 0%–90%"
+  }
+}

@@ -16,6 +16,9 @@ import enAbout from './locales/en/about.json'
 import enTags from './locales/en/tags.json'
 import enCuts from './locales/en/cuts.json'
 import enActivity from './locales/en/activity.json'
+import enShortcuts from './locales/en/shortcuts.json'
+import enDashboard from './locales/en/dashboard.json'
+import enOnboarding from './locales/en/onboarding.json'
 
 import ptBRCommon from './locales/pt-BR/common.json'
 import ptBRNavigation from './locales/pt-BR/navigation.json'
@@ -31,6 +34,9 @@ import ptBRAbout from './locales/pt-BR/about.json'
 import ptBRTags from './locales/pt-BR/tags.json'
 import ptBRCuts from './locales/pt-BR/cuts.json'
 import ptBRActivity from './locales/pt-BR/activity.json'
+import ptBRShortcuts from './locales/pt-BR/shortcuts.json'
+import ptBRDashboard from './locales/pt-BR/dashboard.json'
+import ptBROnboarding from './locales/pt-BR/onboarding.json'
 
 import esCommon from './locales/es/common.json'
 import esNavigation from './locales/es/navigation.json'
@@ -46,6 +52,9 @@ import esAbout from './locales/es/about.json'
 import esTags from './locales/es/tags.json'
 import esCuts from './locales/es/cuts.json'
 import esActivity from './locales/es/activity.json'
+import esShortcuts from './locales/es/shortcuts.json'
+import esDashboard from './locales/es/dashboard.json'
+import esOnboarding from './locales/es/onboarding.json'
 
 /**
  * i18next bootstrap — synchronous and offline. All resources are statically
@@ -68,7 +77,10 @@ export const resources = {
     about: enAbout,
     tags: enTags,
     cuts: enCuts,
-    activity: enActivity
+    activity: enActivity,
+    shortcuts: enShortcuts,
+    dashboard: enDashboard,
+    onboarding: enOnboarding
   },
   'pt-BR': {
     common: ptBRCommon,
@@ -84,7 +96,10 @@ export const resources = {
     about: ptBRAbout,
     tags: ptBRTags,
     cuts: ptBRCuts,
-    activity: ptBRActivity
+    activity: ptBRActivity,
+    shortcuts: ptBRShortcuts,
+    dashboard: ptBRDashboard,
+    onboarding: ptBROnboarding
   },
   es: {
     common: esCommon,
@@ -100,7 +115,10 @@ export const resources = {
     about: esAbout,
     tags: esTags,
     cuts: esCuts,
-    activity: esActivity
+    activity: esActivity,
+    shortcuts: esShortcuts,
+    dashboard: esDashboard,
+    onboarding: esOnboarding
   }
 } as const
 
@@ -123,7 +141,10 @@ void i18n.use(initReactI18next).init({
     'about',
     'tags',
     'cuts',
-    'activity'
+    'activity',
+    'shortcuts',
+    'dashboard',
+    'onboarding'
   ],
   interpolation: {
     // React already escapes by default — double-escaping breaks accents.

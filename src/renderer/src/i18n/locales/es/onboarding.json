@@ -1,0 +1,43 @@
+{
+  "title": "Bienvenido a Klip",
+  "step": "Paso {{current}} de {{total}}",
+  "actions": {
+    "next": "Siguiente",
+    "back": "Atrás",
+    "finish": "Empezar",
+    "skip": "Omitir"
+  },
+  "steps": {
+    "root": {
+      "title": "Elige una carpeta para tu biblioteca",
+      "description": "Klip almacenará videos, cortes y metadatos en esta carpeta. Puedes cambiarla luego en Configuración.",
+      "currentLabel": "Carpeta actual",
+      "useDefault": "Mantener esta carpeta",
+      "change": "Elegir otra carpeta…"
+    },
+    "preferences": {
+      "title": "Personaliza",
+      "description": "Ajusta el tema y el idioma. Ambos se pueden cambiar en cualquier momento desde Configuración.",
+      "themeLabel": "Tema",
+      "languageLabel": "Idioma"
+    },
+    "tour": {
+      "title": "Un tour rápido",
+      "description": "Tres cosas que puedes hacer ahora mismo.",
+      "cards": {
+        "download": {
+          "title": "Pega una URL de YouTube",
+          "body": "Pega o arrastra cualquier URL de video en la página de Descargas — Klip obtiene los metadatos, organiza por creador y encola la descarga."
+        },
+        "organise": {
+          "title": "Organiza por creador",
+          "body": "Cada creador tiene su propia carpeta. Añade etiquetas, crea colecciones y mueve videos entre creadores cuando cambies de idea."
+        },
+        "search": {
+          "title": "Busca transcripciones",
+          "body": "Encuentra cualquier momento en que se dijo algo. Pulsa / para abrir la paleta de comandos, o g s para ir a la búsqueda en transcripciones."
+        }
+      }
+    }
+  }
+}

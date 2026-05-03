@@ -65,8 +65,10 @@ export {
   PLAYBACK_ON_NAVIGATE_VALUES,
   DEFAULT_PLAYBACK_ON_NAVIGATE,
   SETTING_KEYS,
-  isPlaybackOnNavigate
+  isPlaybackOnNavigate,
+  isBooleanString
 } from './playback'
+export type { StorageStats, LibraryStats } from './stats'
 export type { Theme, Language } from './preferences'
 export {
   THEME_VALUES,

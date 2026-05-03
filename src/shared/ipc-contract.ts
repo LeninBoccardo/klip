@@ -34,7 +34,9 @@ import type {
   MoveVideosToCreatorRequest,
   MoveVideosToCreatorResult,
   SearchTranscriptsParams,
-  TranscriptSearchResult
+  TranscriptSearchResult,
+  StorageStats,
+  LibraryStats
 } from './types'
 import type {
   CreatorDto,
@@ -122,6 +124,18 @@ export interface IpcContract {
     params: [kind: 'video' | 'cut', id: string]
     result: { ok: boolean; error?: string }
   }
+  // Reveal an arbitrary path in the OS file manager. Used by the Storage
+  // settings card to "Open in file manager". The path is validated against
+  // the configured rootPath in the controller — only paths under `rootPath`
+  // are accepted.
+  'open-path-in-shell': {
+    params: [path: string]
+    result: { ok: boolean; error?: string }
+  }
+
+  // ── Stats ──
+  'get-storage-stats': { params: []; result: StorageStats }
+  'get-library-stats': { params: []; result: LibraryStats }
 
   // ── Collections ──
   'collections-paginated': {

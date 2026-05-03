@@ -119,6 +119,10 @@ import { ReorderCollection } from '@use-cases/ReorderCollection'
 import { GetCollectionItems } from '@use-cases/GetCollectionItems'
 import { GetCollectionById } from '@use-cases/GetCollectionById'
 import { GetCollectionsPaginated } from '@use-cases/GetCollectionsPaginated'
+import { GetStorageStats } from '@use-cases/GetStorageStats'
+import type { IGetStorageStats } from '@use-cases/IGetStorageStats'
+import { GetLibraryStats } from '@use-cases/GetLibraryStats'
+import type { IGetLibraryStats } from '@use-cases/IGetLibraryStats'
 
 /**
  * Application dependency container.
@@ -181,6 +185,8 @@ export interface AppContainer {
     getCollectionItems: IGetCollectionItems
     getCollectionById: IGetCollectionById
     getCollectionsPaginated: IGetCollectionsPaginated
+    getStorageStats: IGetStorageStats
+    getLibraryStats: IGetLibraryStats
   }
   services: {
     fileWatcher: IFileWatcher
@@ -384,6 +390,11 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const getCollectionById = new GetCollectionById(collectionRepo)
   const getCollectionsPaginated = new GetCollectionsPaginated(collectionRepo)
 
+  // ── Stats / dashboard ──
+  // Both pure aggregate readers — no audit footprint, no notifier traffic.
+  const getStorageStats = new GetStorageStats(videoRepo, cutRepo)
+  const getLibraryStats = new GetLibraryStats(creatorRepo, videoRepo, cutRepo, getStorageStats)
+
   // ── Media protocol (entity-keyed klip-media:// resolver + handler) ──
   // The renderer references local media via klip-media://<kind>/<id>/<asset>
   // and never holds raw filesystem paths. ResolveMediaUrl maps the entity ref
@@ -465,7 +476,9 @@ export function createAppContainer(config: AppConfig): AppContainer {
       reorderCollection,
       getCollectionItems,
       getCollectionById,
-      getCollectionsPaginated
+      getCollectionsPaginated,
+      getStorageStats,
+      getLibraryStats
     },
     services: {
       fileWatcher,

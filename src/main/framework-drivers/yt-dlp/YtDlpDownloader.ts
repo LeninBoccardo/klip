@@ -365,6 +365,12 @@ export class YtDlpDownloader implements IVideoDownloader {
       const args = [
         '--newline',
         '--no-warnings',
+        // `--continue` resumes from the .part file when a previous attempt
+        // for this output template was interrupted. `--no-overwrites` keeps
+        // already-fetched sidecars (thumbnail, info.json) from being
+        // re-downloaded on retry. Both are no-ops on a fresh download.
+        '--continue',
+        '--no-overwrites',
         '--progress-template',
         '%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s',
         '--write-thumbnail',

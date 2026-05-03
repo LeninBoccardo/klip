@@ -13,6 +13,7 @@ import { Route as TagsRouteImport } from './routes/tags'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as DownloadsRouteImport } from './routes/downloads'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CutsRouteImport } from './routes/cuts'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as ActivityRouteImport } from './routes/activity'
@@ -40,6 +41,11 @@ const SearchRoute = SearchRouteImport.update({
 const DownloadsRoute = DownloadsRouteImport.update({
   id: '/downloads',
   path: '/downloads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CutsRoute = CutsRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/activity': typeof ActivityRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/cuts': typeof CutsRoute
+  '/dashboard': typeof DashboardRoute
   '/downloads': typeof DownloadsRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/activity': typeof ActivityRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/cuts': typeof CutsRoute
+  '/dashboard': typeof DashboardRoute
   '/downloads': typeof DownloadsRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/activity': typeof ActivityRoute
   '/collections': typeof CollectionsRouteWithChildren
   '/cuts': typeof CutsRoute
+  '/dashboard': typeof DashboardRoute
   '/downloads': typeof DownloadsRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/collections'
     | '/cuts'
+    | '/dashboard'
     | '/downloads'
     | '/search'
     | '/settings'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/collections'
     | '/cuts'
+    | '/dashboard'
     | '/downloads'
     | '/search'
     | '/settings'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/collections'
     | '/cuts'
+    | '/dashboard'
     | '/downloads'
     | '/search'
     | '/settings'
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   ActivityRoute: typeof ActivityRoute
   CollectionsRoute: typeof CollectionsRouteWithChildren
   CutsRoute: typeof CutsRoute
+  DashboardRoute: typeof DashboardRoute
   DownloadsRoute: typeof DownloadsRoute
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/downloads'
       fullPath: '/downloads'
       preLoaderRoute: typeof DownloadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cuts': {
@@ -292,6 +312,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActivityRoute: ActivityRoute,
   CollectionsRoute: CollectionsRouteWithChildren,
   CutsRoute: CutsRoute,
+  DashboardRoute: DashboardRoute,
   DownloadsRoute: DownloadsRoute,
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,

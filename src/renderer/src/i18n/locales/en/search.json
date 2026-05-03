@@ -22,6 +22,7 @@
     "pageDescription": "Find any moment someone said something across your library.",
     "placeholder": "Search inside transcripts...",
     "noResults": "No transcript matches for “{{query}}”.",
+    "noResultsCta": "Clear search",
     "totalApproximate_one": "{{count}} match",
     "totalApproximate_other": "{{count}} matches",
     "totalCapped": "1000+ matches",

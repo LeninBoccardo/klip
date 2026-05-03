@@ -331,4 +331,33 @@ export class SqliteCutRepository implements ICutRepository {
 
     return paginatedResult(rows, count, params)
   }
+
+  // ── Aggregates ──
+
+  count(): number {
+    const [{ count }] = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(cuts)
+      .where(eq(cuts.status, 'active'))
+      .all()
+    return count
+  }
+
+  sumDuration(): number {
+    const [{ total }] = this.db
+      .select({ total: sql<number>`coalesce(sum(${cuts.duration}), 0)` })
+      .from(cuts)
+      .where(eq(cuts.status, 'active'))
+      .all()
+    return total
+  }
+
+  sumFileSize(): number {
+    const [{ total }] = this.db
+      .select({ total: sql<number>`coalesce(sum(${cuts.fileSize}), 0)` })
+      .from(cuts)
+      .where(eq(cuts.status, 'active'))
+      .all()
+    return total
+  }
 }

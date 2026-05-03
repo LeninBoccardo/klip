@@ -35,4 +35,11 @@ export interface ICutRepository {
   findPaginated(params: CutQueryParams): PaginatedResult<Cut>
   /** Bulk-replace a path prefix in filePath and thumbnailPath columns */
   updateFilePathPrefix(oldPrefix: string, newPrefix: string): void
+  // ── Aggregates (used by dashboard + storage stats) ──
+  /** Total count of active cuts. */
+  count(): number
+  /** Sum of `duration` (seconds) across active cuts. NULL durations skipped. */
+  sumDuration(): number
+  /** Sum of `fileSize` (bytes) across active cuts. NULL sizes skipped. */
+  sumFileSize(): number
 }

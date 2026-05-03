@@ -1,0 +1,32 @@
+{
+  "title": "Atalhos de teclado",
+  "description": "Pressione {{key}} novamente ou Esc para fechar.",
+  "groups": {
+    "global": "Global",
+    "navigation": "Navegação",
+    "player": "Player"
+  },
+  "entries": {
+    "openPaletteMod": "Abrir paleta de comandos",
+    "openPaletteSlash": "Abrir paleta de comandos",
+    "openHelp": "Mostrar atalhos de teclado",
+    "navHome": "Ir para a biblioteca",
+    "navDashboard": "Ir para o painel",
+    "navDownloads": "Ir para downloads",
+    "navCuts": "Ir para cortes",
+    "navTags": "Ir para etiquetas",
+    "navActivity": "Ir para atividades",
+    "navSearch": "Ir para a busca em transcrições",
+    "playerPlayPause": "Tocar / pausar",
+    "playerPauseK": "Pausar",
+    "playerSeekBack10": "Voltar 10s",
+    "playerSeekForward10": "Avançar 10s",
+    "playerSeekBack5": "Voltar 5s",
+    "playerSeekForward5": "Avançar 5s",
+    "playerVolumeUp": "Aumentar volume",
+    "playerVolumeDown": "Diminuir volume",
+    "playerMute": "Silenciar / ativar som",
+    "playerFullscreen": "Alternar tela cheia",
+    "playerJumpPercent": "Pular para 0%–90%"
+  }
+}

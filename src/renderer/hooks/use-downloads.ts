@@ -29,6 +29,13 @@ export function useCancelDownload(): UseMutationResult<void, Error, string> {
 /**
  * Subscribes to real-time download progress events and syncs them into zustand.
  * Mount once near the root or on the downloads page.
+ *
+ * Auto-dismiss policy:
+ *   - `complete` / `cancelled`: removed after 3s.
+ *   - `error` with `retriable: true`: kept indefinitely so the user can hit
+ *     Retry. Removal happens when they click Dismiss or successfully retry.
+ *   - `error` with `retriable: false` (terminal): removed after 3s — there's
+ *     nothing useful the user can do.
  */
 export function useDownloadProgressListener(): void {
   const upsertDownload = useAppStore((s) => s.upsertDownload)
@@ -36,10 +43,14 @@ export function useDownloadProgressListener(): void {
 
   useEffect(() => {
     const unsubscribe = window.api.onDownloadProgress((_event, data: DownloadProgress) => {
-      if (data.status === 'complete' || data.status === 'error' || data.status === 'cancelled') {
-        // Keep it briefly for the UI to show final state, then remove
+      if (data.status === 'complete' || data.status === 'cancelled') {
         upsertDownload(data)
         setTimeout(() => removeDownload(data.downloadId), 3000)
+      } else if (data.status === 'error') {
+        upsertDownload(data)
+        if (!data.retriable) {
+          setTimeout(() => removeDownload(data.downloadId), 3000)
+        }
       } else {
         upsertDownload(data)
       }

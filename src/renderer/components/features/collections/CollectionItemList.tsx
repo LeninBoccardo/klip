@@ -14,7 +14,7 @@ import {
 import { usePlayerStore } from '@/hooks/use-player-store'
 import { mediaUrl } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyContent, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import type { CollectionItemDto } from '@shared/dtos'
 
@@ -115,6 +115,11 @@ export function CollectionItemList({ collectionId }: CollectionItemListProps): R
           <EmptyTitle>{t('detail.items.emptyTitle')}</EmptyTitle>
           <EmptyDescription>{t('detail.items.emptyDescription')}</EmptyDescription>
         </EmptyHeader>
+        <EmptyContent>
+          <Button variant="outline" onClick={() => navigate({ to: '/' })}>
+            {t('detail.items.emptyCta')}
+          </Button>
+        </EmptyContent>
       </Empty>
     )
   }

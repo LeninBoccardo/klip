@@ -44,6 +44,11 @@ export const IpcChannels = {
 
   // ── Shell ──
   OpenMediaExternally: 'open-media-externally',
+  OpenPathInShell: 'open-path-in-shell',
+
+  // ── Stats ──
+  GetStorageStats: 'get-storage-stats',
+  GetLibraryStats: 'get-library-stats',
 
   // ── Collections ──
   CollectionsPaginated: 'collections-paginated',

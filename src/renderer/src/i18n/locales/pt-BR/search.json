@@ -22,6 +22,7 @@
     "pageDescription": "Encontre qualquer momento em que algo foi dito na sua biblioteca.",
     "placeholder": "Buscar dentro das transcrições...",
     "noResults": "Nenhuma correspondência em transcrições para “{{query}}”.",
+    "noResultsCta": "Limpar busca",
     "totalApproximate_one": "{{count}} correspondência",
     "totalApproximate_other": "{{count}} correspondências",
     "totalCapped": "Mais de 1000 correspondências",

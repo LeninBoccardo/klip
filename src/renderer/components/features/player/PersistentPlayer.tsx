@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { usePlayerStore } from '@/hooks/use-player-store'
 import { usePlayerSlot } from './player-slot-ref'
 import { mediaUrl } from '@/lib/format'
+import { useShortcut } from '@/hooks/use-shortcut'
 import { Button } from '@ui/button'
 import { Maximize2, X, ExternalLink, SkipBack, SkipForward } from 'lucide-react'
 import { toast } from 'sonner'
@@ -13,6 +14,11 @@ import { cn } from '@/lib/utils'
 const MINI_WIDTH = 360
 const MINI_HEIGHT = 202 // 16:9 from 360px width
 const MINI_OFFSET = 24
+
+function seekToPercent(el: HTMLVideoElement, fraction: number): void {
+  if (!Number.isFinite(el.duration) || el.duration <= 0) return
+  el.currentTime = el.duration * fraction
+}
 
 /**
  * The single, persistent `<video>` element shared across the app.
@@ -128,6 +134,94 @@ export function PersistentPlayer(): React.ReactElement | null {
     container.style.height = '0px'
     return undefined
   }, [mode, slotEl, mounted])
+
+  // ── Player keyboard shortcuts (active only in detail mode) ──────────────
+  const shortcutsEnabled = mode === 'detail' && Boolean(videoId)
+  const withVideo = useCallback(
+    (fn: (el: HTMLVideoElement) => void) => () => {
+      const el = videoRef.current
+      if (!el) return
+      fn(el)
+    },
+    []
+  )
+
+  useShortcut(' ', withVideo((el) => (el.paused ? void el.play().catch(() => {}) : el.pause())), {
+    enabled: shortcutsEnabled
+  })
+  useShortcut('k', withVideo((el) => el.pause()), { enabled: shortcutsEnabled })
+  useShortcut(
+    'j',
+    withVideo((el) => {
+      el.currentTime = Math.max(0, el.currentTime - 10)
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    'l',
+    withVideo((el) => {
+      el.currentTime = Math.min(el.duration || el.currentTime + 10, el.currentTime + 10)
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    'ArrowLeft',
+    withVideo((el) => {
+      el.currentTime = Math.max(0, el.currentTime - 5)
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    'ArrowRight',
+    withVideo((el) => {
+      el.currentTime = Math.min(el.duration || el.currentTime + 5, el.currentTime + 5)
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    'ArrowUp',
+    withVideo((el) => {
+      el.volume = Math.min(1, el.volume + 0.1)
+      el.muted = false
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    'ArrowDown',
+    withVideo((el) => {
+      el.volume = Math.max(0, el.volume - 0.1)
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    'm',
+    withVideo((el) => {
+      el.muted = !el.muted
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    'f',
+    withVideo((el) => {
+      if (document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {})
+      } else {
+        void el.requestFullscreen().catch(() => {})
+      }
+    }),
+    { enabled: shortcutsEnabled }
+  )
+  // 0–9 jump shortcuts (each is its own listener so chord buffers don't clash)
+  useShortcut('0', withVideo((el) => seekToPercent(el, 0)), { enabled: shortcutsEnabled })
+  useShortcut('1', withVideo((el) => seekToPercent(el, 0.1)), { enabled: shortcutsEnabled })
+  useShortcut('2', withVideo((el) => seekToPercent(el, 0.2)), { enabled: shortcutsEnabled })
+  useShortcut('3', withVideo((el) => seekToPercent(el, 0.3)), { enabled: shortcutsEnabled })
+  useShortcut('4', withVideo((el) => seekToPercent(el, 0.4)), { enabled: shortcutsEnabled })
+  useShortcut('5', withVideo((el) => seekToPercent(el, 0.5)), { enabled: shortcutsEnabled })
+  useShortcut('6', withVideo((el) => seekToPercent(el, 0.6)), { enabled: shortcutsEnabled })
+  useShortcut('7', withVideo((el) => seekToPercent(el, 0.7)), { enabled: shortcutsEnabled })
+  useShortcut('8', withVideo((el) => seekToPercent(el, 0.8)), { enabled: shortcutsEnabled })
+  useShortcut('9', withVideo((el) => seekToPercent(el, 0.9)), { enabled: shortcutsEnabled })
 
   if (!mounted || !videoId) return null
 

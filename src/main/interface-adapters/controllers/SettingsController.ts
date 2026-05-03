@@ -1,7 +1,13 @@
 import { dialog, BrowserWindow } from 'electron'
 import type { ISettingsRepository } from '@domain/repositories'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
-import { isPlaybackOnNavigate, isTheme, isLanguage, SETTING_KEYS } from '@shared/types'
+import {
+  isPlaybackOnNavigate,
+  isTheme,
+  isLanguage,
+  isBooleanString,
+  SETTING_KEYS
+} from '@shared/types'
 import { createTypedHandler } from './create-typed-handler'
 
 /**
@@ -18,7 +24,8 @@ import { createTypedHandler } from './create-typed-handler'
 const SETTABLE_KEYS = new Set<string>([
   SETTING_KEYS.playbackOnNavigate,
   SETTING_KEYS.theme,
-  SETTING_KEYS.language
+  SETTING_KEYS.language,
+  SETTING_KEYS.hasCompletedOnboarding
 ])
 
 /**
@@ -30,7 +37,8 @@ const SETTABLE_KEYS = new Set<string>([
 const VALUE_VALIDATORS: Record<string, (value: string) => boolean> = {
   [SETTING_KEYS.playbackOnNavigate]: isPlaybackOnNavigate,
   [SETTING_KEYS.theme]: isTheme,
-  [SETTING_KEYS.language]: isLanguage
+  [SETTING_KEYS.language]: isLanguage,
+  [SETTING_KEYS.hasCompletedOnboarding]: isBooleanString
 }
 
 /**

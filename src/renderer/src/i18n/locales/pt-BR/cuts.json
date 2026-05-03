@@ -25,7 +25,9 @@
   "empty": {
     "title": "Nenhum corte ainda",
     "withoutFilters": "Os cortes que você criar aparecerão aqui.",
-    "withFilters": "Nenhum corte corresponde aos filtros atuais."
+    "withFilters": "Nenhum corte corresponde aos filtros atuais.",
+    "ctaBrowse": "Explorar biblioteca",
+    "ctaClearFilters": "Limpar filtros"
   },
   "toasts": {
     "deleted": "{{name}} excluído",

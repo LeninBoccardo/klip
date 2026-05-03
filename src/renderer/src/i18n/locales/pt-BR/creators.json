@@ -22,11 +22,13 @@
     "notFound": "Criador não encontrado",
     "videos": {
       "emptyTitle": "Nenhum vídeo",
-      "emptyDescription": "Baixe vídeos deste criador para vê-los aqui."
+      "emptyDescription": "Baixe vídeos deste criador para vê-los aqui.",
+      "emptyCta": "Baixar um vídeo"
     },
     "cuts": {
       "emptyTitle": "Nenhum corte",
-      "emptyDescription": "Exporte cortes do seu editor para a pasta de cortes deste criador."
+      "emptyDescription": "Exporte cortes do seu editor para a pasta de cortes deste criador.",
+      "emptyCta": "Ver todos os cortes"
     }
   },
   "register": {

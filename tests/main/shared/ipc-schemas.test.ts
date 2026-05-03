@@ -215,6 +215,20 @@ const rows: Row[] = [
       ['video', '']
     ]
   },
+  {
+    channel: 'open-path-in-shell',
+    accept: ['/some/path'],
+    reject: [
+      [''],
+      [42],
+      // 4097-char path > max
+      ['x'.repeat(4097)]
+    ]
+  },
+
+  // ── Stats ──
+  { channel: 'get-storage-stats', accept: [], reject: [['extra']] },
+  { channel: 'get-library-stats', accept: [], reject: [['extra']] },
 
   // ── Tags ──
   { channel: 'get-all-distinct-tags', accept: [], reject: [['extra']] },
