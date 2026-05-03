@@ -36,7 +36,9 @@
       "total": "Total",
       "note": "Soma dos tamanhos de arquivo registrados no banco. Arquivos não rastreados no disco não são incluídos.",
       "openInShell": "Abrir no gerenciador de arquivos",
-      "openFailed": "Falha ao abrir a pasta raiz"
+      "openFailed": "Falha ao abrir a pasta raiz",
+      "openLogs": "Abrir pasta de logs",
+      "openLogsFailed": "Falha ao abrir a pasta de logs"
     },
     "confirm": {
       "title": "Mover todos os arquivos para um novo local?",

@@ -18,3 +18,8 @@ resources/bin/
 
 .gitnexus
 .stryker-tmp/
+
+# E2E (Playwright)
+out/playwright-report/
+test-results/
+playwright/.cache/

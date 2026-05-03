@@ -52,7 +52,13 @@ export function MediaCard({
     >
       <AspectRatio ratio={16 / 9} className="bg-muted">
         {src ? (
-          <img src={src} alt={title} className="h-full w-full object-cover" />
+          <img
+            src={src}
+            alt={title}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted-foreground">
             <Film className="size-8" />

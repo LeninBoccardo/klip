@@ -12,13 +12,15 @@ const electron = vi.hoisted(() => {
       }),
       on: vi.fn()
     },
-    shell: { openPath: vi.fn(), showItemInFolder: vi.fn() }
+    shell: { openPath: vi.fn(), showItemInFolder: vi.fn() },
+    app: { getPath: vi.fn((key: string) => `/tmp/klip-${key}`) }
   }
 })
 
 vi.mock('electron', () => ({
   ipcMain: electron.ipcMain,
-  shell: electron.shell
+  shell: electron.shell,
+  app: electron.app
 }))
 
 import { registerShellController } from '@main/interface-adapters/controllers/ShellController'
@@ -50,8 +52,20 @@ describe('ShellController', () => {
     const d = makeDeps()
     registerShellController(d.resolveMediaUrl, d.rootPath)
     expect([...electron.handlers.keys()].sort()).toEqual(
-      ['open-media-externally', 'open-path-in-shell'].sort()
+      ['open-log-folder', 'open-media-externally', 'open-path-in-shell'].sort()
     )
+  })
+
+  it('open-log-folder opens app.getPath("logs")', async () => {
+    const d = makeDeps()
+    electron.shell.openPath.mockResolvedValue('')
+    registerShellController(d.resolveMediaUrl, d.rootPath)
+
+    const result = await invoke<{ ok: boolean }>('open-log-folder')
+
+    expect(electron.app.getPath).toHaveBeenCalledWith('logs')
+    expect(electron.shell.openPath).toHaveBeenCalledWith('/tmp/klip-logs')
+    expect(result.ok).toBe(true)
   })
 
   it('returns ok=false when the entity has no resolvable file', async () => {

@@ -74,6 +74,7 @@ describe('DeleteTagGlobally', () => {
       findByCreatorId: vi.fn(),
       findByProbeStatus: vi.fn(),
       findNeedingDetail: vi.fn(),
+      findMissingForRecovery: vi.fn().mockReturnValue([]),
       findByTags: vi.fn().mockReturnValue([]),
       getAllDistinctTags: vi.fn(),
       findPaginated: vi.fn(),

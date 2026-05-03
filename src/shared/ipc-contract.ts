@@ -132,6 +132,13 @@ export interface IpcContract {
     params: [path: string]
     result: { ok: boolean; error?: string }
   }
+  // Reveal the user's logs folder in the OS file manager. The path is
+  // resolved server-side via `app.getPath('logs')`; the renderer never
+  // sees or supplies it.
+  'open-log-folder': {
+    params: []
+    result: { ok: boolean; error?: string }
+  }
 
   // ── Stats ──
   'get-storage-stats': { params: []; result: StorageStats }

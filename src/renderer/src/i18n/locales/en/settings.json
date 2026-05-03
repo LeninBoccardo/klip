@@ -36,7 +36,9 @@
       "total": "Total",
       "note": "Sum of file sizes tracked in the database. Untracked files on disk are not included.",
       "openInShell": "Open in file manager",
-      "openFailed": "Failed to open root folder"
+      "openFailed": "Failed to open root folder",
+      "openLogs": "Open log folder",
+      "openLogsFailed": "Failed to open log folder"
     },
     "confirm": {
       "title": "Move all files to a new location?",

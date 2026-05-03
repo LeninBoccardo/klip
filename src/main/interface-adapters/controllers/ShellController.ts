@@ -1,4 +1,4 @@
-import { shell } from 'electron'
+import { app, shell } from 'electron'
 import { realpathSync } from 'fs'
 import { resolve as pathResolve, sep as pathSep } from 'path'
 import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
@@ -15,6 +15,8 @@ import { createTypedHandler } from './create-typed-handler'
  *   - `open-path-in-shell` → reveal a path under rootPath in the OS file
  *     manager. The path is realpath-validated to prevent symlink-based
  *     escapes outside the user's library.
+ *   - `open-log-folder` → reveal the user's logs folder. Path resolved
+ *     via `app.getPath('logs')` so the renderer never sees it.
  *
  * The handlers never trust the renderer's path verbatim; resolution goes
  * through `IResolveMediaUrl` (for kind/id) or a containment check against
@@ -54,5 +56,12 @@ export function registerShellController(
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
+  })
+
+  createTypedHandler('open-log-folder', async () => {
+    const logsPath = app.getPath('logs')
+    const error = await shell.openPath(logsPath)
+    if (error) return { ok: false, error }
+    return { ok: true }
   })
 }

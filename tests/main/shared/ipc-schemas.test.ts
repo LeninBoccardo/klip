@@ -225,6 +225,7 @@ const rows: Row[] = [
       ['x'.repeat(4097)]
     ]
   },
+  { channel: 'open-log-folder', accept: [], reject: [['extra']] },
 
   // ── Stats ──
   { channel: 'get-storage-stats', accept: [], reject: [['extra']] },

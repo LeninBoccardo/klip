@@ -1,5 +1,8 @@
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { useAppStore } from '@/hooks/use-app-store'
 import type { DownloadProgress, VideoInfo, DownloadVideoResult } from '@shared/types'
 
@@ -36,13 +39,32 @@ export function useCancelDownload(): UseMutationResult<void, Error, string> {
  *     Retry. Removal happens when they click Dismiss or successfully retry.
  *   - `error` with `retriable: false` (terminal): removed after 3s — there's
  *     nothing useful the user can do.
+ *   - `duplicate`: not stored in zustand at all (no row to display); a sonner
+ *     toast routes the user to the existing video and the event is done.
  */
 export function useDownloadProgressListener(): void {
   const upsertDownload = useAppStore((s) => s.upsertDownload)
   const removeDownload = useAppStore((s) => s.removeDownload)
+  const { t } = useTranslation('downloads')
+  const navigate = useNavigate()
 
   useEffect(() => {
     const unsubscribe = window.api.onDownloadProgress((_event, data: DownloadProgress) => {
+      if (data.status === 'duplicate') {
+        const id = data.existingVideoId
+        const title = data.title ?? t('toast.duplicate.fallbackTitle')
+        toast.message(t('toast.duplicate.title', { title }), {
+          description: t('toast.duplicate.description'),
+          action: id
+            ? {
+                label: t('toast.duplicate.action'),
+                onClick: () => navigate({ to: '/videos/$videoId', params: { videoId: id } })
+              }
+            : undefined
+        })
+        return
+      }
+
       if (data.status === 'complete' || data.status === 'cancelled') {
         upsertDownload(data)
         setTimeout(() => removeDownload(data.downloadId), 3000)
@@ -56,5 +78,5 @@ export function useDownloadProgressListener(): void {
       }
     })
     return unsubscribe
-  }, [upsertDownload, removeDownload])
+  }, [upsertDownload, removeDownload, t, navigate])
 }

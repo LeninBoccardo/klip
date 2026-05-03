@@ -31,6 +31,7 @@ function makeRepo(): IVideoRepository {
     findByCreatorId: vi.fn(),
     findByProbeStatus: vi.fn(),
     findNeedingDetail: vi.fn().mockReturnValue([]),
+    findMissingForRecovery: vi.fn().mockReturnValue([]),
     findPaginated: vi
       .fn()
       .mockReturnValue({ data: [], page: 1, pageSize: 20, total: 0, totalPages: 0 }),

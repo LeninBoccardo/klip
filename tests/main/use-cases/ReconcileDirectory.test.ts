@@ -111,6 +111,7 @@ function mockVideoRepo(): IVideoRepository {
     findByCreatorId: vi.fn().mockReturnValue([]),
     findByProbeStatus: vi.fn().mockReturnValue([]),
     findNeedingDetail: vi.fn().mockReturnValue([]),
+    findMissingForRecovery: vi.fn().mockReturnValue([]),
     upsert,
     upsertWithPrevious: vi.fn((v, _prev) => upsert(v)),
     updateStatus: vi.fn(),

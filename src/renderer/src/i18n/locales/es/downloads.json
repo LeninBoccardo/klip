@@ -67,5 +67,13 @@
     "button": "Reintentar",
     "dismissAria": "Descartar",
     "failed": "Error al reintentar: {{message}}"
+  },
+  "toast": {
+    "duplicate": {
+      "title": "Ya está en la biblioteca: {{title}}",
+      "description": "No se volvió a descargar el mismo video.",
+      "action": "Ver",
+      "fallbackTitle": "este video"
+    }
   }
 }

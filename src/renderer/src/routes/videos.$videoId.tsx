@@ -19,7 +19,8 @@ import {
   Loader2,
   Play,
   ExternalLink,
-  Copy
+  Copy,
+  AlertTriangle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDuration, formatFileSize, formatCount } from '@/lib/format'
@@ -126,6 +127,31 @@ function VideoDetailPage(): React.ReactElement {
           </div>
         }
       />
+
+      {video.status === 'missing' && (
+        <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+          <div className="flex-1 space-y-2">
+            <div>
+              <p className="font-medium">{t('detail.missing.title')}</p>
+              <p className="text-muted-foreground">{t('detail.missing.body')}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={fetchDetail.isPending}
+            >
+              {fetchDetail.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 size-4" />
+              )}
+              {t('detail.missing.retry')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="relative">
         <DetailPlayerSlot />

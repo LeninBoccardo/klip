@@ -13,6 +13,11 @@
     "transcriptCopied": "Transcript copied to clipboard",
     "playAria": "Play {{title}}",
     "notFound": "Video not found",
+    "missing": {
+      "title": "This video appears unavailable on YouTube",
+      "body": "The last refresh returned a 404 or 403. The local file is still here. Retry to check whether the channel is back.",
+      "retry": "Retry detail fetch"
+    },
     "stats": {
       "views": "Views",
       "likes": "Likes",

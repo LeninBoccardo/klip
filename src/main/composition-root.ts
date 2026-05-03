@@ -99,6 +99,8 @@ import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
 import { RegisterCreator } from '@use-cases/RegisterCreator'
 import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
 import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
+import { MarkVideoMissing } from '@use-cases/MarkVideoMissing'
+import { MarkVideoActive } from '@use-cases/MarkVideoActive'
 import { EnrichAllVideos } from '@use-cases/EnrichAllVideos'
 import { FetchVideoComments } from '@use-cases/FetchVideoComments'
 import { ResolveMediaUrl } from '@use-cases/ResolveMediaUrl'
@@ -310,6 +312,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
     creatorRepo,
     videoRepo,
     pathResolver,
+    fsReader,
     fsWriter,
     notifier,
     idGenerator,
@@ -324,7 +327,19 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const fileWatcher = new ChokidarWatcher(rootPath)
   fileWatcher.onEvent((event) => processNotifications.handleEvent(event))
 
-  const fetchVideoDetail = new FetchVideoDetail(videoRepo, videoDownloader, fsReader, pathResolver)
+  // Dead-link handling: FetchVideoDetail flips a video to `'missing'` on
+  // YouTube 404/403 (via markMissing), and back to `'active'` on a
+  // successful refresh of a previously-missing video (via markActive).
+  const markVideoMissing = new MarkVideoMissing(videoRepo, notifier)
+  const markVideoActive = new MarkVideoActive(videoRepo, notifier)
+  const fetchVideoDetail = new FetchVideoDetail(
+    videoRepo,
+    videoDownloader,
+    fsReader,
+    pathResolver,
+    markVideoMissing,
+    markVideoActive
+  )
 
   // Dedicated queue (concurrency 1) keeps batch enrichment from competing with
   // user-triggered downloads for slots in the shared download queue and bounds

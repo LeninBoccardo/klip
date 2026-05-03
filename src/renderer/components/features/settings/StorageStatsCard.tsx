@@ -3,7 +3,7 @@ import { useStorageStats } from '@/hooks/use-stats'
 import { useSetting } from '@/hooks/use-settings'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatFileSize } from '@/lib/format'
 
@@ -17,6 +17,13 @@ export function StorageStatsCard(): React.ReactElement {
     const result = await window.api.openPathInShell(rootPath)
     if (!result.ok) {
       toast.error(result.error ?? t('storage.stats.openFailed'))
+    }
+  }
+
+  const handleOpenLogs = async (): Promise<void> => {
+    const result = await window.api.openLogFolder()
+    if (!result.ok) {
+      toast.error(result.error ?? t('storage.stats.openLogsFailed'))
     }
   }
 
@@ -36,10 +43,16 @@ export function StorageStatsCard(): React.ReactElement {
         />
       </div>
       <p className="text-xs text-muted-foreground">{t('storage.stats.note')}</p>
-      <Button variant="outline" size="sm" onClick={handleOpenInShell} disabled={!rootPath}>
-        <ExternalLink className="mr-2 size-4" />
-        {t('storage.stats.openInShell')}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={handleOpenInShell} disabled={!rootPath}>
+          <ExternalLink className="mr-2 size-4" />
+          {t('storage.stats.openInShell')}
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleOpenLogs}>
+          <FileText className="mr-2 size-4" />
+          {t('storage.stats.openLogs')}
+        </Button>
+      </div>
     </div>
   )
 }

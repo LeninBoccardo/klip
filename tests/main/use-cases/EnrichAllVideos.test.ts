@@ -52,6 +52,7 @@ describe('EnrichAllVideos', () => {
       findByCreatorId: vi.fn(),
       findByProbeStatus: vi.fn(),
       findNeedingDetail: vi.fn().mockReturnValue([]),
+      findMissingForRecovery: vi.fn().mockReturnValue([]),
       findPaginated: vi.fn(),
       upsert: vi.fn(),
       updateStatus: vi.fn(),

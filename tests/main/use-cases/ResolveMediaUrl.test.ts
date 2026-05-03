@@ -103,6 +103,7 @@ function makeRepos(): {
       findByCreatorId: vi.fn(),
       findByProbeStatus: vi.fn(),
       findNeedingDetail: vi.fn(),
+      findMissingForRecovery: vi.fn().mockReturnValue([]),
       upsert: vi.fn(),
       upsertWithPrevious: vi.fn(),
       updateStatus: vi.fn(),

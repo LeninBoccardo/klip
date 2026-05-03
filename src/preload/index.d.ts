@@ -103,6 +103,7 @@ interface KlipAPI {
   // ── Shell ──
   openMediaExternally(kind: 'video' | 'cut', id: string): Promise<{ ok: boolean; error?: string }>
   openPathInShell(path: string): Promise<{ ok: boolean; error?: string }>
+  openLogFolder(): Promise<{ ok: boolean; error?: string }>
 
   // ── Stats ──
   getStorageStats(): Promise<StorageStats>

@@ -6,6 +6,13 @@ export type DownloadStatus =
   | 'complete'
   | 'error'
   | 'cancelled'
+  /**
+   * Pre-flight detected the video is already present in the library
+   * (videos.id matched and the file exists on disk). No queue slot, no
+   * yt-dlp invocation. The renderer surfaces a toast pointing at the
+   * existing video.
+   */
+  | 'duplicate'
 
 /** Request to download a video from a URL */
 export interface DownloadRequest {
@@ -34,6 +41,16 @@ export interface DownloadProgress {
    * failures (deleted video, bad URL) — UI hides the Retry button.
    */
   retriable?: boolean
+  /**
+   * Set on `status: 'duplicate'`. The id of the existing video — the
+   * renderer routes the toast action to `/videos/{existingVideoId}`.
+   */
+  existingVideoId?: string
+  /**
+   * Set on `status: 'duplicate'`. Title of the existing video for the
+   * toast copy.
+   */
+  title?: string
 }
 
 /** Successful download result returned by the downloader driver */

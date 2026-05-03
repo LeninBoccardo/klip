@@ -109,6 +109,7 @@ function makeVideoRepo(): IVideoRepository {
     findByCreatorId: vi.fn(),
     findByProbeStatus: vi.fn(),
     findNeedingDetail: vi.fn(),
+    findMissingForRecovery: vi.fn().mockReturnValue([]),
     findByTags: vi.fn(),
     searchByTitle: vi.fn(),
     getAllDistinctTags: vi.fn(),

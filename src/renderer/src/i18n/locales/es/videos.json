@@ -13,6 +13,11 @@
     "transcriptCopied": "Transcripción copiada al portapapeles",
     "playAria": "Reproducir {{title}}",
     "notFound": "Video no encontrado",
+    "missing": {
+      "title": "Este video parece no estar disponible en YouTube",
+      "body": "La última actualización devolvió 404 o 403. El archivo local sigue aquí. Reintenta para verificar si el canal volvió.",
+      "retry": "Reintentar obtener detalles"
+    },
     "stats": {
       "views": "Vistas",
       "likes": "Me gusta",

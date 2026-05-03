@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuditLogRecent } from '@/hooks/use-audit-log'
 import { PageContainer, PageHeader } from '@/components/shared'
-import { AuditEntryRow } from '@components/features/activity/AuditEntryRow'
+import { VirtualAuditList } from '@components/features/activity/VirtualAuditList'
 import { Button } from '@ui/button'
 import {
   Empty,
@@ -62,11 +62,7 @@ function ActivityPage(): React.ReactElement {
 
       {!isLoading && entries && entries.length > 0 && (
         <>
-          <ul className="space-y-2">
-            {entries.map((entry) => (
-              <AuditEntryRow key={entry.id} entry={entry} />
-            ))}
-          </ul>
+          <VirtualAuditList entries={entries} />
           {canLoadMore && (
             <div className="flex justify-center pt-4">
               <Button

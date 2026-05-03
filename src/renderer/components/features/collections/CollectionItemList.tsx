@@ -204,7 +204,13 @@ function CollectionRow({
         >
           <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
             {thumb ? (
-              <img src={thumb} alt={title} className="h-full w-full object-cover" />
+              <img
+                src={thumb}
+                alt={title}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                 {item.kind === 'video' ? (

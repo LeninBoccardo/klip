@@ -41,21 +41,26 @@ function makeMocks(): {
   downloader: IVideoDownloader
   fsReader: IFileSystemReader
   pathResolver: IPathResolver
+  markMissing: { execute: ReturnType<typeof vi.fn> }
+  markActive: { execute: ReturnType<typeof vi.fn> }
 } {
-  const videoRepo: IVideoRepository = {
+  const videoRepo = {
     findAll: vi.fn(),
     findAllActive: vi.fn(),
     findById: vi.fn(),
     findByCreatorId: vi.fn(),
     findByProbeStatus: vi.fn(),
     findNeedingDetail: vi.fn().mockReturnValue([]),
+    findMissingForRecovery: vi.fn().mockReturnValue([]),
     findPaginated: vi.fn(),
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     updateProbeStatus: vi.fn(),
     delete: vi.fn(),
     updateFilePathPrefix: vi.fn()
-  }
+  } as unknown as IVideoRepository
+  const markMissing = { execute: vi.fn() }
+  const markActive = { execute: vi.fn() }
   const downloader = {
     fetchInfo: vi.fn(),
     fetchChannelInfo: vi.fn(),
@@ -76,7 +81,7 @@ function makeMocks(): {
     join: vi.fn((...s) => s.join('/')),
     dirname: vi.fn((p: string) => p.split('/').slice(0, -1).join('/') || '/')
   }
-  return { videoRepo, downloader, fsReader, pathResolver }
+  return { videoRepo, downloader, fsReader, pathResolver, markMissing, markActive }
 }
 
 describe('FetchVideoDetail', () => {
@@ -89,7 +94,9 @@ describe('FetchVideoDetail', () => {
       mocks.videoRepo,
       mocks.downloader,
       mocks.fsReader,
-      mocks.pathResolver
+      mocks.pathResolver,
+      mocks.markMissing,
+      mocks.markActive
     )
   })
 
@@ -193,5 +200,85 @@ describe('FetchVideoDetail', () => {
 
     expect(result.hasTranscript).toBe(false)
     expect(mocks.videoRepo.upsert).toHaveBeenCalled()
+  })
+
+  it('marks the video missing when YouTube returns 404 (unavailable)', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.downloader.fetchVideoDetail).mockRejectedValue(
+      new Error('HTTP Error 404: Not Found')
+    )
+
+    await expect(useCase.execute('video-1')).rejects.toThrow(/404/)
+
+    expect(mocks.markMissing.execute).toHaveBeenCalledWith('video-1', 'unavailable')
+    expect(mocks.markActive.execute).not.toHaveBeenCalled()
+    // No upsert when fetch fails — we don't want stale detail.
+    expect(mocks.videoRepo.upsert).not.toHaveBeenCalled()
+  })
+
+  it('marks the video missing when YouTube returns 403 (unauthorized)', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.downloader.fetchVideoDetail).mockRejectedValue(
+      new Error('HTTP Error 403: Forbidden')
+    )
+
+    await expect(useCase.execute('video-1')).rejects.toThrow(/403/)
+
+    expect(mocks.markMissing.execute).toHaveBeenCalledWith('video-1', 'unauthorized')
+  })
+
+  it('does NOT mark missing on transient errors (5xx, timeouts)', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.downloader.fetchVideoDetail).mockRejectedValue(
+      new Error('HTTP Error 503: Service Unavailable')
+    )
+
+    await expect(useCase.execute('video-1')).rejects.toThrow(/503/)
+
+    expect(mocks.markMissing.execute).not.toHaveBeenCalled()
+    expect(mocks.markActive.execute).not.toHaveBeenCalled()
+  })
+
+  it('flips a previously-missing video back to active on successful fetch (auto-recovery)', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo({ status: 'missing' }))
+    vi.mocked(mocks.downloader.fetchVideoDetail).mockResolvedValue({
+      videoId: 'abc',
+      likeCount: 5,
+      dislikeCount: null,
+      commentCount: null,
+      viewCount: null,
+      category: null,
+      tags: [],
+      uploadDate: null,
+      description: null,
+      isShort: false
+    })
+    vi.mocked(mocks.downloader.fetchTranscript).mockResolvedValue(null)
+
+    await useCase.execute('video-1')
+
+    expect(mocks.markActive.execute).toHaveBeenCalledWith('video-1')
+    expect(mocks.markMissing.execute).not.toHaveBeenCalled()
+  })
+
+  it('does NOT call markActive on a successful fetch of an already-active video', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo({ status: 'active' }))
+    vi.mocked(mocks.downloader.fetchVideoDetail).mockResolvedValue({
+      videoId: 'abc',
+      likeCount: 5,
+      dislikeCount: null,
+      commentCount: null,
+      viewCount: null,
+      category: null,
+      tags: [],
+      uploadDate: null,
+      description: null,
+      isShort: false
+    })
+    vi.mocked(mocks.downloader.fetchTranscript).mockResolvedValue(null)
+
+    await useCase.execute('video-1')
+
+    expect(mocks.markActive.execute).not.toHaveBeenCalled()
   })
 })

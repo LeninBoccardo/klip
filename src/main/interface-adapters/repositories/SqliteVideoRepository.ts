@@ -26,6 +26,22 @@ const DEFAULT_SORT_COLUMN = videos.createdAt
 
 type VideoRow = typeof videos.$inferSelect
 
+/**
+ * Tokenises free-text input for FTS5 prefix matching. Strips characters
+ * the unicode61 tokenizer would drop anyway (anything outside word
+ * characters), uppercases for normalisation, and splits on whitespace.
+ *
+ * Returns an empty array for inputs FTS can't usefully match — the caller
+ * falls back to LIKE for those.
+ */
+function tokenizeForFts(query: string): string[] {
+  return query
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0)
+}
+
 function mapRow(row: VideoRow): Video {
   let parsedTags: string[] = []
   try {
@@ -62,6 +78,10 @@ export class SqliteVideoRepository implements IVideoRepository {
   findById(id: string): Video | null {
     const row = this.db.select().from(videos).where(eq(videos.id, id)).get()
     return row ? mapRow(row) : null
+  }
+
+  findByYoutubeVideoId(youtubeVideoId: string): Video | null {
+    return this.findById(youtubeVideoId)
   }
 
   findByCreatorId(creatorId: string): Video[] {
@@ -115,6 +135,30 @@ export class SqliteVideoRepository implements IVideoRepository {
     const trimmed = query.trim()
     if (trimmed.length === 0 || limit <= 0) return []
 
+    // ── FTS5 path (preferred) ─────────────────────────────────────────
+    // The 0009 migration's `videos_fts` virtual table indexes title +
+    // transcript_text. Use a prefix MATCH for tokenizable queries so a
+    // 5K-video library doesn't full-scan the unindexed `videos.title`
+    // column. `bm25(videos_fts)` ranks by relevance; we order ascending
+    // (lower bm25 = better match) and tie-break by recency.
+    const ftsTokens = tokenizeForFts(trimmed)
+    if (ftsTokens.length > 0) {
+      const matchExpr = ftsTokens.map((tok) => `title:${tok}*`).join(' ')
+      const rows = this.db.all(
+        sql`SELECT v.* FROM videos v
+            JOIN videos_fts f ON f.video_id = v.id
+            WHERE v.status = 'active' AND videos_fts MATCH ${matchExpr}
+            ORDER BY bm25(videos_fts) ASC, v.created_at DESC
+            LIMIT ${limit}`
+      ) as Array<typeof videos.$inferSelect>
+      if (rows.length > 0) return rows.map(mapRow)
+      // Fall through to LIKE on miss — FTS tokenization may have stripped
+      // every term (e.g. all punctuation / single character).
+    }
+
+    // ── LIKE fallback ─────────────────────────────────────────────────
+    // Used for queries FTS can't tokenize (single non-word chars,
+    // punctuation-only) and as a recall safety net.
     const pattern = `%${escapeLike(trimmed)}%`
     return this.db
       .select()
@@ -228,6 +272,16 @@ export class SqliteVideoRepository implements IVideoRepository {
         )
       )
       .orderBy(asc(videos.createdAt))
+      .all()
+      .map(mapRow)
+  }
+
+  findMissingForRecovery(): Video[] {
+    return this.db
+      .select()
+      .from(videos)
+      .where(and(eq(videos.status, 'missing'), sql`${videos.url} IS NOT NULL`))
+      .orderBy(asc(videos.updatedAt))
       .all()
       .map(mapRow)
   }

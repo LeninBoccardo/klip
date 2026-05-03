@@ -31,6 +31,10 @@ export class AuditedVideoRepository implements IVideoRepository {
     return this.inner.findById(id)
   }
 
+  findByYoutubeVideoId(youtubeVideoId: string): Video | null {
+    return this.inner.findByYoutubeVideoId(youtubeVideoId)
+  }
+
   findByCreatorId(creatorId: string): Video[] {
     return this.inner.findByCreatorId(creatorId)
   }
@@ -45,6 +49,10 @@ export class AuditedVideoRepository implements IVideoRepository {
 
   findNeedingDetail(): Video[] {
     return this.inner.findNeedingDetail()
+  }
+
+  findMissingForRecovery(): Video[] {
+    return this.inner.findMissingForRecovery()
   }
 
   findByTags(tags: string[]): Video[] {

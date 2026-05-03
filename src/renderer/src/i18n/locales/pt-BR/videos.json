@@ -13,6 +13,11 @@
     "transcriptCopied": "Transcrição copiada para a área de transferência",
     "playAria": "Reproduzir {{title}}",
     "notFound": "Vídeo não encontrado",
+    "missing": {
+      "title": "Este vídeo parece indisponível no YouTube",
+      "body": "A última atualização retornou 404 ou 403. O arquivo local continua aqui. Tente novamente para verificar se o canal voltou.",
+      "retry": "Tentar atualizar detalhes"
+    },
     "stats": {
       "views": "Visualizações",
       "likes": "Curtidas",

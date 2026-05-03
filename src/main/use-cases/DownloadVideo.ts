@@ -3,6 +3,7 @@ import type {
   IVideoDownloader,
   IDownloadQueue,
   IPathResolver,
+  IFileSystemReader,
   IFileSystemWriter,
   INotifier,
   IIdGenerator,
@@ -36,6 +37,7 @@ export class DownloadVideo implements IDownloadVideo {
     private creatorRepo: ICreatorRepository,
     private videoRepo: IVideoRepository,
     private pathResolver: IPathResolver,
+    private fsReader: IFileSystemReader,
     private fsWriter: IFileSystemWriter,
     private notifier: INotifier,
     private idGenerator: IIdGenerator,
@@ -120,6 +122,30 @@ export class DownloadVideo implements IDownloadVideo {
       // or the DB primary key.
       if (!/^[A-Za-z0-9_-]{1,64}$/.test(videoId)) {
         throw new Error(`Invalid videoId from yt-dlp: ${JSON.stringify(videoId)}`)
+      }
+
+      // 1.5 Pre-flight dedupe: if the videoId is already in the library AND
+      //     the local file exists, skip the entire download. Recovery paths
+      //     (status='missing' / 'deleted', or file gone from disk) fall
+      //     through to a normal download so the row is repaired in place.
+      const existing = this.videoRepo.findByYoutubeVideoId(videoId)
+      if (
+        existing &&
+        existing.status === 'active' &&
+        this.fsReader.fileExists(existing.filePath)
+      ) {
+        this.notifier.notify('download-progress', {
+          downloadId,
+          url,
+          percent: 100,
+          speed: null,
+          eta: null,
+          status: 'duplicate',
+          creatorName,
+          existingVideoId: existing.id,
+          title: existing.title
+        })
+        return
       }
 
       // 2. Slugify creator name for disk/DB identity

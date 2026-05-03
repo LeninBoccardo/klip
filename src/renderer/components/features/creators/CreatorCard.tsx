@@ -34,7 +34,7 @@ export function CreatorCard({ creator, onClick, className }: CreatorCardProps): 
     >
       <CardContent className="flex items-center gap-3 p-4">
         <Avatar className="size-10">
-          <AvatarImage src={avatarSrc} alt={creator.name} />
+          <AvatarImage src={avatarSrc} alt={creator.name} loading="lazy" decoding="async" />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">

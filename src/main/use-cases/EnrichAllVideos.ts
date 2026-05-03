@@ -27,7 +27,14 @@ export class EnrichAllVideos implements IEnrichAllVideos {
   ) {}
 
   async execute(): Promise<EnrichVideosResult> {
-    const candidates = this.videoRepo.findNeedingDetail()
+    // First-time enrichment + retry of previously-missing videos in one
+    // pass. New videos go first (user just downloaded them and is most
+    // likely watching), then we attempt to recover any flagged-missing
+    // rows from prior failed runs. FetchVideoDetail handles the status
+    // flips on success / permanent failure.
+    const newCandidates = this.videoRepo.findNeedingDetail()
+    const recovery = this.videoRepo.findMissingForRecovery()
+    const candidates = [...newCandidates, ...recovery]
     const result: EnrichVideosResult = {
       total: candidates.length,
       enriched: 0,

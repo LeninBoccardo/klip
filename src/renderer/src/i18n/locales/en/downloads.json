@@ -67,5 +67,13 @@
     "button": "Retry",
     "dismissAria": "Dismiss",
     "failed": "Retry failed: {{message}}"
+  },
+  "toast": {
+    "duplicate": {
+      "title": "Already in library: {{title}}",
+      "description": "Skipped re-downloading the same video.",
+      "action": "View",
+      "fallbackTitle": "this video"
+    }
   }
 }

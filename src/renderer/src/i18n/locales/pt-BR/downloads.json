@@ -67,5 +67,13 @@
     "button": "Tentar novamente",
     "dismissAria": "Dispensar",
     "failed": "Falha ao tentar novamente: {{message}}"
+  },
+  "toast": {
+    "duplicate": {
+      "title": "Já está na biblioteca: {{title}}",
+      "description": "Não re-baixamos o mesmo vídeo.",
+      "action": "Ver",
+      "fallbackTitle": "este vídeo"
+    }
   }
 }

@@ -5,6 +5,7 @@ import type {
   IVideoDownloader,
   IDownloadQueue,
   IPathResolver,
+  IFileSystemReader,
   IFileSystemWriter,
   INotifier,
   IIdGenerator
@@ -72,6 +73,7 @@ function mockVideoRepo(overrides: Partial<IVideoRepository> = {}): IVideoReposit
     findAll: vi.fn().mockReturnValue([]),
     findAllActive: vi.fn().mockReturnValue([]),
     findById: vi.fn().mockReturnValue(null),
+    findByYoutubeVideoId: vi.fn().mockReturnValue(null),
     findByCreatorId: vi.fn().mockReturnValue([]),
     findByProbeStatus: vi.fn().mockReturnValue([]),
     upsert: vi.fn(),
@@ -81,6 +83,18 @@ function mockVideoRepo(overrides: Partial<IVideoRepository> = {}): IVideoReposit
     findPaginated: vi.fn(),
     ...overrides
   }
+}
+
+function mockFsReader(overrides: Partial<IFileSystemReader> = {}): IFileSystemReader {
+  return {
+    directoryExists: vi.fn().mockReturnValue(true),
+    fileExists: vi.fn().mockReturnValue(false),
+    listDirectories: vi.fn().mockReturnValue([]),
+    listFiles: vi.fn().mockReturnValue([]),
+    readJsonFile: vi.fn().mockReturnValue(null),
+    readTextFile: vi.fn().mockReturnValue(null),
+    ...overrides
+  } as IFileSystemReader
 }
 
 function mockPathResolver(): IPathResolver {
@@ -150,6 +164,7 @@ describe('DownloadVideo', () => {
   let creatorRepo: ICreatorRepository
   let videoRepo: IVideoRepository
   let pathResolver: IPathResolver
+  let fsReader: IFileSystemReader
   let fsWriter: IFileSystemWriter
   let notifier: INotifier
   let idGenerator: IIdGenerator
@@ -169,6 +184,7 @@ describe('DownloadVideo', () => {
     creatorRepo = mockCreatorRepo()
     videoRepo = mockVideoRepo()
     pathResolver = mockPathResolver()
+    fsReader = mockFsReader()
     fsWriter = mockFsWriter()
     notifier = mockNotifier()
     idGenerator = mockIdGenerator()
@@ -193,6 +209,7 @@ describe('DownloadVideo', () => {
       creatorRepo,
       videoRepo,
       pathResolver,
+      fsReader,
       fsWriter,
       notifier,
       idGenerator,
@@ -431,6 +448,7 @@ describe('DownloadVideo', () => {
       creatorRepo,
       videoRepo,
       pathResolver,
+      fsReader,
       fsWriter,
       notifier,
       idGenerator,
@@ -769,6 +787,115 @@ describe('DownloadVideo', () => {
         subscriberCount: 1000
       })
     )
+  })
+
+  // ── Dedupe (Item 20) ──
+
+  function makeExistingVideo(overrides: Partial<import('@domain/entities').Video> = {}): import('@domain/entities').Video {
+    return {
+      id: 'abc123',
+      creatorId: 'TestCreator',
+      title: 'Existing Video',
+      url: 'https://youtube.com/watch?v=abc123',
+      duration: 120,
+      resolution: null,
+      fileSize: null,
+      filePath: '/root/TestCreator/downloads/abc123/abc123.mp4',
+      thumbnailPath: null,
+      downloadDate: '2025-01-01T00:00:00.000Z',
+      probeStatus: 'complete',
+      viewCount: null,
+      likeCount: null,
+      dislikeCount: null,
+      commentCount: null,
+      category: null,
+      tags: [],
+      uploadDate: null,
+      description: null,
+      isShort: false,
+      transcriptPath: null,
+      transcriptText: null,
+      detailFetchedAt: null,
+      status: 'active',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+      ...overrides
+    }
+  }
+
+  it('skips an active video already in the library and emits duplicate progress', async () => {
+    vi.mocked(videoRepo.findByYoutubeVideoId).mockReturnValue(makeExistingVideo())
+    vi.mocked(fsReader.fileExists).mockReturnValue(true)
+
+    await useCase.execute({
+      url: 'https://youtube.com/watch?v=abc123',
+      creatorName: 'TestCreator'
+    })
+    await awaitEnqueuedTask()
+
+    expect(downloader.download).not.toHaveBeenCalled()
+    expect(videoRepo.upsert).not.toHaveBeenCalled()
+    expect(notifier.notify).toHaveBeenCalledWith(
+      'download-progress',
+      expect.objectContaining({
+        status: 'duplicate',
+        existingVideoId: 'abc123',
+        title: 'Existing Video'
+      })
+    )
+  })
+
+  it('proceeds with download when the existing video is missing (recovery path)', async () => {
+    vi.mocked(videoRepo.findByYoutubeVideoId).mockReturnValue(
+      makeExistingVideo({ status: 'missing' })
+    )
+    vi.mocked(fsReader.fileExists).mockReturnValue(true)
+
+    await useCase.execute({
+      url: 'https://youtube.com/watch?v=abc123',
+      creatorName: 'TestCreator'
+    })
+    await awaitEnqueuedTask()
+
+    expect(downloader.download).toHaveBeenCalled()
+    expect(videoRepo.upsert).toHaveBeenCalled()
+    expect(notifier.notify).not.toHaveBeenCalledWith(
+      'download-progress',
+      expect.objectContaining({ status: 'duplicate' })
+    )
+  })
+
+  it('proceeds with download when the file is gone from disk', async () => {
+    vi.mocked(videoRepo.findByYoutubeVideoId).mockReturnValue(makeExistingVideo())
+    vi.mocked(fsReader.fileExists).mockReturnValue(false)
+
+    await useCase.execute({
+      url: 'https://youtube.com/watch?v=abc123',
+      creatorName: 'TestCreator'
+    })
+    await awaitEnqueuedTask()
+
+    expect(downloader.download).toHaveBeenCalled()
+    expect(notifier.notify).not.toHaveBeenCalledWith(
+      'download-progress',
+      expect.objectContaining({ status: 'duplicate' })
+    )
+  })
+
+  it('proceeds with download when the existing video is deleted', async () => {
+    vi.mocked(videoRepo.findByYoutubeVideoId).mockReturnValue(
+      makeExistingVideo({ status: 'deleted' })
+    )
+    vi.mocked(fsReader.fileExists).mockReturnValue(true)
+
+    await useCase.execute({
+      url: 'https://youtube.com/watch?v=abc123',
+      creatorName: 'TestCreator'
+    })
+    await awaitEnqueuedTask()
+
+    expect(downloader.download).toHaveBeenCalled()
   })
 
   it('should NOT overwrite existing youtubeChannelId on a Creator', async () => {

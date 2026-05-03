@@ -8,6 +8,14 @@ export interface IVideoRepository {
   findAll(): Video[]
   findAllActive(): Video[]
   findById(id: string): Video | null
+  /**
+   * Look up a video by its YouTube video id. Today this is a thin alias of
+   * `findById` (the table PK *is* the YouTube id), but DownloadVideo's
+   * pre-flight dedupe expresses intent ("does this YouTube video already
+   * exist?") rather than incidental column reuse — so a future PK rename
+   * is a one-line repository change instead of a use-case audit.
+   */
+  findByYoutubeVideoId(youtubeVideoId: string): Video | null
   findByCreatorId(creatorId: string): Video[]
   /**
    * Cheap id-only projection for audit-cascade enumeration: when a creator
@@ -20,6 +28,13 @@ export interface IVideoRepository {
   findByProbeStatus(status: ProbeStatus): Video[]
   /** Active videos with a URL but detail metadata never fetched (detailFetchedAt IS NULL) */
   findNeedingDetail(): Video[]
+  /**
+   * Videos previously flagged `'missing'` because YouTube returned 404/403,
+   * but with a URL still on file. EnrichAllVideos retries these on every
+   * pass; a successful fetch flips them back to `'active'` (auto-recovery).
+   * Excludes deleted videos.
+   */
+  findMissingForRecovery(): Video[]
   /** Active videos that have at least one of the given tags. */
   findByTags(tags: string[]): Video[]
   /**

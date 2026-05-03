@@ -203,6 +203,7 @@ export const ipcSchemas = {
   // Path bounded to defend the use-case from oversized payloads; the
   // controller additionally validates containment under rootPath.
   'open-path-in-shell': z.tuple([z.string().min(1).max(4096)]),
+  'open-log-folder': z.tuple([]),
 
   // ── Stats ──
   'get-storage-stats': z.tuple([]),

@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, protocol } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
@@ -17,6 +17,8 @@ import { registerAuditLogController } from './interface-adapters/controllers/Aud
 import { registerOperationController } from './interface-adapters/controllers/OperationController'
 import { registerUpdaterController } from './interface-adapters/controllers/UpdaterController'
 import { registerStatsController } from './interface-adapters/controllers/StatsController'
+import { initLogger } from './framework-drivers/electron/logger'
+import { applySecurityHardening } from './framework-drivers/electron/security-hardening'
 import { join } from 'path'
 import { initializeDatabase } from './framework-drivers/database'
 
@@ -24,6 +26,24 @@ import { initializeDatabase } from './framework-drivers/database'
 protocol.registerSchemesAsPrivileged([
   { scheme: 'klip-media', privileges: { standard: false, secure: true, supportFetchAPI: true } }
 ])
+
+// ── Initialise persistent logger before app.whenReady so even boot-time
+//    crashes leave a trail at <userData>/logs/klip.log.
+initLogger(app)
+
+// ── Defence-in-depth security: deny external navigation + lock permissions.
+//    Must run before app.whenReady so the global web-contents-created hook
+//    catches the first window's contents.
+applySecurityHardening()
+
+// ── Test-only overrides ──
+// E2E tests need to point the user-data path at a temp directory so they
+// never touch the developer's real DB. `app.setPath` must run before
+// `app.whenReady`, so this block lives at the top of the module. Both
+// vars are no-ops when unset.
+if (process.env.KLIP_USER_DATA) {
+  app.setPath('userData', process.env.KLIP_USER_DATA)
+}
 
 // ── Application container (initialised in app.whenReady) ──
 let container: AppContainer
@@ -45,15 +65,18 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      // Both flags pinned explicitly. `contextIsolation: true` keeps the
+      // All flags pinned explicitly. `contextIsolation: true` keeps the
       // preload bridge isolated from renderer-world prototype tampering;
       // `sandbox: true` strips Node from the renderer process entirely so
       // a stored-content XSS (e.g. via comment text) can't reach
-      // `child_process` / `fs` / `path`. The preload uses only the IPC
-      // primitives and `@electron-toolkit/preload`'s `electronAPI`, both of
-      // which are sandbox-safe (toolkit ≥ 3.0.2).
+      // `child_process` / `fs` / `path`. `webSecurity: true` keeps
+      // same-origin policy active (defaults true, but pinned for review
+      // clarity). The preload uses only the IPC primitives and
+      // `@electron-toolkit/preload`'s `electronAPI`, both of which are
+      // sandbox-safe (toolkit ≥ 3.0.2).
       contextIsolation: true,
-      sandbox: true
+      sandbox: true,
+      webSecurity: true
     }
   })
 
@@ -78,10 +101,10 @@ function createWindow(): void {
     })
   }
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
+  // `setWindowOpenHandler` + `will-navigate` are now wired globally via
+  // `applySecurityHardening` (see boot section). The hardener routes
+  // youtube.com/youtu.be hosts through `shell.openExternal` and denies
+  // everything else, replacing the prior per-window blanket allowlist.
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local HTML file for production.
@@ -107,7 +130,10 @@ app.whenReady().then(() => {
   })
 
   // ── Create DI container ──
-  const defaultRootPath = join(app.getPath('documents'), 'klip')
+  // KLIP_DEFAULT_ROOT lets E2E tests override the default rootPath so
+  // each test starts with an empty creator folder; ignored in normal use.
+  const defaultRootPath =
+    process.env.KLIP_DEFAULT_ROOT ?? join(app.getPath('documents'), 'klip')
   const dbPath = join(app.getPath('userData'), 'klip.db')
 
   // Open DB and create the container — root-path resolution (read settings,
