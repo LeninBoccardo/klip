@@ -1,12 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from '@ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@ui/dialog'
 import { Button } from '@ui/button'
 import { useSetting } from '@/hooks/use-settings'
 import { useMigrateRoot } from '@/hooks/use-migrate-root'
@@ -43,9 +37,7 @@ export function OnboardingWizard(): React.ReactElement | null {
       >
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
-          <DialogDescription>
-            {t('step', { current: step, total: TOTAL_STEPS })}
-          </DialogDescription>
+          <DialogDescription>{t('step', { current: step, total: TOTAL_STEPS })}</DialogDescription>
         </DialogHeader>
 
         {step === 1 && <StepRoot />}
@@ -102,12 +94,7 @@ function StepRoot(): React.ReactElement {
         <p className="text-xs text-muted-foreground">{t('steps.root.currentLabel')}</p>
         <p className="font-mono text-sm break-all">{rootPath ?? '—'}</p>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleChange}
-        disabled={mutation.isPending}
-      >
+      <Button variant="outline" size="sm" onClick={handleChange} disabled={mutation.isPending}>
         <FolderSync className="mr-2 size-4" />
         {t('steps.root.change')}
       </Button>
@@ -150,15 +137,10 @@ function StepTour(): React.ReactElement {
       <p className="text-sm text-muted-foreground">{t('steps.tour.description')}</p>
       <ul className="space-y-2">
         {cards.map(({ key, icon: Icon }) => (
-          <li
-            key={key}
-            className="flex items-start gap-3 rounded-md border p-3"
-          >
+          <li key={key} className="flex items-start gap-3 rounded-md border p-3">
             <Icon className="mt-0.5 size-5 shrink-0 text-primary" />
             <div className="space-y-1">
-              <p className="text-sm font-medium">
-                {t(`steps.tour.cards.${key}.title` as const)}
-              </p>
+              <p className="text-sm font-medium">{t(`steps.tour.cards.${key}.title` as const)}</p>
               <p className="text-xs text-muted-foreground">
                 {t(`steps.tour.cards.${key}.body` as const)}
               </p>

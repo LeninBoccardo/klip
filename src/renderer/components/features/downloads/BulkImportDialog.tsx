@@ -8,25 +8,12 @@ import {
   DialogHeader,
   DialogTitle
 } from '@ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/select'
 import { Textarea } from '@ui/textarea'
 import { Button } from '@ui/button'
 import { Checkbox } from '@ui/checkbox'
 import { Badge } from '@ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
 import { Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFetchVideoInfo, useDownloadVideo } from '@/hooks/use-downloads'
@@ -146,9 +133,8 @@ export function BulkImportDialog({
       const channel = row.info?.channel ?? null
       const creatorName =
         row.creatorOverride === AUTO_CREATOR
-          ? channel ?? row.info?.videoId ?? 'unknown'
-          : creators?.data.find((c) => c.id === row.creatorOverride)?.name ??
-            row.creatorOverride
+          ? (channel ?? row.info?.videoId ?? 'unknown')
+          : (creators?.data.find((c) => c.id === row.creatorOverride)?.name ?? row.creatorOverride)
       try {
         await downloadVideo.mutateAsync({ url: row.url, creatorName })
         queued++
@@ -158,8 +144,7 @@ export function BulkImportDialog({
     }
     setSubmitting(false)
 
-    const description =
-      failed > 0 ? t('bulkImport.queuedFailedNote', { count: failed }) : undefined
+    const description = failed > 0 ? t('bulkImport.queuedFailedNote', { count: failed }) : undefined
     toast.success(t('bulkImport.queuedToast', { count: queued }), { description })
     onOpenChange(false)
     setText('')
@@ -206,9 +191,7 @@ export function BulkImportDialog({
               <TableBody>
                 {rows.map((row, idx) => {
                   const channel = row.info?.channel
-                  const autoLabel = channel
-                    ? t('bulkImport.creatorAuto', { name: channel })
-                    : '—'
+                  const autoLabel = channel ? t('bulkImport.creatorAuto', { name: channel }) : '—'
                   return (
                     <TableRow key={`${row.url}-${idx}`}>
                       <TableCell>
@@ -221,9 +204,7 @@ export function BulkImportDialog({
                       <TableCell className="max-w-xs">
                         <p className="truncate font-medium">{row.info?.title ?? row.url}</p>
                         <p className="truncate text-xs text-muted-foreground">{row.url}</p>
-                        {row.error && (
-                          <p className="text-xs text-destructive">{row.error}</p>
-                        )}
+                        {row.error && <p className="text-xs text-destructive">{row.error}</p>}
                       </TableCell>
                       <TableCell>
                         <Select

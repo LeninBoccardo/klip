@@ -13,10 +13,21 @@ import {
   SelectableEntity,
   BulkActionsBar
 } from '@/components/shared'
-import { CutsFilters, sortKeyToParams, type CutsSortKey } from '@components/features/cuts/CutsFilters'
+import {
+  CutsFilters,
+  sortKeyToParams,
+  type CutsSortKey
+} from '@components/features/cuts/CutsFilters'
 import { AddToCollectionDialog } from '@components/features/collections/AddToCollectionDialog'
 import { Button } from '@ui/button'
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription
+} from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import { Scissors, CheckSquare, Square } from 'lucide-react'
 import { toast } from 'sonner'

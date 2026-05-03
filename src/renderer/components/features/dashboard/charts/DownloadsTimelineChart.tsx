@@ -13,9 +13,7 @@ interface DownloadsTimelineChartProps {
   data: { date: string; count: number }[]
 }
 
-export function DownloadsTimelineChart({
-  data
-}: DownloadsTimelineChartProps): React.ReactElement {
+export function DownloadsTimelineChart({ data }: DownloadsTimelineChartProps): React.ReactElement {
   const { t } = useTranslation('dashboard')
   const hasAny = data.some((d) => d.count > 0)
 

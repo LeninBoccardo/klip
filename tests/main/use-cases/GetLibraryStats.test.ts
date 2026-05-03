@@ -1,10 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { GetLibraryStats } from '@main/use-cases/GetLibraryStats'
-import type {
-  ICreatorRepository,
-  ICutRepository,
-  IVideoRepository
-} from '@domain/repositories'
+import type { ICreatorRepository, ICutRepository, IVideoRepository } from '@domain/repositories'
 import type { IGetStorageStats } from '@main/use-cases/IGetStorageStats'
 import type { LibraryStats } from '@shared/types'
 
@@ -25,9 +21,7 @@ function makeVideoRepo(): IVideoRepository {
     countTranscribed: vi.fn().mockReturnValue(30),
     sumDuration: vi.fn().mockReturnValue(123_456),
     sumFileSize: vi.fn().mockReturnValue(789_000),
-    findDownloadCountsByDay: vi
-      .fn()
-      .mockReturnValue([{ date: '2026-05-01', count: 3 }]),
+    findDownloadCountsByDay: vi.fn().mockReturnValue([{ date: '2026-05-01', count: 3 }]),
     findTopCreators: vi.fn().mockReturnValue([
       { creatorId: 'c-1', videoCount: 10 },
       { creatorId: 'c-2', videoCount: 5 }

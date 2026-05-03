@@ -87,9 +87,7 @@ describe('SqliteVideoTranscriptIndex', () => {
   })
 
   it('findVideosNeedingBackfill returns rows with transcript_path but no transcript_text', () => {
-    raw.exec(
-      `INSERT INTO creators (id, folder_name, name) VALUES ('c-1', 'c-1', 'C')`
-    )
+    raw.exec(`INSERT INTO creators (id, folder_name, name) VALUES ('c-1', 'c-1', 'C')`)
     const stmt = raw.prepare(
       `INSERT INTO videos (id, creator_id, title, file_path, transcript_path, transcript_text, status)
        VALUES (?, 'c-1', ?, ?, ?, ?, 'active')`

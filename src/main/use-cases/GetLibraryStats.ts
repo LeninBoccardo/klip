@@ -1,8 +1,4 @@
-import type {
-  ICreatorRepository,
-  ICutRepository,
-  IVideoRepository
-} from '@domain/repositories'
+import type { ICreatorRepository, ICutRepository, IVideoRepository } from '@domain/repositories'
 import type { LibraryStats } from '@shared/types'
 import type { IGetLibraryStats } from './IGetLibraryStats'
 import type { IGetStorageStats } from './IGetStorageStats'

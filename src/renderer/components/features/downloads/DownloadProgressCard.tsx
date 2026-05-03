@@ -22,7 +22,8 @@ export function DownloadProgressCard({
   const { t } = useTranslation('downloads')
   const isTerminal =
     progress.status === 'complete' || progress.status === 'error' || progress.status === 'cancelled'
-  const showRetry = progress.status === 'error' && progress.retriable === true && progress.creatorName
+  const showRetry =
+    progress.status === 'error' && progress.retriable === true && progress.creatorName
 
   return (
     <Item variant="outline">

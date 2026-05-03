@@ -13,9 +13,7 @@ const COLORS: Record<keyof LibraryStats['videos']['byStatus'], string> = {
   deleted: 'hsl(var(--destructive))'
 }
 
-export function VideosByStatusChart({
-  byStatus
-}: VideosByStatusChartProps): React.ReactElement {
+export function VideosByStatusChart({ byStatus }: VideosByStatusChartProps): React.ReactElement {
   const { t } = useTranslation('dashboard')
   const data = STATUSES.map((status) => ({
     status,

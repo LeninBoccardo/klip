@@ -17,7 +17,12 @@ export interface ShortcutEntry {
 export const SHORTCUTS: readonly ShortcutEntry[] = [
   // ── Global ──
   { id: 'palette.open', group: 'global', keys: 'mod+k', descriptionKey: 'entries.openPaletteMod' },
-  { id: 'palette.openSlash', group: 'global', keys: '/', descriptionKey: 'entries.openPaletteSlash' },
+  {
+    id: 'palette.openSlash',
+    group: 'global',
+    keys: '/',
+    descriptionKey: 'entries.openPaletteSlash'
+  },
   { id: 'help.open', group: 'global', keys: '?', descriptionKey: 'entries.openHelp' },
 
   // ── Navigation chords (g + key) ──
@@ -32,15 +37,55 @@ export const SHORTCUTS: readonly ShortcutEntry[] = [
   // ── Player (active when persistent player is in detail mode) ──
   { id: 'player.playPause', group: 'player', keys: ' ', descriptionKey: 'entries.playerPlayPause' },
   { id: 'player.pauseK', group: 'player', keys: 'k', descriptionKey: 'entries.playerPauseK' },
-  { id: 'player.seekBack10', group: 'player', keys: 'j', descriptionKey: 'entries.playerSeekBack10' },
-  { id: 'player.seekForward10', group: 'player', keys: 'l', descriptionKey: 'entries.playerSeekForward10' },
-  { id: 'player.seekBack5', group: 'player', keys: 'arrowleft', descriptionKey: 'entries.playerSeekBack5' },
-  { id: 'player.seekForward5', group: 'player', keys: 'arrowright', descriptionKey: 'entries.playerSeekForward5' },
-  { id: 'player.volumeUp', group: 'player', keys: 'arrowup', descriptionKey: 'entries.playerVolumeUp' },
-  { id: 'player.volumeDown', group: 'player', keys: 'arrowdown', descriptionKey: 'entries.playerVolumeDown' },
+  {
+    id: 'player.seekBack10',
+    group: 'player',
+    keys: 'j',
+    descriptionKey: 'entries.playerSeekBack10'
+  },
+  {
+    id: 'player.seekForward10',
+    group: 'player',
+    keys: 'l',
+    descriptionKey: 'entries.playerSeekForward10'
+  },
+  {
+    id: 'player.seekBack5',
+    group: 'player',
+    keys: 'arrowleft',
+    descriptionKey: 'entries.playerSeekBack5'
+  },
+  {
+    id: 'player.seekForward5',
+    group: 'player',
+    keys: 'arrowright',
+    descriptionKey: 'entries.playerSeekForward5'
+  },
+  {
+    id: 'player.volumeUp',
+    group: 'player',
+    keys: 'arrowup',
+    descriptionKey: 'entries.playerVolumeUp'
+  },
+  {
+    id: 'player.volumeDown',
+    group: 'player',
+    keys: 'arrowdown',
+    descriptionKey: 'entries.playerVolumeDown'
+  },
   { id: 'player.mute', group: 'player', keys: 'm', descriptionKey: 'entries.playerMute' },
-  { id: 'player.fullscreen', group: 'player', keys: 'f', descriptionKey: 'entries.playerFullscreen' },
-  { id: 'player.jumpPercent', group: 'player', keys: '0…9', descriptionKey: 'entries.playerJumpPercent' }
+  {
+    id: 'player.fullscreen',
+    group: 'player',
+    keys: 'f',
+    descriptionKey: 'entries.playerFullscreen'
+  },
+  {
+    id: 'player.jumpPercent',
+    group: 'player',
+    keys: '0…9',
+    descriptionKey: 'entries.playerJumpPercent'
+  }
 ] as const
 
 export const GROUPS: readonly ShortcutGroup[] = ['global', 'navigation', 'player'] as const

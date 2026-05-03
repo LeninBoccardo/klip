@@ -6,7 +6,14 @@ import { DownloadProgressCard } from './DownloadProgressCard'
 import { URL_INPUT_FOCUS_EVENT } from './UrlInput'
 import { ItemGroup } from '@/components/ui/item'
 import { Button } from '@ui/button'
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription
+} from '@ui/empty'
 import { Download } from 'lucide-react'
 import type { DownloadProgress } from '@shared/types'
 

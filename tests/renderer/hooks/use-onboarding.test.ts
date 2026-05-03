@@ -54,9 +54,7 @@ describe('useOnboardingState', () => {
     act(() => result.current.complete())
 
     expect(result.current.shouldShow).toBe(false)
-    await waitFor(() =>
-      expect(setSetting).toHaveBeenCalledWith('hasCompletedOnboarding', 'true')
-    )
+    await waitFor(() => expect(setSetting).toHaveBeenCalledWith('hasCompletedOnboarding', 'true'))
   })
 
   it('replay() persists "false" so the wizard reopens', async () => {
@@ -68,8 +66,6 @@ describe('useOnboardingState', () => {
 
     act(() => result.current.replay())
 
-    await waitFor(() =>
-      expect(setSetting).toHaveBeenCalledWith('hasCompletedOnboarding', 'false')
-    )
+    await waitFor(() => expect(setSetting).toHaveBeenCalledWith('hasCompletedOnboarding', 'false'))
   })
 })

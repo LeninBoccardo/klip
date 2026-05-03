@@ -339,9 +339,7 @@ export class SqliteVideoRepository implements IVideoRepository {
     const [{ count }] = this.db
       .select({ count: sql<number>`count(*)` })
       .from(videos)
-      .where(
-        and(eq(videos.status, 'active'), sql`${videos.transcriptText} IS NOT NULL`)
-      )
+      .where(and(eq(videos.status, 'active'), sql`${videos.transcriptText} IS NOT NULL`))
       .all()
     return count
   }

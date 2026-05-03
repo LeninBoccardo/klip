@@ -8,13 +8,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/select'
 import { Button } from '@ui/button'
 import { Label } from '@ui/label'
 import { Loader2, Plus } from 'lucide-react'
@@ -110,11 +104,7 @@ export function MoveToCreatorDialog({
             </Button>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={move.isPending}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={move.isPending}>
               {tc('actions.cancel')}
             </Button>
             <Button onClick={handleSubmit} disabled={!target || move.isPending}>

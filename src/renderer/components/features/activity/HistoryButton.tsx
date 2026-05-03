@@ -1,12 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle
-} from '@ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@ui/sheet'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
 import { ScrollArea } from '@ui/scroll-area'

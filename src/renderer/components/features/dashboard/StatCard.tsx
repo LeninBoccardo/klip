@@ -9,7 +9,13 @@ interface StatCardProps {
   className?: string
 }
 
-export function StatCard({ label, value, hint, icon, className }: StatCardProps): React.ReactElement {
+export function StatCard({
+  label,
+  value,
+  hint,
+  icon,
+  className
+}: StatCardProps): React.ReactElement {
   return (
     <Card className={cn('h-full', className)}>
       <CardContent className="flex items-start justify-between gap-3 p-4">

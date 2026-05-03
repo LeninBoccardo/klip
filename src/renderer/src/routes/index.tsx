@@ -13,7 +13,14 @@ import {
   EntityContextMenu
 } from '@/components/shared'
 import { Button } from '@ui/button'
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription
+} from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import { Plus, Users, Download } from 'lucide-react'
 import { toast } from 'sonner'

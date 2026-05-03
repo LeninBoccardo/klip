@@ -126,9 +126,7 @@ describe('DeleteTagGlobally', () => {
   })
 
   it('removes the tag across active cuts as well', () => {
-    vi.mocked(cutRepo.findByTags).mockReturnValue([
-      makeCut({ id: 'c-1', tags: ['wip', 'fav'] })
-    ])
+    vi.mocked(cutRepo.findByTags).mockReturnValue([makeCut({ id: 'c-1', tags: ['wip', 'fav'] })])
 
     const result = useCase.execute('wip')
 

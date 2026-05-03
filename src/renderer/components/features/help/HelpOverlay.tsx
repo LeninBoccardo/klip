@@ -1,12 +1,6 @@
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from '@ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@ui/dialog'
 import { Kbd, KbdGroup } from '@ui/kbd'
 import { GROUPS, shortcutsByGroup } from './shortcut-registry'
 import { tokenizeShortcut } from '@/lib/platform-key'
@@ -37,9 +31,7 @@ export function HelpOverlay({ open, onOpenChange }: HelpOverlayProps): React.Rea
                 </h3>
                 <ul className="space-y-1.5">
                   {entries.map((entry) => {
-                    const tokens = entry.keys === ' '
-                      ? ['Space']
-                      : tokenizeShortcut(entry.keys)
+                    const tokens = entry.keys === ' ' ? ['Space'] : tokenizeShortcut(entry.keys)
                     return (
                       <li
                         key={entry.id}

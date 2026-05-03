@@ -4,15 +4,17 @@ import { useTranslation } from 'react-i18next'
 import { useSearchTranscripts } from '@/hooks/use-search'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { TranscriptSnippet } from '@components/features/search/TranscriptSnippet'
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText
-} from '@ui/input-group'
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@ui/input-group'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription
+} from '@ui/empty'
 import { Search as SearchIcon, Captions } from 'lucide-react'
 import { z } from 'zod'
 
@@ -78,7 +80,9 @@ function SearchPage(): React.ReactElement {
 
       {trimmed.length > 0 && data && (
         <p className="text-sm text-muted-foreground">
-          {total >= 1000 ? t('transcripts.totalCapped') : t('transcripts.totalApproximate', { count: total })}
+          {total >= 1000
+            ? t('transcripts.totalCapped')
+            : t('transcripts.totalApproximate', { count: total })}
         </p>
       )}
 

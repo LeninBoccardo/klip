@@ -2,12 +2,7 @@ import type { AuditEntryDto } from '@shared/dtos'
 
 export type AuditEntityKind = 'creator' | 'video' | 'cut' | 'collection' | 'unknown'
 
-const KNOWN_ENTITIES: ReadonlySet<string> = new Set([
-  'creator',
-  'video',
-  'cut',
-  'collection'
-])
+const KNOWN_ENTITIES: ReadonlySet<string> = new Set(['creator', 'video', 'cut', 'collection'])
 
 export function classifyEntity(entityType: string): AuditEntityKind {
   return KNOWN_ENTITIES.has(entityType) ? (entityType as AuditEntityKind) : 'unknown'

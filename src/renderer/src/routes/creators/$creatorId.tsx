@@ -18,7 +18,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
 import { Skeleton } from '@ui/skeleton'
 import { Button } from '@ui/button'
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription
+} from '@ui/empty'
 import { Film, Scissors, CheckSquare, Square, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { AddToCollectionDialog } from '@components/features/collections/AddToCollectionDialog'

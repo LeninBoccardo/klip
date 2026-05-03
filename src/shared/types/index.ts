@@ -45,10 +45,7 @@ export type {
   TranscriptSearchResult,
   SearchTranscriptsParams
 } from './transcript-search'
-export {
-  TRANSCRIPT_SNIPPET_OPEN,
-  TRANSCRIPT_SNIPPET_CLOSE
-} from './transcript-search'
+export { TRANSCRIPT_SNIPPET_OPEN, TRANSCRIPT_SNIPPET_CLOSE } from './transcript-search'
 export type { DbUpdateScope, DbUpdatedPayload } from './notification-events'
 export type { SearchAllResult } from './search'
 export type {

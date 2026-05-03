@@ -36,12 +36,7 @@ export function StorageStatsCard(): React.ReactElement {
         />
       </div>
       <p className="text-xs text-muted-foreground">{t('storage.stats.note')}</p>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleOpenInShell}
-        disabled={!rootPath}
-      >
+      <Button variant="outline" size="sm" onClick={handleOpenInShell} disabled={!rootPath}>
         <ExternalLink className="mr-2 size-4" />
         {t('storage.stats.openInShell')}
       </Button>
@@ -63,9 +58,7 @@ function Stat({
       <p className="text-xs text-muted-foreground">{label}</p>
       <p
         className={
-          emphasised
-            ? 'text-base font-semibold tabular-nums'
-            : 'text-sm font-medium tabular-nums'
+          emphasised ? 'text-base font-semibold tabular-nums' : 'text-sm font-medium tabular-nums'
         }
       >
         {value}

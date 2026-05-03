@@ -5,7 +5,14 @@ import { useAuditLogRecent } from '@/hooks/use-audit-log'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { AuditEntryRow } from '@components/features/activity/AuditEntryRow'
 import { Button } from '@ui/button'
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription
+} from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import { Activity as ActivityIcon } from 'lucide-react'
 

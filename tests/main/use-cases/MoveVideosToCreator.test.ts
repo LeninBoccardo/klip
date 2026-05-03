@@ -134,15 +134,15 @@ describe('MoveVideosToCreator', () => {
   })
 
   it('throws EmptyVideoIdsError on empty videoIds', async () => {
-    await expect(
-      useCase.execute({ videoIds: [], targetCreatorId: 'new' })
-    ).rejects.toMatchObject({ name: 'EmptyVideoIdsError' })
+    await expect(useCase.execute({ videoIds: [], targetCreatorId: 'new' })).rejects.toMatchObject({
+      name: 'EmptyVideoIdsError'
+    })
   })
 
   it('throws EmptyTargetCreatorError on empty targetCreatorId', async () => {
-    await expect(
-      useCase.execute({ videoIds: ['v-1'], targetCreatorId: '' })
-    ).rejects.toMatchObject({ name: 'EmptyTargetCreatorError' })
+    await expect(useCase.execute({ videoIds: ['v-1'], targetCreatorId: '' })).rejects.toMatchObject(
+      { name: 'EmptyTargetCreatorError' }
+    )
   })
 
   it('throws TargetCreatorNotFoundError when target creator does not exist', async () => {

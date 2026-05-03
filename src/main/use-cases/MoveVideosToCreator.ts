@@ -80,10 +80,7 @@ export class MoveVideosToCreator implements IMoveVideosToCreator {
         moved++
       } catch (err) {
         errors[videoId] = err instanceof Error ? err.message : String(err)
-        console.error(
-          `[MoveVideosToCreator] Failed to move ${videoId}:`,
-          redactError(err, root)
-        )
+        console.error(`[MoveVideosToCreator] Failed to move ${videoId}:`, redactError(err, root))
       }
     }
 

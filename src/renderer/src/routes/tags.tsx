@@ -7,13 +7,15 @@ import { RenameTagDialog } from '@components/features/tags/RenameTagDialog'
 import { DeleteTagDialog } from '@components/features/tags/DeleteTagDialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
 import { Button } from '@ui/button'
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@ui/input-group'
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText
-} from '@ui/input-group'
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription
+} from '@ui/empty'
 import { Skeleton } from '@ui/skeleton'
 import { Search, Pencil, Trash2, Tags as TagsIcon } from 'lucide-react'
 import type { TagAggregation } from '@shared/types'
@@ -33,10 +35,7 @@ function TagsPage(): React.ReactElement {
   const [renameTarget, setRenameTarget] = useState<TagAggregation | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<TagAggregation | null>(null)
 
-  const existingTagNames = useMemo(
-    () => new Set((tags ?? []).map((t) => t.tag)),
-    [tags]
-  )
+  const existingTagNames = useMemo(() => new Set((tags ?? []).map((t) => t.tag)), [tags])
 
   const visible = useMemo(() => {
     if (!tags) return []
@@ -47,10 +46,8 @@ function TagsPage(): React.ReactElement {
     const dir = sort.desc ? -1 : 1
     return filtered.sort((a, b) => {
       if (sort.key === 'tag') return a.tag.localeCompare(b.tag) * dir
-      const aVal =
-        sort.key === 'total' ? a.videoCount + a.cutCount : a[sort.key]
-      const bVal =
-        sort.key === 'total' ? b.videoCount + b.cutCount : b[sort.key]
+      const aVal = sort.key === 'total' ? a.videoCount + a.cutCount : a[sort.key]
+      const bVal = sort.key === 'total' ? b.videoCount + b.cutCount : b[sort.key]
       return (aVal - bVal) * dir
     })
   }, [tags, filter, sort])

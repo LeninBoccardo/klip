@@ -146,10 +146,18 @@ export function PersistentPlayer(): React.ReactElement | null {
     []
   )
 
-  useShortcut(' ', withVideo((el) => (el.paused ? void el.play().catch(() => {}) : el.pause())), {
-    enabled: shortcutsEnabled
-  })
-  useShortcut('k', withVideo((el) => el.pause()), { enabled: shortcutsEnabled })
+  useShortcut(
+    ' ',
+    withVideo((el) => (el.paused ? void el.play().catch(() => {}) : el.pause())),
+    {
+      enabled: shortcutsEnabled
+    }
+  )
+  useShortcut(
+    'k',
+    withVideo((el) => el.pause()),
+    { enabled: shortcutsEnabled }
+  )
   useShortcut(
     'j',
     withVideo((el) => {
@@ -212,16 +220,56 @@ export function PersistentPlayer(): React.ReactElement | null {
     { enabled: shortcutsEnabled }
   )
   // 0–9 jump shortcuts (each is its own listener so chord buffers don't clash)
-  useShortcut('0', withVideo((el) => seekToPercent(el, 0)), { enabled: shortcutsEnabled })
-  useShortcut('1', withVideo((el) => seekToPercent(el, 0.1)), { enabled: shortcutsEnabled })
-  useShortcut('2', withVideo((el) => seekToPercent(el, 0.2)), { enabled: shortcutsEnabled })
-  useShortcut('3', withVideo((el) => seekToPercent(el, 0.3)), { enabled: shortcutsEnabled })
-  useShortcut('4', withVideo((el) => seekToPercent(el, 0.4)), { enabled: shortcutsEnabled })
-  useShortcut('5', withVideo((el) => seekToPercent(el, 0.5)), { enabled: shortcutsEnabled })
-  useShortcut('6', withVideo((el) => seekToPercent(el, 0.6)), { enabled: shortcutsEnabled })
-  useShortcut('7', withVideo((el) => seekToPercent(el, 0.7)), { enabled: shortcutsEnabled })
-  useShortcut('8', withVideo((el) => seekToPercent(el, 0.8)), { enabled: shortcutsEnabled })
-  useShortcut('9', withVideo((el) => seekToPercent(el, 0.9)), { enabled: shortcutsEnabled })
+  useShortcut(
+    '0',
+    withVideo((el) => seekToPercent(el, 0)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '1',
+    withVideo((el) => seekToPercent(el, 0.1)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '2',
+    withVideo((el) => seekToPercent(el, 0.2)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '3',
+    withVideo((el) => seekToPercent(el, 0.3)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '4',
+    withVideo((el) => seekToPercent(el, 0.4)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '5',
+    withVideo((el) => seekToPercent(el, 0.5)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '6',
+    withVideo((el) => seekToPercent(el, 0.6)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '7',
+    withVideo((el) => seekToPercent(el, 0.7)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '8',
+    withVideo((el) => seekToPercent(el, 0.8)),
+    { enabled: shortcutsEnabled }
+  )
+  useShortcut(
+    '9',
+    withVideo((el) => seekToPercent(el, 0.9)),
+    { enabled: shortcutsEnabled }
+  )
 
   if (!mounted || !videoId) return null
 

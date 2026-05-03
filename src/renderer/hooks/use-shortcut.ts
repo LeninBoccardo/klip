@@ -119,11 +119,7 @@ export function useShortcut(
     const onKeyDown = (event: KeyboardEvent): void => {
       // Suppress in inputs unless explicitly opted-in. Modifier shortcuts
       // (e.g. mod+k) always fire — they're the typing escape hatch.
-      if (
-        parsed.kind !== 'modifier' &&
-        !allowInInputs &&
-        isTextInputActive()
-      ) {
+      if (parsed.kind !== 'modifier' && !allowInInputs && isTextInputActive()) {
         return
       }
 

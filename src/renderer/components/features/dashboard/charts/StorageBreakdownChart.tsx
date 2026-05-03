@@ -7,13 +7,21 @@ interface StorageBreakdownChartProps {
   storage: StorageStats
 }
 
-export function StorageBreakdownChart({
-  storage
-}: StorageBreakdownChartProps): React.ReactElement {
+export function StorageBreakdownChart({ storage }: StorageBreakdownChartProps): React.ReactElement {
   const { t } = useTranslation('dashboard')
   const data = [
-    { key: 'videos', label: t('storage.videos'), value: storage.videosBytes, color: 'hsl(var(--primary))' },
-    { key: 'cuts', label: t('storage.cuts'), value: storage.cutsBytes, color: 'hsl(var(--accent-foreground))' }
+    {
+      key: 'videos',
+      label: t('storage.videos'),
+      value: storage.videosBytes,
+      color: 'hsl(var(--primary))'
+    },
+    {
+      key: 'cuts',
+      label: t('storage.cuts'),
+      value: storage.cutsBytes,
+      color: 'hsl(var(--accent-foreground))'
+    }
   ].filter((d) => d.value > 0)
 
   if (data.length === 0) {

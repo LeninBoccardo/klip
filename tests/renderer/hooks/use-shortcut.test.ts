@@ -135,14 +135,21 @@ describe('useShortcut', () => {
 
   it('reads the latest handler without re-binding', () => {
     let calls = 0
-    const { rerender } = renderHook(
-      ({ fn }: { fn: () => void }) => useShortcut('?', fn),
-      { initialProps: { fn: () => { calls += 1 } } }
-    )
+    const { rerender } = renderHook(({ fn }: { fn: () => void }) => useShortcut('?', fn), {
+      initialProps: {
+        fn: () => {
+          calls += 1
+        }
+      }
+    })
     dispatchKey('?')
     expect(calls).toBe(1)
 
-    rerender({ fn: () => { calls += 100 } })
+    rerender({
+      fn: () => {
+        calls += 100
+      }
+    })
     dispatchKey('?')
     expect(calls).toBe(101)
   })
