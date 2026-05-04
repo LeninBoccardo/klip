@@ -1,15 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-
-// jsdom doesn't implement Element.prototype.scrollIntoView. cmdk calls it
-// when it auto-selects the first matching item, so without this shim every
-// CommandDialog mount with results explodes inside the layout effect.
-if (!Element.prototype.scrollIntoView) {
-  Element.prototype.scrollIntoView = function (): void {
-    /* no-op for jsdom */
-  }
-}
 import type { UseQueryResult } from '@tanstack/react-query'
 import i18n from '@renderer/i18n'
 import { CommandPalette } from '@/components/features/search/CommandPalette'
