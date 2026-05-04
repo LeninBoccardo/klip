@@ -17,6 +17,7 @@ export default defineConfig({
             '@main': resolve(__dirname, 'src/main'),
             '@domain': resolve(__dirname, 'src/main/domain'),
             '@use-cases': resolve(__dirname, 'src/main/use-cases'),
+            '@preload': resolve(__dirname, 'src/preload'),
             '@shared': resolve(__dirname, 'src/shared')
           }
         }
