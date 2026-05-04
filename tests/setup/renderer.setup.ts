@@ -29,6 +29,15 @@ if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = ResizeObserverShim as unknown as typeof ResizeObserver
 }
 
+// jsdom does not implement Element.prototype.scrollIntoView. cmdk auto-selects
+// the first matching item on mount and calls it inside a layout effect — every
+// CommandDialog / Combobox / TagInput test would otherwise crash.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function (): void {
+    /* no-op for jsdom */
+  }
+}
+
 afterEach(() => {
   cleanup()
 })
