@@ -23,6 +23,16 @@ const tCommon = (key: string, params?: Record<string, unknown>): string =>
 const tCollections = (key: string, params?: Record<string, unknown>): string =>
   i18n.t(key, { ns: 'collections', ...params })
 
+// userEvent.setup() installs its own clipboard stub. Trigger the install
+// once at module load and then patch the writeText slot — subsequent setup
+// calls in tests reuse the same clipboard object and don't clobber our spy.
+userEvent.setup()
+Object.defineProperty(navigator.clipboard, 'writeText', {
+  value: writeText,
+  writable: true,
+  configurable: true
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
   Object.defineProperty(window, 'api', {
@@ -30,23 +40,11 @@ beforeEach(() => {
     writable: true,
     configurable: true
   })
-  // jsdom 29's `navigator.clipboard` is a non-configurable accessor at the
-  // top level — replacing it as a whole silently fails. userEvent.setup()
-  // also patches it. Sidestep both: ensure `navigator.clipboard` exists, then
-  // patch its `writeText` slot (each method slot is configurable).
-  if (!('clipboard' in navigator) || navigator.clipboard == null) {
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText },
-      writable: true,
-      configurable: true
-    })
-  } else {
-    Object.defineProperty(navigator.clipboard, 'writeText', {
-      value: writeText,
-      writable: true,
-      configurable: true
-    })
-  }
+  Object.defineProperty(navigator.clipboard, 'writeText', {
+    value: writeText,
+    writable: true,
+    configurable: true
+  })
   revealEntityInFolder.mockResolvedValue({ ok: true })
   openExternalUrl.mockResolvedValue({ ok: true })
   writeText.mockResolvedValue(undefined)
