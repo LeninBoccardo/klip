@@ -38,6 +38,29 @@ if (!Element.prototype.scrollIntoView) {
   }
 }
 
+// jsdom does not implement Pointer Events APIs that Radix's Select primitive
+// uses (hasPointerCapture / setPointerCapture / releasePointerCapture). Without
+// these, opening a Select trigger via user.click throws inside Radix's
+// pointerdown handler.
+const ProtoWithPointer = Element.prototype as Element & {
+  hasPointerCapture?: (id: number) => boolean
+  setPointerCapture?: (id: number) => void
+  releasePointerCapture?: (id: number) => void
+}
+if (!ProtoWithPointer.hasPointerCapture) {
+  ProtoWithPointer.hasPointerCapture = (): boolean => false
+}
+if (!ProtoWithPointer.setPointerCapture) {
+  ProtoWithPointer.setPointerCapture = (): void => {
+    /* no-op */
+  }
+}
+if (!ProtoWithPointer.releasePointerCapture) {
+  ProtoWithPointer.releasePointerCapture = (): void => {
+    /* no-op */
+  }
+}
+
 afterEach(() => {
   cleanup()
 })
