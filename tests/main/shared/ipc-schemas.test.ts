@@ -319,7 +319,85 @@ const rows: Row[] = [
   // ── Updater ──
   { channel: 'check-for-updates', accept: [], reject: [['extra']] },
   { channel: 'install-update', accept: [], reject: [['extra']] },
-  { channel: 'get-updater-status', accept: [], reject: [['extra']] }
+  { channel: 'get-updater-status', accept: [], reject: [['extra']] },
+  // ── Editor (in-app trim) ──
+  // Channel-specific guards: editor-open-window expects an object with a
+  // non-empty sourceVideoId; editor-start-render expects a full recipe;
+  // editor-cancel-render / editor-get-session expect a non-empty job id.
+  {
+    channel: 'editor-open-window',
+    accept: [{ sourceVideoId: 'vid-1' }],
+    reject: [
+      [],
+      [{}], // missing sourceVideoId
+      [{ sourceVideoId: '' }], // empty
+      [{ sourceVideoId: longString(257) }] // exceeds 256
+    ]
+  },
+  {
+    channel: 'editor-start-render',
+    accept: [
+      {
+        recipe: {
+          version: 1,
+          sourceVideoId: 'vid-1',
+          ops: [{ type: 'trim', in: 1.5, out: 4.5 }],
+          output: { container: 'mp4', mode: 'copy' }
+        },
+        title: 'My cut',
+        tags: ['a']
+      }
+    ],
+    reject: [
+      [], // missing
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'unknown-op' }],
+            output: { container: 'mp4', mode: 'copy' }
+          },
+          title: 'x',
+          tags: []
+        }
+      ], // unknown op type — discriminated union rejects
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'trim', in: 1, out: 2 }],
+            output: { container: 'avi', mode: 'copy' } // unsupported container
+          },
+          title: 'x',
+          tags: []
+        }
+      ],
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'trim', in: 1, out: 2 }],
+            output: { container: 'mp4', mode: 'copy' }
+          },
+          title: '', // empty title
+          tags: []
+        }
+      ]
+    ]
+  },
+  {
+    channel: 'editor-cancel-render',
+    accept: ['job-1'],
+    reject: [[], [''], [longString(257)]]
+  },
+  {
+    channel: 'editor-get-session',
+    accept: ['job-1'],
+    reject: [[], [''], [longString(257)]]
+  }
 ]
 
 describe('ipcSchemas — every channel has an accept + reject case', () => {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol } from 'electron'
+import { app, protocol } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createAppContainer, type AppContainer } from './composition-root'
@@ -17,6 +17,7 @@ import { registerAuditLogController } from './interface-adapters/controllers/Aud
 import { registerOperationController } from './interface-adapters/controllers/OperationController'
 import { registerUpdaterController } from './interface-adapters/controllers/UpdaterController'
 import { registerStatsController } from './interface-adapters/controllers/StatsController'
+import { registerEditorController } from './interface-adapters/controllers/EditorController'
 import { initLogger } from './framework-drivers/electron/logger'
 import { applySecurityHardening } from './framework-drivers/electron/security-hardening'
 import { join } from 'path'
@@ -42,80 +43,6 @@ if (process.env.KLIP_USER_DATA) {
 
 // ── Application container (initialised in app.whenReady) ──
 let container: AppContainer
-
-function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 936,
-    // Below ~1024px the layout starts cramping (sidebar + content + sidebar
-    // header chrome leaves <600px of usable width). Pin a sensible floor so
-    // we don't have to support arbitrary tiny widths; matches Tailwind's
-    // `lg` breakpoint so the responsive grids we already write target the
-    // narrowest size users can actually reach.
-    minWidth: 1024,
-    minHeight: 720,
-    show: false,
-    autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#1c1815',
-      symbolColor: '#f5ecd5',
-      height: 32
-    },
-    backgroundColor: '#1c1815',
-    ...(process.platform === 'linux' ? { icon } : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      // All flags pinned explicitly. `contextIsolation: true` keeps the
-      // preload bridge isolated from renderer-world prototype tampering;
-      // `sandbox: true` strips Node from the renderer process entirely so
-      // a stored-content XSS (e.g. via comment text) can't reach
-      // `child_process` / `fs` / `path`. `webSecurity: true` keeps
-      // same-origin policy active (defaults true, but pinned for review
-      // clarity). The preload uses only the IPC primitives and
-      // `@electron-toolkit/preload`'s `electronAPI`, both of which are
-      // sandbox-safe (toolkit ≥ 3.0.2).
-      contextIsolation: true,
-      sandbox: true,
-      webSecurity: true
-    }
-  })
-
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-
-  // Stream renderer-side console messages and preload-script errors to the
-  // main-process terminal in dev. Without this, renderer logs only show up in
-  // DevTools, which makes preload-load failures (and any pre-DevTools-ready
-  // error) effectively invisible from the npm run dev terminal. Using the
-  // non-deprecated `(details) => …` overload — Electron 41 emits a deprecation
-  // warning for the legacy `(_event, level, message, line, sourceId)` form.
-  if (is.dev) {
-    mainWindow.webContents.on('console-message', (details) => {
-      console.log(
-        `[renderer:${details.level}] ${details.sourceId}:${details.lineNumber} ${details.message}`
-      )
-    })
-    mainWindow.webContents.on('preload-error', (_event, preloadPath, error) => {
-      console.error(`[klip] preload-error at ${preloadPath}:`, error)
-    })
-  }
-
-  // `setWindowOpenHandler` + `will-navigate` are now wired globally via
-  // `applySecurityHardening` (see boot section). The hardener routes
-  // youtube.com/youtu.be hosts through `shell.openExternal` and denies
-  // everything else, replacing the prior per-window blanket allowlist.
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local HTML file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
-}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -149,7 +76,7 @@ app.whenReady().then(() => {
   // persist default on first launch) lives inside the container so concrete
   // repository instantiation stays out of the bootstrap.
   const database = initializeDatabase(dbPath)
-  container = createAppContainer({ database, defaultRootPath, isDev: is.dev })
+  container = createAppContainer({ database, defaultRootPath, isDev: is.dev, iconPath: icon })
   const rootPath = container.rootPathRef.value
   console.log(
     `[klip] Container initialised (db: ${redactPath(dbPath, rootPath)}, root: ${redactPath(rootPath, rootPath)})`
@@ -193,6 +120,12 @@ app.whenReady().then(() => {
     container.repositories.creator
   )
   registerStatsController(container.useCases.getStorageStats, container.useCases.getLibraryStats)
+  registerEditorController({
+    windowManager: container.ports.windowManager,
+    renderCut: container.useCases.renderCutFromVideo,
+    cancelRender: container.useCases.cancelRender,
+    sessions: container.ports.editorSessions
+  })
   registerCollectionController({
     create: container.useCases.createCollection,
     rename: container.useCases.renameCollection,
@@ -257,7 +190,7 @@ app.whenReady().then(() => {
   // ── Start file watcher (runtime changes only, ignoreInitial: true) ──
   container.services.fileWatcher.start()
 
-  createWindow()
+  container.ports.windowManager.createMainWindow()
 
   // ── Auto-check for updates (production only; DisabledUpdater is a no-op in dev) ──
   if (!is.dev) {
@@ -267,9 +200,10 @@ app.whenReady().then(() => {
   }
 
   app.on('activate', function () {
-    // On macOS, it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    // On macOS, recreate the main window when the dock icon is clicked
+    // and there are no other windows open. The WindowManager guards
+    // against double-creation if a window is already alive.
+    container.ports.windowManager.recreateMainWindowIfClosed()
   })
 })
 

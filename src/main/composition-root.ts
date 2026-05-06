@@ -23,6 +23,10 @@ import type {
   IDownloadQueue,
   IIdGenerator,
   IUpdater,
+  IRenderBackend,
+  IRenderQueue,
+  IEditorSessionStore,
+  IWindowManager,
   RootPathRef
 } from '@domain/ports'
 import type { IReconcileDirectory } from '@use-cases/IReconcileDirectory'
@@ -125,6 +129,14 @@ import { GetStorageStats } from '@use-cases/GetStorageStats'
 import type { IGetStorageStats } from '@use-cases/IGetStorageStats'
 import { GetLibraryStats } from '@use-cases/GetLibraryStats'
 import type { IGetLibraryStats } from '@use-cases/IGetLibraryStats'
+import { RenderCutFromVideo } from '@use-cases/RenderCutFromVideo'
+import type { IRenderCutFromVideo } from '@use-cases/IRenderCutFromVideo'
+import { CancelRender } from '@use-cases/CancelRender'
+import type { ICancelRender } from '@use-cases/ICancelRender'
+import { FfmpegRenderBackend } from './framework-drivers/ffmpeg/FfmpegRenderBackend'
+import { PQueueRenderQueue } from './interface-adapters/queue/PQueueRenderQueue'
+import { InMemoryEditorSessionStore } from './interface-adapters/editor/InMemoryEditorSessionStore'
+import { createElectronWindowManager } from './framework-drivers/electron/WindowManager'
 
 /**
  * Application dependency container.
@@ -154,6 +166,10 @@ export interface AppContainer {
     downloadQueue: IDownloadQueue
     idGenerator: IIdGenerator
     updater: IUpdater
+    renderBackends: IRenderBackend[]
+    renderQueue: IRenderQueue
+    editorSessions: IEditorSessionStore
+    windowManager: IWindowManager
   }
   useCases: {
     reconcile: IReconcileDirectory
@@ -189,6 +205,8 @@ export interface AppContainer {
     getCollectionsPaginated: IGetCollectionsPaginated
     getStorageStats: IGetStorageStats
     getLibraryStats: IGetLibraryStats
+    renderCutFromVideo: IRenderCutFromVideo
+    cancelRender: ICancelRender
   }
   services: {
     fileWatcher: IFileWatcher
@@ -208,6 +226,8 @@ export interface AppConfig {
   defaultRootPath: string
   /** When true, the auto-updater is replaced with a no-op `DisabledUpdater`. */
   isDev: boolean
+  /** Path to the icon used for non-titlebar window decorations on Linux. */
+  iconPath: string
 }
 
 /**
@@ -241,6 +261,18 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const videoDownloader = new YtDlpDownloader(binaryResolver)
   const mediaProbe = new FfprobeMediaProbe(binaryResolver)
   const downloadQueue = new PQueueDownloadQueue(2)
+  const renderQueue = new PQueueRenderQueue(1)
+  const editorSessions = new InMemoryEditorSessionStore()
+  // The list-of-backends pattern lets v2 add SmartCutRenderBackend or a
+  // WebCodecsRenderBackend without touching `RenderCutFromVideo`. MVP
+  // ships only the ffmpeg backend, but the use-case picks via
+  // `canRender()` so the multi-backend selection is exercised from day one.
+  const ffmpegRenderBackend = new FfmpegRenderBackend(binaryResolver)
+  const renderBackends: IRenderBackend[] = [ffmpegRenderBackend]
+  const windowManager = createElectronWindowManager({
+    iconPath: config.iconPath,
+    isDev: config.isDev
+  })
   const idGenerator = new NodeIdGenerator()
   const updater: IUpdater = config.isDev ? new DisabledUpdater() : new ElectronAutoUpdater()
   updater.onStatusChange((status) => notifier.notify('updater-status', status))
@@ -424,6 +456,29 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const resolveMediaUrl = new ResolveMediaUrl(creatorRepo, videoRepo, cutRepo)
   const klipMediaProtocol = new KlipMediaProtocolHandler(resolveMediaUrl, rootPathRef)
 
+  // ── Editor (in-app trim) ──
+  // The use case picks among `renderBackends` per recipe via canRender();
+  // MVP only has the ffmpeg backend, but the multi-backend selection is
+  // exercised from day one so adding SmartCut / WebCodecs in v2 is purely
+  // additive. The render queue is concurrency 1 — a parallel render
+  // would just thrash the disk on the same source file.
+  const renderCutFromVideo = new RenderCutFromVideo(
+    renderBackends,
+    renderQueue,
+    editorSessions,
+    cutRepo,
+    creatorRepo,
+    videoRepo,
+    operationRepo,
+    fsReader,
+    fsWriter,
+    pathResolver,
+    idGenerator,
+    notifier,
+    rootPathRef
+  )
+  const cancelRender = new CancelRender(editorSessions)
+
   const migrateRootFolder = new MigrateRootFolder(
     operationRepo,
     settingsRepo,
@@ -464,7 +519,11 @@ export function createAppContainer(config: AppConfig): AppContainer {
       mediaProbe,
       downloadQueue,
       idGenerator,
-      updater
+      updater,
+      renderBackends,
+      renderQueue,
+      editorSessions,
+      windowManager
     },
     useCases: {
       reconcile,
@@ -499,7 +558,9 @@ export function createAppContainer(config: AppConfig): AppContainer {
       getCollectionById,
       getCollectionsPaginated,
       getStorageStats,
-      getLibraryStats
+      getLibraryStats,
+      renderCutFromVideo,
+      cancelRender
     },
     services: {
       fileWatcher,
@@ -512,6 +573,15 @@ export function createAppContainer(config: AppConfig): AppContainer {
       void fileWatcher.stop()
       debouncer.cancel()
       downloadQueue.clear()
+      // Drop any pending render tasks and SIGTERM in-flight ffmpeg children
+      // so the staging files are finalised cleanly before the OS reaps the
+      // process. The recovery sweep on next launch picks up anything that
+      // didn't finish writing.
+      renderQueue.clear()
+      for (const session of editorSessions.list()) {
+        const controller = editorSessions.getAbortController(session.jobId)
+        if (controller && !controller.signal.aborted) controller.abort()
+      }
       // Force a WAL checkpoint before close so the next launch doesn't see
       // leftover *-wal / *-shm files. RESTART blocks new readers/writers
       // during the checkpoint, which is fine here since we're exiting.

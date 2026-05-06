@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { InvokeChannel } from './ipc-contract'
+import { renderCutRequestSchema } from './types'
 
 /**
  * Runtime schemas for every invoke-channel's parameter tuple.
@@ -243,7 +244,19 @@ export const ipcSchemas = {
   // ── Updater ──
   'check-for-updates': z.tuple([]),
   'install-update': z.tuple([]),
-  'get-updater-status': z.tuple([])
+  'get-updater-status': z.tuple([]),
+
+  // ── Editor (in-app trim) ──
+  // The editor window URL embeds sourceVideoId in its hash, but the IPC
+  // entry from the main window sends the same id through here so the
+  // window-manager can validate + resolve it before window creation.
+  'editor-open-window': z.tuple([z.object({ sourceVideoId: z.string().min(1).max(256) })]),
+  // The full recipe is validated through `renderCutRequestSchema` —
+  // unknown op types fail closed at the boundary instead of reaching
+  // the use-case (defence-in-depth + the forward-compat sentinel).
+  'editor-start-render': z.tuple([renderCutRequestSchema]),
+  'editor-cancel-render': z.tuple([z.string().min(1).max(256)]),
+  'editor-get-session': z.tuple([z.string().min(1).max(256)])
 } as const satisfies Record<InvokeChannel, z.ZodTypeAny>
 
 export type IpcSchemaFor<C extends InvokeChannel> = (typeof ipcSchemas)[C]

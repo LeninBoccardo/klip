@@ -91,12 +91,19 @@ export const IpcChannels = {
   InstallUpdate: 'install-update',
   GetUpdaterStatus: 'get-updater-status',
 
+  // ── Editor (lightweight in-app trim) ──
+  EditorOpenWindow: 'editor-open-window',
+  EditorStartRender: 'editor-start-render',
+  EditorCancelRender: 'editor-cancel-render',
+  EditorGetSession: 'editor-get-session',
+
   // ── Push events (webContents.send → ipcRenderer.on) ──
   DbUpdated: 'db-updated',
   DownloadProgress: 'download-progress',
   MigrateRootProgress: 'migrate-root-progress',
   UpdaterStatus: 'updater-status',
-  EnrichProgress: 'enrich-progress'
+  EnrichProgress: 'enrich-progress',
+  RenderProgress: 'render-progress'
 } as const
 
 /** Union of all IPC channel name values */

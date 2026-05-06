@@ -5,6 +5,7 @@ import type {
   DownloadProgress,
   EnrichProgress,
   MigrateRootProgress,
+  RenderProgress,
   UpdaterStatus,
   DbUpdatedPayload
 } from '@shared/types'
@@ -100,6 +101,12 @@ const api = {
   installUpdate: createTypedInvoker('install-update'),
   getUpdaterStatus: createTypedInvoker('get-updater-status'),
 
+  // ── Editor (in-app trim) ──
+  editorOpenWindow: createTypedInvoker('editor-open-window'),
+  editorStartRender: createTypedInvoker('editor-start-render'),
+  editorCancelRender: createTypedInvoker('editor-cancel-render'),
+  editorGetSession: createTypedInvoker('editor-get-session'),
+
   // ── Push event listeners ──
   onDownloadProgress: (
     callback: (_event: unknown, data: DownloadProgress) => void
@@ -133,6 +140,12 @@ const api = {
     ipcRenderer.on(IpcChannels.EnrichProgress, callback)
     return (): void => {
       ipcRenderer.removeListener(IpcChannels.EnrichProgress, callback)
+    }
+  },
+  onRenderProgress: (callback: (_event: unknown, data: RenderProgress) => void): (() => void) => {
+    ipcRenderer.on(IpcChannels.RenderProgress, callback)
+    return (): void => {
+      ipcRenderer.removeListener(IpcChannels.RenderProgress, callback)
     }
   }
 }

@@ -36,7 +36,11 @@ import type {
   SearchTranscriptsParams,
   TranscriptSearchResult,
   StorageStats,
-  LibraryStats
+  LibraryStats,
+  RenderCutRequest,
+  RenderCutResponse,
+  RenderProgress,
+  EditorSessionState
 } from './types'
 import type {
   CreatorDto,
@@ -236,12 +240,19 @@ export interface IpcContract {
   'install-update': { params: []; result: void }
   'get-updater-status': { params: []; result: UpdaterStatus }
 
+  // ── Editor ──
+  'editor-open-window': { params: [input: { sourceVideoId: string }]; result: void }
+  'editor-start-render': { params: [request: RenderCutRequest]; result: RenderCutResponse }
+  'editor-cancel-render': { params: [jobId: string]; result: void }
+  'editor-get-session': { params: [jobId: string]; result: EditorSessionState | null }
+
   // ── Push events (main → renderer) ──
   'db-updated': { params: [data: DbUpdatedPayload]; result: void }
   'download-progress': { params: [data: DownloadProgress]; result: void }
   'migrate-root-progress': { params: [data: MigrateRootProgress]; result: void }
   'updater-status': { params: [data: UpdaterStatus]; result: void }
   'enrich-progress': { params: [data: EnrichProgress]; result: void }
+  'render-progress': { params: [data: RenderProgress]; result: void }
 }
 
 /** Channels that use ipcMain.handle (request/response pattern) */
@@ -252,6 +263,7 @@ export type InvokeChannel = Exclude<
   | 'migrate-root-progress'
   | 'updater-status'
   | 'enrich-progress'
+  | 'render-progress'
 >
 
 /** Channels that use webContents.send (push pattern) */
@@ -261,6 +273,7 @@ export type PushChannel =
   | 'migrate-root-progress'
   | 'updater-status'
   | 'enrich-progress'
+  | 'render-progress'
 
 /** Extract the result type for a given channel */
 export type IpcResult<C extends keyof IpcContract> = IpcContract[C]['result']

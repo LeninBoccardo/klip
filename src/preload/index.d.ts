@@ -37,7 +37,11 @@ import type {
   SearchTranscriptsParams,
   TranscriptSearchResult,
   StorageStats,
-  LibraryStats
+  LibraryStats,
+  RenderCutRequest,
+  RenderCutResponse,
+  RenderProgress,
+  EditorSessionState
 } from '@shared/types'
 import type {
   CreatorDto,
@@ -141,6 +145,16 @@ interface KlipAPI {
   installUpdate(): Promise<void>
   getUpdaterStatus(): Promise<UpdaterStatus>
 
+  // ── Editor (in-app trim) ──
+  /** Spawn or focus the dedicated editor window for the given source video. */
+  editorOpenWindow(input: { sourceVideoId: string }): Promise<void>
+  /** Enqueue a render. Returns immediately with a tracking jobId + the new cutId. */
+  editorStartRender(request: RenderCutRequest): Promise<RenderCutResponse>
+  /** Abort an in-flight render. No-op if the job already finished. */
+  editorCancelRender(jobId: string): Promise<void>
+  /** Read-back current session state — used by the sidebar progress chip. */
+  editorGetSession(jobId: string): Promise<EditorSessionState | null>
+
   // ── Push event listeners ──
   /** Subscribe to download progress events; returns an unsubscribe function */
   onDownloadProgress(callback: (event: unknown, data: DownloadProgress) => void): () => void
@@ -152,6 +166,8 @@ interface KlipAPI {
   onUpdaterStatus(callback: (event: unknown, data: UpdaterStatus) => void): () => void
   /** Subscribe to batch-enrich progress events; returns an unsubscribe function */
   onEnrichProgress(callback: (event: unknown, data: EnrichProgress) => void): () => void
+  /** Subscribe to editor render-progress events; returns an unsubscribe function */
+  onRenderProgress(callback: (event: unknown, data: RenderProgress) => void): () => void
 }
 
 declare global {

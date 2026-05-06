@@ -16,6 +16,7 @@ export type {
 export { RenderCancelledError } from './IRenderBackend'
 export type { IRenderQueue } from './IRenderQueue'
 export type { IEditorSessionStore } from './IEditorSessionStore'
+export type { IWindowManager } from './IWindowManager'
 export type { IVideoDownloader, DownloadOptions } from './IVideoDownloader'
 export type { IMediaProbe } from './IMediaProbe'
 export type { IDownloadQueue } from './IDownloadQueue'
