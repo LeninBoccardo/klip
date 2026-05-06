@@ -13,12 +13,7 @@ import type {
 } from '@domain/ports'
 import { RenderCancelledError } from '@domain/ports'
 import type { Cut, Operation } from '@domain/entities'
-import type {
-  EditRecipe,
-  RenderCutRequest,
-  RenderCutResponse,
-  RenderProgress
-} from '@shared/types'
+import type { EditRecipe, RenderCutRequest, RenderCutResponse, RenderProgress } from '@shared/types'
 import { renderCutRequestSchema } from '@shared/types'
 import { redactError } from '@domain/types/redact'
 import type { IRenderCutFromVideo } from './IRenderCutFromVideo'
@@ -334,10 +329,7 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
           percent: null,
           errorMessage: message
         })
-        console.error(
-          `[klip] Render failed (${jobId}):`,
-          redactError(err, this.rootPath.value)
-        )
+        console.error(`[klip] Render failed (${jobId}):`, redactError(err, this.rootPath.value))
       }
 
       this.notifier.notify('db-updated', { scope: ['cuts'] })
@@ -387,7 +379,10 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
       percent: null,
       errorMessage: message
     })
-    console.error(`[klip] Render queue rejection (${jobId}):`, redactError(err, this.rootPath.value))
+    console.error(
+      `[klip] Render queue rejection (${jobId}):`,
+      redactError(err, this.rootPath.value)
+    )
     this.notifier.notify('db-updated', { scope: ['cuts'] })
   }
 

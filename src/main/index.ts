@@ -68,8 +68,7 @@ app.whenReady().then(() => {
   // ── Create DI container ──
   // KLIP_DEFAULT_ROOT lets E2E tests override the default rootPath so
   // each test starts with an empty creator folder; ignored in normal use.
-  const defaultRootPath =
-    process.env.KLIP_DEFAULT_ROOT ?? join(app.getPath('documents'), 'klip')
+  const defaultRootPath = process.env.KLIP_DEFAULT_ROOT ?? join(app.getPath('documents'), 'klip')
   const dbPath = join(app.getPath('userData'), 'klip.db')
 
   // Open DB and create the container — root-path resolution (read settings,

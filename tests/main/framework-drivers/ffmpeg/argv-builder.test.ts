@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  buildFfmpegArgv,
-  expectedOutputSeconds
-} from '@main/framework-drivers/ffmpeg/argv-builder'
+import { buildFfmpegArgv, expectedOutputSeconds } from '@main/framework-drivers/ffmpeg/argv-builder'
 import type { EditRecipe } from '@shared/types'
 
 const SOURCE = '/library/creator/downloads/abc/abc.mp4'
@@ -91,11 +88,7 @@ describe('buildFfmpegArgv — trim, re-encode mode', () => {
   })
 
   it('still uses pre-input seek (auto-falls-back to accurate seek when re-encoding)', () => {
-    const argv = buildFfmpegArgv(
-      trimRecipe({ in: 5, out: 10, mode: 'reencode' }),
-      SOURCE,
-      STAGING
-    )
+    const argv = buildFfmpegArgv(trimRecipe({ in: 5, out: 10, mode: 'reencode' }), SOURCE, STAGING)
     const ssIdx = argv.indexOf('-ss')
     const iIdx = argv.indexOf('-i')
     expect(ssIdx).toBeLessThan(iIdx)
@@ -160,9 +153,10 @@ describe('buildFfmpegArgv — forward-compat hard gate', () => {
 
 describe('expectedOutputSeconds', () => {
   it('returns out − in for a trim op', () => {
-    expect(
-      expectedOutputSeconds(trimRecipe({ in: 1.25, out: 4.75, mode: 'copy' }))
-    ).toBeCloseTo(3.5, 6)
+    expect(expectedOutputSeconds(trimRecipe({ in: 1.25, out: 4.75, mode: 'copy' }))).toBeCloseTo(
+      3.5,
+      6
+    )
   })
 
   it('returns 0 for unsupported recipes (caller treats 0 as "no progress fraction available")', () => {
@@ -176,8 +170,6 @@ describe('expectedOutputSeconds', () => {
   })
 
   it('clamps negative durations to 0 (defence-in-depth against malformed recipes)', () => {
-    expect(
-      expectedOutputSeconds(trimRecipe({ in: 5, out: 4, mode: 'copy' }))
-    ).toBe(0)
+    expect(expectedOutputSeconds(trimRecipe({ in: 5, out: 4, mode: 'copy' }))).toBe(0)
   })
 })

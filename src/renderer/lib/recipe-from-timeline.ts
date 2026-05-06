@@ -132,9 +132,7 @@ export function timelineFromRecipe(
   zoomPxPerSec?: number
 ): TimelineState {
   if (recipe.ops.length !== 1) {
-    throw new Error(
-      `MVP timeline can only rehydrate a single op, got ${recipe.ops.length}`
-    )
+    throw new Error(`MVP timeline can only rehydrate a single op, got ${recipe.ops.length}`)
   }
   const op: EditOp = recipe.ops[0]
   if (op.type !== 'trim') {

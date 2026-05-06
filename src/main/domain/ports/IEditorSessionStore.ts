@@ -30,11 +30,7 @@ export interface IEditorSessionStore {
   ): void
 
   /** Mark the session terminal (complete | error | cancelled) and stamp finishedAt. */
-  finalize(
-    jobId: string,
-    status: 'complete' | 'error' | 'cancelled',
-    errorMessage?: string
-  ): void
+  finalize(jobId: string, status: 'complete' | 'error' | 'cancelled', errorMessage?: string): void
 
   /** All currently-known sessions; useful for the sidebar progress chip and recovery sweep. */
   list(): EditorSessionState[]

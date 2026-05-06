@@ -54,17 +54,12 @@
       "indexes": {
         "idx_audit_log_entity": {
           "name": "idx_audit_log_entity",
-          "columns": [
-            "entity_type",
-            "entity_id"
-          ],
+          "columns": ["entity_type", "entity_id"],
           "isUnique": false
         },
         "idx_audit_log_created": {
           "name": "idx_audit_log_created",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -109,17 +104,12 @@
       "indexes": {
         "idx_collection_cuts_position": {
           "name": "idx_collection_cuts_position",
-          "columns": [
-            "collection_id",
-            "position"
-          ],
+          "columns": ["collection_id", "position"],
           "isUnique": false
         },
         "idx_collection_cuts_cut_id": {
           "name": "idx_collection_cuts_cut_id",
-          "columns": [
-            "cut_id"
-          ],
+          "columns": ["cut_id"],
           "isUnique": false
         }
       },
@@ -128,12 +118,8 @@
           "name": "collection_cuts_collection_id_collections_id_fk",
           "tableFrom": "collection_cuts",
           "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["collection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -141,22 +127,15 @@
           "name": "collection_cuts_cut_id_cuts_id_fk",
           "tableFrom": "collection_cuts",
           "tableTo": "cuts",
-          "columnsFrom": [
-            "cut_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["cut_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "collection_cuts_collection_id_cut_id_pk": {
-          "columns": [
-            "collection_id",
-            "cut_id"
-          ],
+          "columns": ["collection_id", "cut_id"],
           "name": "collection_cuts_collection_id_cut_id_pk"
         }
       },
@@ -199,17 +178,12 @@
       "indexes": {
         "idx_collection_videos_position": {
           "name": "idx_collection_videos_position",
-          "columns": [
-            "collection_id",
-            "position"
-          ],
+          "columns": ["collection_id", "position"],
           "isUnique": false
         },
         "idx_collection_videos_video_id": {
           "name": "idx_collection_videos_video_id",
-          "columns": [
-            "video_id"
-          ],
+          "columns": ["video_id"],
           "isUnique": false
         }
       },
@@ -218,12 +192,8 @@
           "name": "collection_videos_collection_id_collections_id_fk",
           "tableFrom": "collection_videos",
           "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["collection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -231,22 +201,15 @@
           "name": "collection_videos_video_id_videos_id_fk",
           "tableFrom": "collection_videos",
           "tableTo": "videos",
-          "columnsFrom": [
-            "video_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["video_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "collection_videos_collection_id_video_id_pk": {
-          "columns": [
-            "collection_id",
-            "video_id"
-          ],
+          "columns": ["collection_id", "video_id"],
           "name": "collection_videos_collection_id_video_id_pk"
         }
       },
@@ -312,9 +275,7 @@
       "indexes": {
         "idx_collections_updated_at": {
           "name": "idx_collections_updated_at",
-          "columns": [
-            "updated_at"
-          ],
+          "columns": ["updated_at"],
           "isUnique": false
         }
       },
@@ -432,23 +393,17 @@
       "indexes": {
         "creators_folder_name_unique": {
           "name": "creators_folder_name_unique",
-          "columns": [
-            "folder_name"
-          ],
+          "columns": ["folder_name"],
           "isUnique": true
         },
         "idx_creators_status": {
           "name": "idx_creators_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "idx_creators_yt_channel_id_unique": {
           "name": "idx_creators_yt_channel_id_unique",
-          "columns": [
-            "youtube_channel_id"
-          ],
+          "columns": ["youtube_channel_id"],
           "isUnique": true,
           "where": "youtube_channel_id IS NOT NULL"
         }
@@ -596,38 +551,27 @@
       "indexes": {
         "idx_cuts_creator_id": {
           "name": "idx_cuts_creator_id",
-          "columns": [
-            "creator_id"
-          ],
+          "columns": ["creator_id"],
           "isUnique": false
         },
         "idx_cuts_video_id": {
           "name": "idx_cuts_video_id",
-          "columns": [
-            "video_id"
-          ],
+          "columns": ["video_id"],
           "isUnique": false
         },
         "idx_cuts_status": {
           "name": "idx_cuts_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "idx_cuts_status_created": {
           "name": "idx_cuts_status_created",
-          "columns": [
-            "status",
-            "created_at"
-          ],
+          "columns": ["status", "created_at"],
           "isUnique": false
         },
         "idx_cuts_probe_status": {
           "name": "idx_cuts_probe_status",
-          "columns": [
-            "probe_status"
-          ],
+          "columns": ["probe_status"],
           "isUnique": false
         }
       },
@@ -636,12 +580,8 @@
           "name": "cuts_creator_id_creators_id_fk",
           "tableFrom": "cuts",
           "tableTo": "creators",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -649,12 +589,8 @@
           "name": "cuts_video_id_videos_id_fk",
           "tableFrom": "cuts",
           "tableTo": "videos",
-          "columnsFrom": [
-            "video_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["video_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -729,9 +665,7 @@
       "indexes": {
         "idx_operations_status": {
           "name": "idx_operations_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },
@@ -974,38 +908,27 @@
       "indexes": {
         "idx_videos_creator_id": {
           "name": "idx_videos_creator_id",
-          "columns": [
-            "creator_id"
-          ],
+          "columns": ["creator_id"],
           "isUnique": false
         },
         "idx_videos_status": {
           "name": "idx_videos_status",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "idx_videos_status_created": {
           "name": "idx_videos_status_created",
-          "columns": [
-            "status",
-            "created_at"
-          ],
+          "columns": ["status", "created_at"],
           "isUnique": false
         },
         "idx_videos_detail_fetched": {
           "name": "idx_videos_detail_fetched",
-          "columns": [
-            "detail_fetched_at"
-          ],
+          "columns": ["detail_fetched_at"],
           "isUnique": false
         },
         "idx_videos_probe_status": {
           "name": "idx_videos_probe_status",
-          "columns": [
-            "probe_status"
-          ],
+          "columns": ["probe_status"],
           "isUnique": false
         }
       },
@@ -1014,12 +937,8 @@
           "name": "videos_creator_id_creators_id_fk",
           "tableFrom": "videos",
           "tableTo": "creators",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

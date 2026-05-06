@@ -794,7 +794,9 @@ describe('DownloadVideo', () => {
 
   // ── Dedupe (Item 20) ──
 
-  function makeExistingVideo(overrides: Partial<import('@domain/entities').Video> = {}): import('@domain/entities').Video {
+  function makeExistingVideo(
+    overrides: Partial<import('@domain/entities').Video> = {}
+  ): import('@domain/entities').Video {
     return {
       id: 'abc123',
       creatorId: 'TestCreator',

@@ -50,11 +50,7 @@ export class InMemoryEditorSessionStore implements IEditorSessionStore {
     if (patch.errorMessage !== undefined) entry.state.errorMessage = patch.errorMessage
   }
 
-  finalize(
-    jobId: string,
-    status: 'complete' | 'error' | 'cancelled',
-    errorMessage?: string
-  ): void {
+  finalize(jobId: string, status: 'complete' | 'error' | 'cancelled', errorMessage?: string): void {
     const entry = this.sessions.get(jobId)
     if (!entry) return
     entry.state.status = status

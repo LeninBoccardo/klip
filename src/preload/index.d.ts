@@ -109,10 +109,7 @@ interface KlipAPI {
   openPathInShell(path: string): Promise<{ ok: boolean; error?: string }>
   openLogFolder(): Promise<{ ok: boolean; error?: string }>
   openExternalUrl(url: string): Promise<{ ok: boolean; error?: string }>
-  revealEntityInFolder(
-    kind: 'video' | 'cut',
-    id: string
-  ): Promise<{ ok: boolean; error?: string }>
+  revealEntityInFolder(kind: 'video' | 'cut', id: string): Promise<{ ok: boolean; error?: string }>
   revealCreatorFolder(creatorId: string): Promise<{ ok: boolean; error?: string }>
 
   // ── Stats ──

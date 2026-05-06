@@ -4,13 +4,7 @@
  * `keys` field to `useShortcut`. Adding a new shortcut means a single edit
  * here plus a translation key in `shortcuts.json`.
  */
-export type ShortcutGroup =
-  | 'global'
-  | 'navigation'
-  | 'list'
-  | 'forms'
-  | 'player'
-  | 'editor'
+export type ShortcutGroup = 'global' | 'navigation' | 'list' | 'forms' | 'player' | 'editor'
 
 export interface ShortcutEntry {
   id: string

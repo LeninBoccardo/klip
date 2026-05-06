@@ -65,7 +65,9 @@ export class ElectronWindowManager implements IWindowManager {
 
   // ── Private ──
 
-  private spawnWindow(target: { kind: 'main' } | { kind: 'editor'; sourceVideoId: string }): BrowserWindow {
+  private spawnWindow(
+    target: { kind: 'main' } | { kind: 'editor'; sourceVideoId: string }
+  ): BrowserWindow {
     const isEditor = target.kind === 'editor'
     const window = new BrowserWindow({
       width: isEditor ? 1280 : 1280,
