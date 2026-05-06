@@ -7,6 +7,13 @@ export type { INotifier } from './INotifier'
 export type { IPathResolver } from './IPathResolver'
 export type { ITransactionScope } from './ITransactionScope'
 export type { IBinaryResolver, ExternalBinary } from './IBinaryResolver'
+export type {
+  IRenderBackend,
+  RenderBackendInput,
+  RenderBackendContext,
+  RenderBackendResult
+} from './IRenderBackend'
+export { RenderCancelledError } from './IRenderBackend'
 export type { IVideoDownloader, DownloadOptions } from './IVideoDownloader'
 export type { IMediaProbe } from './IMediaProbe'
 export type { IDownloadQueue } from './IDownloadQueue'
