@@ -1,4 +1,6 @@
+import { z } from 'zod'
 import type { EditRecipe } from './edit-recipe'
+import { editRecipeSchema } from './edit-recipe'
 
 export type RenderJobStatus =
   | 'queued'
@@ -49,4 +51,22 @@ export interface EditorSessionState {
   startedAt: string
   finishedAt: string | null
   errorMessage: string | null
+}
+
+/**
+ * Request to start a render. The recipe is the technical "what to do";
+ * `title` and `tags` are user-facing metadata that decorate the resulting
+ * `Cut` row but don't affect the produced file.
+ */
+export const renderCutRequestSchema = z.object({
+  recipe: editRecipeSchema,
+  title: z.string().min(1).max(200),
+  tags: z.array(z.string().max(64)).max(64)
+})
+
+export type RenderCutRequest = z.infer<typeof renderCutRequestSchema>
+
+export interface RenderCutResponse {
+  jobId: string
+  cutId: string
 }

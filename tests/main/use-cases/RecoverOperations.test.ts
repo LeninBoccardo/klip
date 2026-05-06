@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RecoverOperations } from '@use-cases/RecoverOperations'
-import type { IOperationRepository } from '@domain/repositories'
+import type { ICutRepository, IOperationRepository } from '@domain/repositories'
 import type { IFileSystemReader, IFileSystemWriter, IPathResolver } from '@domain/ports'
 import type { Operation } from '@domain/entities'
 
@@ -35,9 +35,36 @@ function mockFsWriter(overrides: Partial<IFileSystemWriter> = {}): IFileSystemWr
     writeFile: vi.fn(),
     renameDirectory: vi.fn(),
     moveDirectory: vi.fn(),
+    deleteFile: vi.fn(),
     isDirectoryEmpty: vi.fn().mockReturnValue(true),
     ...overrides
   }
+}
+
+function mockCutRepo(overrides: Partial<ICutRepository> = {}): ICutRepository {
+  return {
+    findAll: vi.fn().mockReturnValue([]),
+    findAllActive: vi.fn().mockReturnValue([]),
+    findById: vi.fn().mockReturnValue(null),
+    findByCreatorId: vi.fn().mockReturnValue([]),
+    findIdsByCreator: vi.fn().mockReturnValue([]),
+    findByVideoId: vi.fn().mockReturnValue([]),
+    findByProbeStatus: vi.fn().mockReturnValue([]),
+    getAllDistinctTags: vi.fn().mockReturnValue([]),
+    findByTags: vi.fn().mockReturnValue([]),
+    searchByTitle: vi.fn().mockReturnValue([]),
+    upsert: vi.fn(),
+    upsertWithPrevious: vi.fn(),
+    updateStatus: vi.fn(),
+    updateProbeStatus: vi.fn(),
+    delete: vi.fn(),
+    updateFilePathPrefix: vi.fn(),
+    findPaginated: vi.fn(),
+    count: vi.fn().mockReturnValue(0),
+    sumDuration: vi.fn().mockReturnValue(0),
+    sumFileSize: vi.fn().mockReturnValue(0),
+    ...overrides
+  } as ICutRepository
 }
 
 function mockPathResolver(): IPathResolver {
@@ -68,6 +95,7 @@ describe('RecoverOperations', () => {
   let fsReader: IFileSystemReader
   let fsWriter: IFileSystemWriter
   let pathResolver: IPathResolver
+  let cutRepo: ICutRepository
   let useCase: RecoverOperations
 
   beforeEach(() => {
@@ -75,7 +103,8 @@ describe('RecoverOperations', () => {
     fsReader = mockFsReader()
     fsWriter = mockFsWriter()
     pathResolver = mockPathResolver()
-    useCase = new RecoverOperations(operationRepo, fsReader, fsWriter, pathResolver)
+    cutRepo = mockCutRepo()
+    useCase = new RecoverOperations(operationRepo, fsReader, fsWriter, pathResolver, cutRepo)
   })
 
   it('should return zero counts when no stale operations exist', () => {

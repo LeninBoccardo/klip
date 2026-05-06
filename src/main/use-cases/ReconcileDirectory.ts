@@ -17,6 +17,11 @@ interface CutDataJson {
   tags?: string[]
   startTimestamp?: number
   endTimestamp?: number
+  // Editor-produced sidecars carry the recipe so v2's "re-edit this cut"
+  // can rehydrate the timeline state. Reconcile MVP doesn't read it back —
+  // the DB column is the authoritative store — but typing it here keeps
+  // future readers honest.
+  editRecipe?: unknown
 }
 
 /** Metadata shape expected inside `creator.json` */

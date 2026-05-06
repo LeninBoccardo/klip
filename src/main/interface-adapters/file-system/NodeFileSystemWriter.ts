@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, renameSync, cpSync, rmSync, readdirSync } from 'fs'
+import { mkdirSync, writeFileSync, renameSync, cpSync, rmSync, readdirSync, unlinkSync } from 'fs'
 import { dirname } from 'path'
 import type { IFileSystemWriter } from '@domain/ports'
 
@@ -27,6 +27,17 @@ export class NodeFileSystemWriter implements IFileSystemWriter {
       // Cross-device fallback: recursive copy then delete
       cpSync(srcPath, destPath, { recursive: true })
       rmSync(srcPath, { recursive: true, force: true })
+    }
+  }
+
+  deleteFile(filePath: string): void {
+    try {
+      unlinkSync(filePath)
+    } catch (err) {
+      // Idempotent — only swallow ENOENT, surface anything else (a
+      // permission error here would silently strand orphan files).
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return
+      throw err
     }
   }
 

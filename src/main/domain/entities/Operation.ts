@@ -2,7 +2,7 @@
 export type OperationStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'rolled_back'
 
 /** Type discriminator for operations */
-export type OperationType = 'rename_folder' | 'migrate_root' | 'bulk_import'
+export type OperationType = 'rename_folder' | 'migrate_root' | 'bulk_import' | 'render_cut'
 
 /**
  * A persistent record of a multi-step operation.

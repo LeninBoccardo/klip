@@ -15,6 +15,13 @@ export interface IFileSystemWriter {
   /** Move a directory from src to dest, working across drives (recursive copy + delete fallback) */
   moveDirectory(srcPath: string, destPath: string): void
 
+  /**
+   * Delete a single file. Idempotent — silently no-ops if the file does
+   * not exist. Used by the editor's render-cleanup path (cancel / failure)
+   * and by the operations-recovery sweep on next launch.
+   */
+  deleteFile(filePath: string): void
+
   /** Check if a directory is empty (no files, no subdirectories) */
   isDirectoryEmpty(dirPath: string): boolean
 }

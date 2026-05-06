@@ -321,7 +321,13 @@ export function createAppContainer(config: AppConfig): AppContainer {
 
   const probeMediaFile = new ProbeMediaFile(mediaProbe)
 
-  const recoverOperations = new RecoverOperations(operationRepo, fsReader, fsWriter, pathResolver)
+  const recoverOperations = new RecoverOperations(
+    operationRepo,
+    fsReader,
+    fsWriter,
+    pathResolver,
+    cutRepo
+  )
 
   // ── File watcher ──
   const fileWatcher = new ChokidarWatcher(rootPath)

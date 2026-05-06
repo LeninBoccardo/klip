@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { IOperationRepository } from '@domain/repositories'
+import type { ICutRepository, IOperationRepository } from '@domain/repositories'
 import type { IFileSystemReader, IFileSystemWriter, IPathResolver } from '@domain/ports'
 import type { Operation } from '@domain/entities'
 import { redactError } from '@domain/types/redact'
@@ -35,6 +35,17 @@ const migrateRootPayloadV2Schema = z.object({
 })
 
 const migrateRootPayloadSchema = z.union([migrateRootPayloadV2Schema, migrateRootPayloadV1Schema])
+
+// Render-cut payloads — see `RenderCutOpPayload` in RenderCutFromVideo.ts.
+// The recovery sweep needs `cutId` (to drop the half-formed row) and
+// `stagingPath` (to delete the partial mp4); the rest is informational.
+const renderCutPayloadSchema = z.object({
+  version: z.literal(1),
+  cutId: z.string().min(1),
+  finalPath: z.string().min(1),
+  stagingPath: z.string().min(1),
+  cutDir: z.string().min(1)
+})
 
 type PayloadResult<T> =
   | { ok: true; value: T }
@@ -74,7 +85,8 @@ export class RecoverOperations implements IRecoverOperations {
     private operationRepo: IOperationRepository,
     private fsReader: IFileSystemReader,
     private fsWriter: IFileSystemWriter,
-    private pathResolver: IPathResolver
+    private pathResolver: IPathResolver,
+    private cutRepo: ICutRepository
   ) {}
 
   execute(): RecoverResult {
@@ -109,6 +121,8 @@ export class RecoverOperations implements IRecoverOperations {
         return this.recoverMigrateRootOp(op)
       case 'bulk_import':
         return this.recoverBulkImportOp(op)
+      case 'render_cut':
+        return this.recoverRenderCutOp(op)
       default:
         // Unknown type — roll back to be safe
         this.markRolledBack(op.id, `Unknown operation type: ${op.type}`)
@@ -230,6 +244,54 @@ export class RecoverOperations implements IRecoverOperations {
    */
   private recoverBulkImportOp(op: Operation): boolean {
     this.markRolledBack(op.id, 'Bulk import interrupted — rolled back for safety')
+    return false
+  }
+
+  /**
+   * Recover an interrupted editor render. The `RenderCutFromVideo` use case
+   * inserts the operation row *before* the Cut row, so a crash at any point
+   * leaves at most: a Cut row with `probeStatus='pending'` (and no file at
+   * `filePath`), plus a possibly-partial mp4 in the staging dir. We delete
+   * both and mark the operation rolled-back so the cuts list isn't polluted
+   * with phantom rows.
+   *
+   * Always rolls back — there is no "render completed but the row update
+   * crashed" path because the use case marks the op `completed` only after
+   * the rename + sidecar write are both done.
+   */
+  private recoverRenderCutOp(op: Operation): boolean {
+    const result = parsePayload(op.payload, renderCutPayloadSchema)
+    if (!result.ok) {
+      this.markRolledBack(
+        op.id,
+        result.reason === 'parse-error'
+          ? 'Failed to parse render_cut payload — manual cleanup required'
+          : 'Malformed render_cut payload (missing cutId/stagingPath)'
+      )
+      return false
+    }
+
+    const { cutId, stagingPath } = result.value
+
+    try {
+      this.fsWriter.deleteFile(stagingPath)
+    } catch (err) {
+      console.warn(
+        `[klip] render_cut recovery: failed to delete staging file:`,
+        err instanceof Error ? err.message : err
+      )
+    }
+
+    try {
+      this.cutRepo.delete(cutId)
+    } catch (err) {
+      console.warn(
+        `[klip] render_cut recovery: failed to delete orphan Cut row:`,
+        err instanceof Error ? err.message : err
+      )
+    }
+
+    this.markRolledBack(op.id, 'Render interrupted — partial output and orphan row cleaned up')
     return false
   }
 

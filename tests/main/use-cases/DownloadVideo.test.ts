@@ -108,7 +108,10 @@ function mockFsWriter(): IFileSystemWriter {
   return {
     ensureDirectory: vi.fn(),
     writeFile: vi.fn(),
-    renameDirectory: vi.fn()
+    renameDirectory: vi.fn(),
+    moveDirectory: vi.fn(),
+    deleteFile: vi.fn(),
+    isDirectoryEmpty: vi.fn().mockReturnValue(true)
   }
 }
 

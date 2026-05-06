@@ -2,6 +2,7 @@ import type {
   DownloadProgress,
   EnrichProgress,
   MigrateRootProgress,
+  RenderProgress,
   UpdaterStatus,
   DbUpdatedPayload
 } from '@shared/types'
@@ -26,6 +27,7 @@ export interface NotificationEventMap {
   'migrate-root-progress': MigrateRootProgress
   'updater-status': UpdaterStatus
   'enrich-progress': EnrichProgress
+  'render-progress': RenderProgress
 }
 
 /** Union of all valid notification channel names */

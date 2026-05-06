@@ -72,8 +72,11 @@ export type {
   RenderJobStatus,
   RenderProgress,
   RenderResult,
-  EditorSessionState
+  EditorSessionState,
+  RenderCutRequest,
+  RenderCutResponse
 } from './render-job'
+export { renderCutRequestSchema } from './render-job'
 export type { Theme, Language } from './preferences'
 export {
   THEME_VALUES,
