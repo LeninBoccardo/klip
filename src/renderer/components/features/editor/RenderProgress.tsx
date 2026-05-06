@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Button } from '@ui/button'
 import { Progress } from '@ui/progress'
 import type { RenderJobStatus } from '@shared/types'
@@ -28,9 +30,10 @@ export function RenderProgress({
   onCancel,
   onDismiss
 }: RenderProgressProps): React.ReactElement {
+  const { t } = useTranslation('editor')
   const inFlight = status === 'queued' || status === 'rendering' || status === 'finalizing'
-  const headline = headlineFor(status)
-  const sub = subFor(status, percent, errorMessage)
+  const headline = headlineFor(status, t)
+  const sub = subFor(status, percent, errorMessage, t)
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/85 backdrop-blur-sm">
@@ -50,11 +53,11 @@ export function RenderProgress({
         <div className="flex justify-end gap-2">
           {inFlight ? (
             <Button variant="ghost" size="sm" onClick={onCancel}>
-              Cancel
+              {t('progress.actions.cancel')}
             </Button>
           ) : (
             <Button variant="ghost" size="sm" onClick={onDismiss}>
-              Dismiss
+              {t('progress.actions.dismiss')}
             </Button>
           )}
         </div>
@@ -63,36 +66,37 @@ export function RenderProgress({
   )
 }
 
-function headlineFor(status: RenderJobStatus): string {
+function headlineFor(status: RenderJobStatus, t: TFunction<'editor'>): string {
   switch (status) {
     case 'queued':
-      return 'Queued…'
+      return t('progress.headline.queued')
     case 'rendering':
-      return 'Rendering…'
+      return t('progress.headline.rendering')
     case 'finalizing':
-      return 'Finalising…'
+      return t('progress.headline.finalizing')
     case 'complete':
-      return 'Cut saved'
+      return t('progress.headline.complete')
     case 'cancelled':
-      return 'Render cancelled'
+      return t('progress.headline.cancelled')
     case 'error':
-      return 'Render failed'
+      return t('progress.headline.error')
   }
 }
 
 function subFor(
   status: RenderJobStatus,
   percent: number | null,
-  errorMessage: string | null
+  errorMessage: string | null,
+  t: TFunction<'editor'>
 ): string {
   if (status === 'rendering' && percent !== null) {
-    return `${percent.toFixed(0)}%`
+    return t('progress.sub.renderingPercent', { percent: percent.toFixed(0) })
   }
-  if (status === 'rendering') return 'Pre-rolling…'
-  if (status === 'queued') return 'Waiting for the render queue.'
-  if (status === 'finalizing') return 'Writing output and metadata.'
-  if (status === 'complete') return 'The cut is now in your library.'
-  if (status === 'cancelled') return 'Partial output cleaned up.'
-  if (status === 'error') return errorMessage ?? 'See the log for details.'
+  if (status === 'rendering') return t('progress.sub.renderingPreroll')
+  if (status === 'queued') return t('progress.sub.queued')
+  if (status === 'finalizing') return t('progress.sub.finalizing')
+  if (status === 'complete') return t('progress.sub.complete')
+  if (status === 'cancelled') return t('progress.sub.cancelled')
+  if (status === 'error') return errorMessage ?? t('progress.sub.errorFallback')
   return ''
 }

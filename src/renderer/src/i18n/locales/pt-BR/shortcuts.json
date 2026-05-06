@@ -6,7 +6,8 @@
     "navigation": "Navegação",
     "list": "Listas e grades",
     "forms": "Formulários",
-    "player": "Player"
+    "player": "Player",
+    "editor": "Editor"
   },
   "entries": {
     "openPaletteMod": "Abrir paleta de comandos",
@@ -35,6 +36,9 @@
     "playerVolumeDown": "Diminuir volume",
     "playerMute": "Silenciar / ativar som",
     "playerFullscreen": "Alternar tela cheia",
-    "playerJumpPercent": "Pular para 0%–90%"
+    "playerJumpPercent": "Pular para 0%–90%",
+    "editorMarkIn": "Marcar início no playhead",
+    "editorMarkOut": "Marcar fim no playhead",
+    "editorSave": "Abrir diálogo de salvar corte"
   }
 }

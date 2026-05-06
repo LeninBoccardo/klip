@@ -6,7 +6,8 @@
     "navigation": "Navigation",
     "list": "Lists & grids",
     "forms": "Forms",
-    "player": "Player"
+    "player": "Player",
+    "editor": "Editor"
   },
   "entries": {
     "openPaletteMod": "Open command palette",
@@ -35,6 +36,9 @@
     "playerVolumeDown": "Volume down",
     "playerMute": "Mute / unmute",
     "playerFullscreen": "Toggle fullscreen",
-    "playerJumpPercent": "Jump to 0%–90%"
+    "playerJumpPercent": "Jump to 0%–90%",
+    "editorMarkIn": "Mark in-point at playhead",
+    "editorMarkOut": "Mark out-point at playhead",
+    "editorSave": "Open save-cut dialog"
   }
 }

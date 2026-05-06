@@ -19,6 +19,7 @@ import enActivity from './locales/en/activity.json'
 import enShortcuts from './locales/en/shortcuts.json'
 import enDashboard from './locales/en/dashboard.json'
 import enOnboarding from './locales/en/onboarding.json'
+import enEditor from './locales/en/editor.json'
 
 import ptBRCommon from './locales/pt-BR/common.json'
 import ptBRNavigation from './locales/pt-BR/navigation.json'
@@ -37,6 +38,7 @@ import ptBRActivity from './locales/pt-BR/activity.json'
 import ptBRShortcuts from './locales/pt-BR/shortcuts.json'
 import ptBRDashboard from './locales/pt-BR/dashboard.json'
 import ptBROnboarding from './locales/pt-BR/onboarding.json'
+import ptBREditor from './locales/pt-BR/editor.json'
 
 import esCommon from './locales/es/common.json'
 import esNavigation from './locales/es/navigation.json'
@@ -55,6 +57,7 @@ import esActivity from './locales/es/activity.json'
 import esShortcuts from './locales/es/shortcuts.json'
 import esDashboard from './locales/es/dashboard.json'
 import esOnboarding from './locales/es/onboarding.json'
+import esEditor from './locales/es/editor.json'
 
 /**
  * i18next bootstrap — synchronous and offline. All resources are statically
@@ -80,7 +83,8 @@ export const resources = {
     activity: enActivity,
     shortcuts: enShortcuts,
     dashboard: enDashboard,
-    onboarding: enOnboarding
+    onboarding: enOnboarding,
+    editor: enEditor
   },
   'pt-BR': {
     common: ptBRCommon,
@@ -99,7 +103,8 @@ export const resources = {
     activity: ptBRActivity,
     shortcuts: ptBRShortcuts,
     dashboard: ptBRDashboard,
-    onboarding: ptBROnboarding
+    onboarding: ptBROnboarding,
+    editor: ptBREditor
   },
   es: {
     common: esCommon,
@@ -118,7 +123,8 @@ export const resources = {
     activity: esActivity,
     shortcuts: esShortcuts,
     dashboard: esDashboard,
-    onboarding: esOnboarding
+    onboarding: esOnboarding,
+    editor: esEditor
   }
 } as const
 
@@ -144,7 +150,8 @@ void i18n.use(initReactI18next).init({
     'activity',
     'shortcuts',
     'dashboard',
-    'onboarding'
+    'onboarding',
+    'editor'
   ],
   interpolation: {
     // React already escapes by default — double-escaping breaks accents.

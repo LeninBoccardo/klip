@@ -4,7 +4,13 @@
  * `keys` field to `useShortcut`. Adding a new shortcut means a single edit
  * here plus a translation key in `shortcuts.json`.
  */
-export type ShortcutGroup = 'global' | 'navigation' | 'list' | 'forms' | 'player'
+export type ShortcutGroup =
+  | 'global'
+  | 'navigation'
+  | 'list'
+  | 'forms'
+  | 'player'
+  | 'editor'
 
 export interface ShortcutEntry {
   id: string
@@ -95,6 +101,21 @@ export const SHORTCUTS: readonly ShortcutEntry[] = [
     group: 'player',
     keys: '0…9',
     descriptionKey: 'entries.playerJumpPercent'
+  },
+
+  // ── Editor (active inside the dedicated editor window) ──
+  // The editor window is a separate Electron window with its own React
+  // tree; these shortcuts are wired via `useShortcut` inside `EditorView`,
+  // not from the main app's GlobalShortcuts. Listing them here lets the
+  // main window's help cheatsheet announce what's available before the
+  // user opens the editor.
+  { id: 'editor.markIn', group: 'editor', keys: 'i', descriptionKey: 'entries.editorMarkIn' },
+  { id: 'editor.markOut', group: 'editor', keys: 'o', descriptionKey: 'entries.editorMarkOut' },
+  {
+    id: 'editor.save',
+    group: 'editor',
+    keys: 'mod+enter',
+    descriptionKey: 'entries.editorSave'
   }
 ] as const
 
@@ -103,7 +124,8 @@ export const GROUPS: readonly ShortcutGroup[] = [
   'navigation',
   'list',
   'forms',
-  'player'
+  'player',
+  'editor'
 ] as const
 
 export function shortcutsByGroup(group: ShortcutGroup): ShortcutEntry[] {

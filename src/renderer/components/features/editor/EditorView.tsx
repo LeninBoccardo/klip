@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/tooltip'
 import { Kbd } from '@ui/kbd'
 import { mediaUrl } from '@/lib/format'
 import { useEditorStore } from '@/hooks/use-editor-store'
+import { useShortcut } from '@/hooks/use-shortcut'
 import { isTimelineSaveable } from '@/lib/recipe-from-timeline'
 import { Timeline } from './Timeline'
 import { SaveCutDialog } from './SaveCutDialog'
@@ -31,6 +33,7 @@ import { RenderProgress } from './RenderProgress'
  * to `net.fetch(file://)`, which honours Range natively.
  */
 export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.ReactElement {
+  const { t } = useTranslation('editor')
   const timeline = useEditorStore((s) => s.timeline)
   const setCursor = useEditorStore((s) => s.setCursor)
   const setInPoint = useEditorStore((s) => s.setInPoint)
@@ -91,7 +94,19 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
     await window.api.editorCancelRender(activeJobId)
   }, [activeJobId])
 
+  // ── Editor shortcuts ──
+  // I / O capture the playhead into the in/out region — the same mental
+  // model as LosslessCut. Mod+Enter opens the save dialog when the
+  // timeline is saveable. Esc/Backspace are deliberately NOT bound here:
+  // closing a Radix dialog on Esc is handled by the dialog itself, and
+  // Esc inside the editor window otherwise has no useful target (no
+  // route history to back out of).
   const saveable = !!timeline && isTimelineSaveable(timeline)
+  useShortcut('i', handleMarkIn)
+  useShortcut('o', handleMarkOut)
+  useShortcut('mod+enter', () => {
+    if (saveable) handleSave()
+  })
   const inFlight =
     activeJobStatus === 'queued' ||
     activeJobStatus === 'rendering' ||
@@ -101,7 +116,7 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4 text-sm">
-        <span className="font-medium">Editor</span>
+        <span className="font-medium">{t('header.title')}</span>
         <span className="text-muted-foreground">·</span>
         <code className="text-xs text-muted-foreground">{sourceVideoId}</code>
       </header>
@@ -118,7 +133,7 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
               preload="metadata"
             />
           ) : (
-            <span className="text-sm text-muted-foreground">Loading source video metadata…</span>
+            <span className="text-sm text-muted-foreground">{t('loading')}</span>
           )}
         </div>
 
@@ -127,24 +142,25 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
           <div className="flex shrink-0 flex-col gap-3 border-t bg-background p-4">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-mono text-xs text-muted-foreground">
-                {formatSeconds(timeline.cursorSec)} / {formatSeconds(timeline.tracks[0].clips[0].durationSec)}
+                {formatSeconds(timeline.cursorSec)} /{' '}
+                {formatSeconds(timeline.tracks[0].clips[0].durationSec)}
               </span>
               <span className="ml-2 flex items-center gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" variant="outline" onClick={handleMarkIn}>
-                      Mark in <Kbd className="ml-2">I</Kbd>
+                      {t('controls.markIn')} <Kbd className="ml-2">I</Kbd>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Set the in-point to the current playhead.</TooltipContent>
+                  <TooltipContent>{t('controls.markIn')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" variant="outline" onClick={handleMarkOut}>
-                      Mark out <Kbd className="ml-2">O</Kbd>
+                      {t('controls.markOut')} <Kbd className="ml-2">O</Kbd>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Set the out-point to the current playhead.</TooltipContent>
+                  <TooltipContent>{t('controls.markOut')}</TooltipContent>
                 </Tooltip>
                 <Button
                   size="sm"
@@ -152,7 +168,7 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
                   onClick={clearRegion}
                   disabled={!timeline.tracks[0].clips[0].region}
                 >
-                  Clear region
+                  {t('controls.clearRegion')}
                 </Button>
               </span>
               <span className="ml-auto flex items-center gap-2">
@@ -163,7 +179,7 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
                   </span>
                 )}
                 <Button size="sm" onClick={handleSave} disabled={!saveable || inFlight}>
-                  Save cut…
+                  {t('controls.save')}
                 </Button>
               </span>
             </div>

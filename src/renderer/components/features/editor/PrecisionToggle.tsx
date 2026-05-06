@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Label } from '@ui/label'
 import { RadioGroup, RadioGroupItem } from '@ui/radio-group'
 import type { RenderMode } from '@/hooks/use-editor-store'
@@ -18,6 +19,7 @@ export function PrecisionToggle({
   onChange: (next: RenderMode) => void
   disabled?: boolean
 }): React.ReactElement {
+  const { t } = useTranslation('editor')
   return (
     <RadioGroup
       value={value}
@@ -27,26 +29,23 @@ export function PrecisionToggle({
     >
       <Label
         htmlFor="precision-copy"
-        className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-[:checked]:border-primary"
+        className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-checked:border-primary"
       >
         <RadioGroupItem id="precision-copy" value="copy" className="mt-0.5" />
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium">Fast (lossless)</span>
-          <span className="text-xs text-muted-foreground">
-            Stream-copy. Instant, identical quality. Cuts snap to the nearest keyframe before the
-            in-point.
-          </span>
+          <span className="text-sm font-medium">{t('precision.fast.label')}</span>
+          <span className="text-xs text-muted-foreground">{t('precision.fast.description')}</span>
         </div>
       </Label>
       <Label
         htmlFor="precision-reencode"
-        className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-[:checked]:border-primary"
+        className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-checked:border-primary"
       >
         <RadioGroupItem id="precision-reencode" value="reencode" className="mt-0.5" />
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium">Precise (re-encode)</span>
+          <span className="text-sm font-medium">{t('precision.precise.label')}</span>
           <span className="text-xs text-muted-foreground">
-            Frame-accurate. Slower (roughly real-time) and slightly lossy.
+            {t('precision.precise.description')}
           </span>
         </div>
       </Label>

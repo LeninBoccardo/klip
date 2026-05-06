@@ -1,0 +1,56 @@
+Klip — Third-party software notices
+====================================
+
+Klip is distributed under the MIT licence (see LICENSE). The application
+ships with the following third-party binaries and bundles them into the
+installer; their licences and source-availability obligations are noted
+below.
+
+----------------------------------------------------------------------
+1. ffmpeg + ffprobe
+----------------------------------------------------------------------
+
+Klip ships LGPL 2.1+ builds of `ffmpeg` and `ffprobe` obtained from the
+ffbinaries project (https://ffbinaries.com). ffmpeg is © the FFmpeg
+project (https://ffmpeg.org); the LGPL builds are configured to exclude
+all GPL components.
+
+Per the LGPL, you may obtain the corresponding source code for the
+exact ffmpeg version we ship from:
+
+  https://github.com/FFmpeg/FFmpeg
+
+The version pinned in `scripts/download-binaries.ts` (`FFMPEG_VERSION`)
+identifies the upstream release tag. We do not modify ffmpeg or
+ffprobe — the binaries are used exactly as fetched from ffbinaries.
+
+Full LGPL 2.1 text: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+----------------------------------------------------------------------
+2. yt-dlp
+----------------------------------------------------------------------
+
+Klip ships `yt-dlp` (https://github.com/yt-dlp/yt-dlp), released into
+the public domain via the Unlicense (https://unlicense.org/). The
+version pinned in `scripts/download-binaries.ts` (`YT_DLP_VERSION`)
+identifies the upstream release tag. yt-dlp is used unmodified.
+
+----------------------------------------------------------------------
+3. JavaScript / TypeScript dependencies
+----------------------------------------------------------------------
+
+Runtime and build dependencies (Electron, React, TanStack libraries,
+Drizzle, better-sqlite3, p-queue, zod, shadcn/Radix, Tailwind, etc.)
+are listed in `package.json`. Each dependency carries its own licence
+inside `node_modules/<pkg>/LICENSE`; the predominant licences are MIT
+and Apache 2.0. Run `npm ls --json` for the full tree.
+
+No GPL-licensed dependencies are bundled at runtime.
+
+----------------------------------------------------------------------
+Reporting issues
+----------------------------------------------------------------------
+
+If you believe Klip distributes a binary or dependency under terms
+that conflict with this notice, please open an issue at the project's
+repository so we can correct it.

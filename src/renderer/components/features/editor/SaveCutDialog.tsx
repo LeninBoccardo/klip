@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@ui/button'
 import {
   Dialog,
@@ -32,6 +33,7 @@ export function SaveCutDialog({
   open: boolean
   onOpenChange: (next: boolean) => void
 }): React.ReactElement {
+  const { t } = useTranslation('editor')
   const timeline = useEditorStore((s) => s.timeline)
   const renderMode = useEditorStore((s) => s.renderMode)
   const setRenderMode = useEditorStore((s) => s.setRenderMode)
@@ -90,35 +92,33 @@ export function SaveCutDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Save cut</DialogTitle>
-          <DialogDescription>
-            The cut runs in the background. You can keep using klip while it renders.
-          </DialogDescription>
+          <DialogTitle>{t('save.title')}</DialogTitle>
+          <DialogDescription>{t('save.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
           <Field>
-            <FieldLabel htmlFor="cut-title">Title</FieldLabel>
+            <FieldLabel htmlFor="cut-title">{t('save.fields.titleLabel')}</FieldLabel>
             <Input
               id="cut-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Untitled cut"
+              placeholder={t('save.fields.titlePlaceholder')}
               autoFocus
               maxLength={200}
             />
-            <FieldDescription>Shown in the cuts list.</FieldDescription>
+            <FieldDescription>{t('save.fields.titleDescription')}</FieldDescription>
           </Field>
 
           <Field>
-            <FieldLabel>Tags</FieldLabel>
+            <FieldLabel>{t('save.fields.tagsLabel')}</FieldLabel>
             <TagInput value={tags} onChange={setTags} suggestions={tagSuggestions} />
           </Field>
 
           <Separator />
 
           <Field>
-            <FieldLabel>Render mode</FieldLabel>
+            <FieldLabel>{t('save.fields.renderModeLabel')}</FieldLabel>
             <PrecisionToggle
               value={renderMode}
               onChange={(m: RenderMode) => setRenderMode(m)}
@@ -126,18 +126,16 @@ export function SaveCutDialog({
             />
           </Field>
 
-          {!saveable && (
-            <FieldError>Mark in and out points on the timeline before saving.</FieldError>
-          )}
+          {!saveable && <FieldError>{t('save.errors.noRegion')}</FieldError>}
           {submitError && <FieldError>{submitError}</FieldError>}
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancel
+            {t('save.actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {submitting ? 'Submitting…' : 'Save cut'}
+            {submitting ? t('save.actions.submitting') : t('save.actions.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,0 +1,75 @@
+{
+  "header": {
+    "title": "Editor"
+  },
+  "loading": "Loading source video metadata…",
+  "controls": {
+    "markIn": "Mark in",
+    "markOut": "Mark out",
+    "clearRegion": "Clear region",
+    "save": "Save cut…"
+  },
+  "save": {
+    "title": "Save cut",
+    "description": "The cut runs in the background. You can keep using klip while it renders.",
+    "fields": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "Untitled cut",
+      "titleDescription": "Shown in the cuts list.",
+      "tagsLabel": "Tags",
+      "renderModeLabel": "Render mode"
+    },
+    "errors": {
+      "noRegion": "Mark in and out points on the timeline before saving."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "submit": "Save cut",
+      "submitting": "Submitting…"
+    }
+  },
+  "precision": {
+    "fast": {
+      "label": "Fast (lossless)",
+      "description": "Stream-copy. Instant, identical quality. Cuts snap to the nearest keyframe before the in-point."
+    },
+    "precise": {
+      "label": "Precise (re-encode)",
+      "description": "Frame-accurate. Slower (roughly real-time) and slightly lossy."
+    }
+  },
+  "progress": {
+    "headline": {
+      "queued": "Queued…",
+      "rendering": "Rendering…",
+      "finalizing": "Finalising…",
+      "complete": "Cut saved",
+      "cancelled": "Render cancelled",
+      "error": "Render failed"
+    },
+    "sub": {
+      "queued": "Waiting for the render queue.",
+      "renderingPreroll": "Pre-rolling…",
+      "renderingPercent": "{{percent}}%",
+      "finalizing": "Writing output and metadata.",
+      "complete": "The cut is now in your library.",
+      "cancelled": "Partial output cleaned up.",
+      "errorFallback": "See the log for details."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "dismiss": "Dismiss"
+    }
+  },
+  "chip": {
+    "queued": "Render queued",
+    "renderingPercent": "Rendering · {{percent}}%",
+    "rendering": "Rendering…",
+    "finalizing": "Finalising",
+    "complete": "Cut saved",
+    "cancelled": "Render cancelled",
+    "error": "Render failed",
+    "reopenAria": "Reopen the render's editor window",
+    "dismissAria": "Dismiss"
+  }
+}

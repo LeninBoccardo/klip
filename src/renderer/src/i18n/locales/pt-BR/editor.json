@@ -1,0 +1,75 @@
+{
+  "header": {
+    "title": "Editor"
+  },
+  "loading": "Carregando metadados do vídeo de origem…",
+  "controls": {
+    "markIn": "Marcar início",
+    "markOut": "Marcar fim",
+    "clearRegion": "Limpar região",
+    "save": "Salvar corte…"
+  },
+  "save": {
+    "title": "Salvar corte",
+    "description": "O corte é renderizado em segundo plano. Você pode continuar usando o klip enquanto isso.",
+    "fields": {
+      "titleLabel": "Título",
+      "titlePlaceholder": "Corte sem título",
+      "titleDescription": "Aparece na lista de cortes.",
+      "tagsLabel": "Tags",
+      "renderModeLabel": "Modo de renderização"
+    },
+    "errors": {
+      "noRegion": "Marque os pontos de início e fim na linha do tempo antes de salvar."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "submit": "Salvar corte",
+      "submitting": "Enviando…"
+    }
+  },
+  "precision": {
+    "fast": {
+      "label": "Rápido (sem perdas)",
+      "description": "Cópia de fluxo. Instantâneo, qualidade idêntica. Os cortes são alinhados ao keyframe anterior ao ponto de início."
+    },
+    "precise": {
+      "label": "Preciso (recodifica)",
+      "description": "Precisão de quadro. Mais lento (aproximadamente em tempo real) e levemente com perdas."
+    }
+  },
+  "progress": {
+    "headline": {
+      "queued": "Na fila…",
+      "rendering": "Renderizando…",
+      "finalizing": "Finalizando…",
+      "complete": "Corte salvo",
+      "cancelled": "Renderização cancelada",
+      "error": "Falha na renderização"
+    },
+    "sub": {
+      "queued": "Aguardando a fila de renderização.",
+      "renderingPreroll": "Iniciando…",
+      "renderingPercent": "{{percent}}%",
+      "finalizing": "Gravando saída e metadados.",
+      "complete": "O corte já está na sua biblioteca.",
+      "cancelled": "Saída parcial removida.",
+      "errorFallback": "Consulte o log para mais detalhes."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "dismiss": "Dispensar"
+    }
+  },
+  "chip": {
+    "queued": "Renderização na fila",
+    "renderingPercent": "Renderizando · {{percent}}%",
+    "rendering": "Renderizando…",
+    "finalizing": "Finalizando",
+    "complete": "Corte salvo",
+    "cancelled": "Renderização cancelada",
+    "error": "Falha na renderização",
+    "reopenAria": "Reabrir a janela do editor da renderização",
+    "dismissAria": "Dispensar"
+  }
+}

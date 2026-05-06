@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Scissors, X } from 'lucide-react'
 import { Button } from '@ui/button'
 import { Progress } from '@ui/progress'
@@ -21,6 +23,7 @@ import type { RenderProgress } from '@shared/types'
  * immediately — no stacking of dismiss timers.
  */
 export function RenderProgressChip(): React.ReactElement | null {
+  const { t } = useTranslation('editor')
   const [snapshot, setSnapshot] = useState<RenderProgress | null>(null)
 
   useEffect(() => {
@@ -63,11 +66,11 @@ export function RenderProgressChip(): React.ReactElement | null {
       type="button"
       onClick={handleClick}
       className="flex w-full flex-col gap-1.5 rounded-md border bg-muted/40 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
-      aria-label="Reopen the render's editor window"
+      aria-label={t('chip.reopenAria')}
     >
       <div className="flex items-center gap-2">
         <Scissors className="size-3.5 text-primary" />
-        <span className="flex-1 truncate font-medium">{labelFor(snapshot)}</span>
+        <span className="flex-1 truncate font-medium">{labelFor(snapshot, t)}</span>
         {!inFlight && (
           <Button
             asChild
@@ -79,7 +82,7 @@ export function RenderProgressChip(): React.ReactElement | null {
               handleDismiss()
             }}
           >
-            <span aria-label="Dismiss">
+            <span aria-label={t('chip.dismissAria')}>
               <X className="size-3" />
             </span>
           </Button>
@@ -95,19 +98,21 @@ export function RenderProgressChip(): React.ReactElement | null {
   )
 }
 
-function labelFor(p: RenderProgress): string {
+function labelFor(p: RenderProgress, t: TFunction<'editor'>): string {
   switch (p.status) {
     case 'queued':
-      return 'Render queued'
+      return t('chip.queued')
     case 'rendering':
-      return p.percent !== null ? `Rendering · ${p.percent.toFixed(0)}%` : 'Rendering…'
+      return p.percent !== null
+        ? t('chip.renderingPercent', { percent: p.percent.toFixed(0) })
+        : t('chip.rendering')
     case 'finalizing':
-      return 'Finalising'
+      return t('chip.finalizing')
     case 'complete':
-      return 'Cut saved'
+      return t('chip.complete')
     case 'cancelled':
-      return 'Render cancelled'
+      return t('chip.cancelled')
     case 'error':
-      return 'Render failed'
+      return t('chip.error')
   }
 }

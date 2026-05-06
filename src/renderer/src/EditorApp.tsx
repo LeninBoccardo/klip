@@ -3,7 +3,6 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { TooltipProvider } from '@ui/tooltip'
 import { Toaster } from '@ui/sonner'
-import { useTranslation } from 'react-i18next'
 import { queryClient } from '@/lib/query-client'
 import { useEditorStore } from '@/hooks/use-editor-store'
 import { useRenderProgressListener } from '@/hooks/use-render-progress'
@@ -88,7 +87,6 @@ function useHashChangeReload(): void {
  * present; the EditorView renders a loading state until duration arrives.
  */
 function useSourceVideoBootstrap(sourceVideoId: string): void {
-  const { t } = useTranslation('common')
   const initSourceVideo = useEditorStore((s) => s.initSourceVideo)
 
   useEffect(() => {
@@ -104,17 +102,14 @@ function useSourceVideoBootstrap(sourceVideoId: string): void {
       const duration = video.duration ?? 0
       if (duration <= 0) {
         // Probe-pending — the source video exists but ffprobe hasn't run
-        // yet. Editing without a known duration would leave the timeline
-        // unable to clamp its bounds; show a friendly "not ready" state.
+        // yet. The main-window Edit button gates against this, but log
+        // here too so an externally-opened editor URL surfaces the cause.
         console.warn(`[klip:editor] source video duration unknown: ${sourceVideoId}`)
       }
       initSourceVideo({ sourceVideoId, durationSec: duration })
     })
-    // Surface a one-line marker to ease dev troubleshooting; i18n key
-    // is intentionally generic so this doesn't grow into a UI requirement.
-    void t
     return () => {
       cancelled = true
     }
-  }, [sourceVideoId, initSourceVideo, t])
+  }, [sourceVideoId, initSourceVideo])
 }

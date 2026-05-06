@@ -6,7 +6,8 @@
     "navigation": "Navegación",
     "list": "Listas y cuadrículas",
     "forms": "Formularios",
-    "player": "Reproductor"
+    "player": "Reproductor",
+    "editor": "Editor"
   },
   "entries": {
     "openPaletteMod": "Abrir paleta de comandos",
@@ -35,6 +36,9 @@
     "playerVolumeDown": "Bajar volumen",
     "playerMute": "Silenciar / activar",
     "playerFullscreen": "Alternar pantalla completa",
-    "playerJumpPercent": "Saltar a 0%–90%"
+    "playerJumpPercent": "Saltar a 0%–90%",
+    "editorMarkIn": "Marcar inicio en el playhead",
+    "editorMarkOut": "Marcar fin en el playhead",
+    "editorSave": "Abrir diálogo de guardar corte"
   }
 }
