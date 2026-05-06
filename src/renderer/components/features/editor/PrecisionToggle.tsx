@@ -1,0 +1,55 @@
+import { Label } from '@ui/label'
+import { RadioGroup, RadioGroupItem } from '@ui/radio-group'
+import type { RenderMode } from '@/hooks/use-editor-store'
+
+/**
+ * The single-knob render-quality toggle from plan §8.Q1. Exposed inside
+ * the SaveCutDialog so the user picks per-render rather than as a
+ * persistent setting; defaults to `copy` because the killer property of
+ * this editor is "instant trim", and the user opts in to slowness only
+ * when they need frame accuracy.
+ */
+export function PrecisionToggle({
+  value,
+  onChange,
+  disabled
+}: {
+  value: RenderMode
+  onChange: (next: RenderMode) => void
+  disabled?: boolean
+}): React.ReactElement {
+  return (
+    <RadioGroup
+      value={value}
+      onValueChange={(v) => onChange(v as RenderMode)}
+      disabled={disabled}
+      className="grid grid-cols-1 gap-2"
+    >
+      <Label
+        htmlFor="precision-copy"
+        className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-[:checked]:border-primary"
+      >
+        <RadioGroupItem id="precision-copy" value="copy" className="mt-0.5" />
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">Fast (lossless)</span>
+          <span className="text-xs text-muted-foreground">
+            Stream-copy. Instant, identical quality. Cuts snap to the nearest keyframe before the
+            in-point.
+          </span>
+        </div>
+      </Label>
+      <Label
+        htmlFor="precision-reencode"
+        className="flex cursor-pointer items-start gap-3 rounded-md border p-3 has-[:checked]:border-primary"
+      >
+        <RadioGroupItem id="precision-reencode" value="reencode" className="mt-0.5" />
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">Precise (re-encode)</span>
+          <span className="text-xs text-muted-foreground">
+            Frame-accurate. Slower (roughly real-time) and slightly lossy.
+          </span>
+        </div>
+      </Label>
+    </RadioGroup>
+  )
+}

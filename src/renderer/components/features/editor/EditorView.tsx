@@ -1,22 +1,102 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button } from '@ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/tooltip'
+import { Kbd } from '@ui/kbd'
+import { mediaUrl } from '@/lib/format'
 import { useEditorStore } from '@/hooks/use-editor-store'
+import { isTimelineSaveable } from '@/lib/recipe-from-timeline'
+import { Timeline } from './Timeline'
+import { SaveCutDialog } from './SaveCutDialog'
+import { RenderProgress } from './RenderProgress'
 
 /**
- * Phase 6 shell. Phase 7 fills in:
- *   - The preview <video> mounted against `klip-media://video/<id>/file`.
- *   - The hand-rolled timeline + thumbnail strip (recipe-from-timeline).
- *   - InOutHandles, PrecisionToggle, RenderProgress, SaveCutDialog.
+ * The editor window's main view. Layout is straightforward:
  *
- * What we render today is a deliberate placeholder so the rest of the
- * Phase 5 IPC + WindowManager wiring is exercisable end-to-end —
- * `editor:openWindow` opens this view, the store boots from the source
- * video's metadata, and the render-progress listener mounts so the
- * forthcoming components have live state to react against.
+ *   ┌─ header ─────────────────────────────────────────┐
+ *   │ Editor · <source-id>                             │
+ *   ├──────────────────────────────────────────────────┤
+ *   │                                                  │
+ *   │     <video> preview (16:9, click-to-toggle)      │
+ *   │                                                  │
+ *   ├──────────────────────────────────────────────────┤
+ *   │ ⏯ time / duration   [I] [O] [⌫ clear]   [Save…] │
+ *   ├──────────────────────────────────────────────────┤
+ *   │ Timeline ░░░░░░█████░░░░░░░░░░░░░░░░░░░░░░░░░░░│
+ *   └──────────────────────────────────────────────────┘
+ *
+ * The `<video>` element is mounted directly here (NOT the
+ * PersistentPlayer) — the editor window is a separate Electron
+ * window so the singleton player from the main window is unreachable.
+ * Range scrubbing works because the klip-media:// handler delegates
+ * to `net.fetch(file://)`, which honours Range natively.
  */
 export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.ReactElement {
   const timeline = useEditorStore((s) => s.timeline)
-  const renderMode = useEditorStore((s) => s.renderMode)
+  const setCursor = useEditorStore((s) => s.setCursor)
+  const setInPoint = useEditorStore((s) => s.setInPoint)
+  const setOutPoint = useEditorStore((s) => s.setOutPoint)
+  const clearRegion = useEditorStore((s) => s.clearRegion)
+  const activeJobId = useEditorStore((s) => s.activeJobId)
   const activeJobStatus = useEditorStore((s) => s.activeJobStatus)
   const activeJobPercent = useEditorStore((s) => s.activeJobPercent)
+  const activeJobError = useEditorStore((s) => s.activeJobError)
+  const clearJob = useEditorStore((s) => s.clearJob)
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [saveOpen, setSaveOpen] = useState(false)
+
+  // ── Mirror the <video> currentTime into the store ──
+  // Using `timeupdate` (default ~4 Hz) keeps the cursor smooth without
+  // overflowing zustand updates per second. The cursor is what
+  // `Mark in / Mark out` reads, so this loop is the single source of
+  // truth for "where the playhead is".
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    const onTimeUpdate = (): void => setCursor(el.currentTime)
+    el.addEventListener('timeupdate', onTimeUpdate)
+    return () => el.removeEventListener('timeupdate', onTimeUpdate)
+  }, [setCursor])
+
+  // External seeks (timeline click, keyboard shortcuts in phase 9) write
+  // to the store; mirror back to the <video> so the preview follows.
+  useEffect(() => {
+    if (!timeline) return
+    const el = videoRef.current
+    if (!el) return
+    const next = timeline.cursorSec
+    if (Math.abs(el.currentTime - next) > 0.05) {
+      el.currentTime = next
+    }
+  }, [timeline])
+
+  const handleMarkIn = useCallback(() => {
+    const el = videoRef.current
+    if (!el) return
+    setInPoint(el.currentTime)
+  }, [setInPoint])
+
+  const handleMarkOut = useCallback(() => {
+    const el = videoRef.current
+    if (!el) return
+    setOutPoint(el.currentTime)
+  }, [setOutPoint])
+
+  const handleSave = useCallback(() => {
+    setSaveOpen(true)
+  }, [])
+
+  const handleCancelRender = useCallback(async () => {
+    if (!activeJobId) return
+    await window.api.editorCancelRender(activeJobId)
+  }, [activeJobId])
+
+  const saveable = !!timeline && isTimelineSaveable(timeline)
+  const inFlight =
+    activeJobStatus === 'queued' ||
+    activeJobStatus === 'rendering' ||
+    activeJobStatus === 'finalizing'
+  const overlayVisible = !!activeJobStatus
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
@@ -25,23 +105,100 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
         <span className="text-muted-foreground">·</span>
         <code className="text-xs text-muted-foreground">{sourceVideoId}</code>
       </header>
-      <main className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-        {!timeline && <span>Loading source video metadata…</span>}
+
+      <div className="relative flex flex-1 flex-col overflow-hidden">
+        {/* Preview pane — flex-1 so it eats the available height. */}
+        <div className="relative flex flex-1 items-center justify-center bg-black">
+          {timeline ? (
+            <video
+              ref={videoRef}
+              src={mediaUrl('video', sourceVideoId, 'file')}
+              controls
+              className="h-full w-full"
+              preload="metadata"
+            />
+          ) : (
+            <span className="text-sm text-muted-foreground">Loading source video metadata…</span>
+          )}
+        </div>
+
+        {/* Controls + timeline. Pinned to the bottom of the editor. */}
         {timeline && (
-          <>
-            <span>Editor shell wired. Timeline + components arrive in phase 7.</span>
-            <span className="text-xs">
-              duration: {timeline.tracks[0].clips[0].durationSec.toFixed(2)}s · mode: {renderMode}
-            </span>
-            {activeJobStatus && (
-              <span className="text-xs">
-                job: {activeJobStatus}
-                {activeJobPercent !== null ? ` (${activeJobPercent.toFixed(1)}%)` : ''}
+          <div className="flex shrink-0 flex-col gap-3 border-t bg-background p-4">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-mono text-xs text-muted-foreground">
+                {formatSeconds(timeline.cursorSec)} / {formatSeconds(timeline.tracks[0].clips[0].durationSec)}
               </span>
-            )}
-          </>
+              <span className="ml-2 flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline" onClick={handleMarkIn}>
+                      Mark in <Kbd className="ml-2">I</Kbd>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Set the in-point to the current playhead.</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline" onClick={handleMarkOut}>
+                      Mark out <Kbd className="ml-2">O</Kbd>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Set the out-point to the current playhead.</TooltipContent>
+                </Tooltip>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={clearRegion}
+                  disabled={!timeline.tracks[0].clips[0].region}
+                >
+                  Clear region
+                </Button>
+              </span>
+              <span className="ml-auto flex items-center gap-2">
+                {timeline.tracks[0].clips[0].region && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {formatSeconds(timeline.tracks[0].clips[0].region.inSec)} →{' '}
+                    {formatSeconds(timeline.tracks[0].clips[0].region.outSec)}
+                  </span>
+                )}
+                <Button size="sm" onClick={handleSave} disabled={!saveable || inFlight}>
+                  Save cut…
+                </Button>
+              </span>
+            </div>
+
+            <Timeline state={timeline} onSeek={setCursor} />
+          </div>
         )}
-      </main>
+
+        {overlayVisible && activeJobStatus && (
+          <RenderProgress
+            status={activeJobStatus}
+            percent={activeJobPercent}
+            errorMessage={activeJobError}
+            onCancel={handleCancelRender}
+            onDismiss={clearJob}
+          />
+        )}
+      </div>
+
+      <SaveCutDialog open={saveOpen} onOpenChange={setSaveOpen} />
     </div>
   )
+}
+
+function formatSeconds(s: number): string {
+  if (!Number.isFinite(s) || s < 0) return '00:00.000'
+  const totalMs = Math.floor(s * 1000)
+  const ms = totalMs % 1000
+  const totalSec = Math.floor(totalMs / 1000)
+  const sec = totalSec % 60
+  const totalMin = Math.floor(totalSec / 60)
+  const min = totalMin % 60
+  const hour = Math.floor(totalMin / 60)
+  const pad = (n: number, width = 2): string => n.toString().padStart(width, '0')
+  return hour > 0
+    ? `${pad(hour)}:${pad(min)}:${pad(sec)}.${pad(ms, 3)}`
+    : `${pad(min)}:${pad(sec)}.${pad(ms, 3)}`
 }
