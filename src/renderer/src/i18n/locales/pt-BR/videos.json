@@ -7,6 +7,10 @@
     "uploaded": "Publicado em {{date}}",
     "openExternally": "Abrir externamente",
     "openFailed": "Falha ao abrir o arquivo.",
+    "editor": {
+      "openEditor": "Editar",
+      "notProbedYet": "Este vídeo ainda não foi analisado — aguarde o ffprobe terminar antes de editar."
+    },
     "fetchMetadata": "Buscar metadados",
     "refreshMetadata": "Atualizar metadados",
     "metadataRefreshed": "Metadados atualizados",

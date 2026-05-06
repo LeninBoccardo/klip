@@ -23,6 +23,7 @@ import {
   Tags as TagsIcon,
   Activity as ActivityIcon
 } from 'lucide-react'
+import { RenderProgressChip } from '@components/features/editor/RenderProgressChip'
 
 type NavKey =
   | 'library'
@@ -94,6 +95,7 @@ export function AppSidebar(): React.ReactElement {
       </SidebarContent>
 
       <SidebarFooter className="border-t px-4 py-3">
+        <RenderProgressChip />
         <p className="text-xs text-muted-foreground">{t('version', { version: '0.0.1' })}</p>
       </SidebarFooter>
     </Sidebar>

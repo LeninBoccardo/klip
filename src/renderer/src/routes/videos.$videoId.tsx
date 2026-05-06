@@ -21,7 +21,8 @@ import {
   Play,
   ExternalLink,
   Copy,
-  AlertTriangle
+  AlertTriangle,
+  Scissors
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDuration, formatFileSize, formatCount } from '@/lib/format'
@@ -107,6 +108,18 @@ function VideoDetailPage(): React.ReactElement {
     if (!result.ok) toast.error(result.error ?? t('detail.openFailed'))
   }
 
+  const handleEdit = async (): Promise<void> => {
+    // Refuse to open the editor on a source we have no duration for —
+    // the timeline can't bound itself without it. The probe queue is
+    // async; nudge the user to wait rather than opening a half-broken
+    // editor window.
+    if (!video.duration || video.duration <= 0) {
+      toast.error(t('detail.editor.notProbedYet'))
+      return
+    }
+    await window.api.editorOpenWindow({ sourceVideoId: video.id })
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -117,6 +130,10 @@ function VideoDetailPage(): React.ReactElement {
         actions={
           <div className="flex items-center gap-2">
             <HistoryButton entityType="video" entityId={video.id} entityName={video.title} />
+            <Button variant="outline" onClick={handleEdit}>
+              <Scissors className="mr-2 size-4" />
+              {t('detail.editor.openEditor')}
+            </Button>
             <Button variant="outline" onClick={handleOpenExternal}>
               <ExternalLink className="mr-2 size-4" />
               {t('detail.openExternally')}
