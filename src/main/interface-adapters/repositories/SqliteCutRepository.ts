@@ -51,6 +51,7 @@ function mapRowToCut(row: {
   probeStatus: string
   status: string
   deletedAt: string | null
+  editRecipeJson: string | null
   createdAt: string
   updatedAt: string
 }): Cut {
@@ -152,6 +153,7 @@ export class SqliteCutRepository implements ICutRepository {
                 c.thumbnail_path AS thumbnailPath,
                 c.probe_status AS probeStatus,
                 c.status, c.deleted_at AS deletedAt,
+                c.edit_recipe_json AS editRecipeJson,
                 c.created_at AS createdAt, c.updated_at AS updatedAt
          FROM cuts c, json_each(c.tags) AS t
          WHERE c.status = 'active' AND t.value IN (${tagValues})
@@ -172,6 +174,7 @@ export class SqliteCutRepository implements ICutRepository {
       probeStatus: string
       status: string
       deletedAt: string | null
+      editRecipeJson: string | null
       createdAt: string
       updatedAt: string
     }>
@@ -213,6 +216,7 @@ export class SqliteCutRepository implements ICutRepository {
         probeStatus: cut.probeStatus,
         status: cut.status,
         deletedAt: cut.deletedAt,
+        editRecipeJson: cut.editRecipeJson,
         createdAt: cut.createdAt,
         updatedAt: cut.updatedAt
       })
@@ -233,6 +237,7 @@ export class SqliteCutRepository implements ICutRepository {
           probeStatus: sql`excluded.probe_status`,
           status: sql`excluded.status`,
           deletedAt: sql`excluded.deleted_at`,
+          editRecipeJson: sql`excluded.edit_recipe_json`,
           updatedAt: sql`excluded.updated_at`
         }
       })

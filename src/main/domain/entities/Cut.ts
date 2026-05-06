@@ -16,6 +16,12 @@ export interface Cut {
   probeStatus: ProbeStatus
   status: EntityStatus
   deletedAt: string | null
+  /**
+   * Serialised `EditRecipe` produced by the in-app editor. Null for cuts
+   * sideloaded via folder-discovery (the watcher path). Domain treats it
+   * opaquely; parsing happens at boundaries (sidecar reader, IPC validator).
+   */
+  editRecipeJson: string | null
   createdAt: string
   updatedAt: string
 }

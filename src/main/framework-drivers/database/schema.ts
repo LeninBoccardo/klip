@@ -114,6 +114,11 @@ export const cuts = sqliteTable(
     probeStatus: text('probe_status').notNull().default('pending'),
     status: text('status').notNull().default('active'),
     deletedAt: text('deleted_at'),
+    // Serialised `EditRecipe` for cuts produced by the in-app editor.
+    // Null for sideloaded cuts (folder-discovered via reconcile). Lets v2
+    // re-open editor-created cuts and query "find cuts that used X mode" as
+    // SQL instead of a JSON-walk over every cut-data.json on disk.
+    editRecipeJson: text('edit_recipe_json'),
     createdAt: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),

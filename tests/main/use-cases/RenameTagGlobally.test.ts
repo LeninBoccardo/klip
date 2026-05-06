@@ -53,6 +53,7 @@ function makeCut(overrides: Partial<Cut> = {}): Cut {
     probeStatus: 'complete',
     status: 'active',
     deletedAt: null,
+    editRecipeJson: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ...overrides

@@ -450,6 +450,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       probeStatus: 'pending',
       status: 'active',
       deletedAt: null,
+      editRecipeJson: null,
       createdAt: now,
       updatedAt: now
     }

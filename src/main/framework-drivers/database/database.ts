@@ -112,6 +112,7 @@ function pushSchema(db: AppDatabase): void {
       probe_status TEXT NOT NULL DEFAULT 'pending',
       status TEXT NOT NULL DEFAULT 'active',
       deleted_at TEXT,
+      edit_recipe_json TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )

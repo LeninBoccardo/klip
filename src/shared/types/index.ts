@@ -66,6 +66,14 @@ export {
   isBooleanString
 } from './playback'
 export type { StorageStats, LibraryStats } from './stats'
+export type { EditOp, EditRecipe } from './edit-recipe'
+export { editOpSchema, editRecipeSchema, isMvpSupportedRecipe } from './edit-recipe'
+export type {
+  RenderJobStatus,
+  RenderProgress,
+  RenderResult,
+  EditorSessionState
+} from './render-job'
 export type { Theme, Language } from './preferences'
 export {
   THEME_VALUES,
