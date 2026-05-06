@@ -1,11 +1,15 @@
 /**
- * Downloads yt-dlp and ffprobe binaries for the current platform.
+ * Downloads yt-dlp, ffprobe, and ffmpeg binaries for the current platform.
  *
  * Usage: npx tsx scripts/download-binaries.ts
  *    or: npm run setup
  *
  * Binaries are placed in resources/bin/ (gitignored).
  * Supports Windows, macOS, and Linux.
+ *
+ * Licensing: ffmpeg + ffprobe are pulled from ffbinaries.com — the LGPL
+ * 2.1+ builds. See NOTICE for the full disclosure trail. Do NOT swap to
+ * GPL builds without auditing what infects.
  */
 
 import { createWriteStream, mkdirSync, chmodSync, existsSync, unlinkSync, readFileSync } from 'fs'
@@ -21,7 +25,10 @@ const BIN_DIR = nodePathResolver.join(__dirname, '..', 'resources', 'bin')
 
 // ── Version pins ──
 const YT_DLP_VERSION = '2025.02.19'
-const FFPROBE_VERSION = '6.1'
+// ffmpeg + ffprobe ship together from ffbinaries; pin a single version for
+// both so a future bump touches one constant.
+const FFMPEG_VERSION = '6.1'
+const FFPROBE_VERSION = FFMPEG_VERSION
 
 // ── SHA256 hashes — verify downloaded binaries against upstream releases ──
 // Bumping versions: download the new binary, run `shasum -a 256 <file>` (or
@@ -36,7 +43,9 @@ const SHASUMS: Record<string, string | null> = {
   'yt-dlp_macos': null,
   'yt-dlp_linux': null,
   'ffprobe.exe': null,
-  ffprobe: null
+  ffprobe: null,
+  'ffmpeg.exe': null,
+  ffmpeg: null
 }
 
 // ── Platform detection ──
@@ -79,35 +88,49 @@ function getYtDlpSpec(): BinarySpec {
   }
 }
 
-const BASE_FFPROBE_URL = 'https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v'
+const BASE_FFBINARIES_URL = 'https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v'
 
-function getFfprobeSpec(): BinarySpec {
+/**
+ * ffmpeg and ffprobe share the same archive layout on ffbinaries — only
+ * the binary name and per-platform `<name>-<version>-<platform>.zip` URL
+ * differ. Factored so adding a third co-published tool (ffplay) later
+ * is one line.
+ */
+function getFfbinariesSpec(name: 'ffmpeg' | 'ffprobe', version: string): BinarySpec {
   const arch = process.arch === 'arm64' ? 'arm64' : 'amd64'
   switch (platform) {
     case 'win32':
       return {
-        name: 'ffprobe',
-        url: `${BASE_FFPROBE_URL}${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-win-64.zip`,
-        outputName: 'ffprobe.exe',
+        name,
+        url: `${BASE_FFBINARIES_URL}${version}/${name}-${version}-win-64.zip`,
+        outputName: `${name}.exe`,
         extractType: 'zip'
       }
     case 'darwin':
       return {
-        name: 'ffprobe',
-        url: `${BASE_FFPROBE_URL}${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-macos-64.zip`,
-        outputName: 'ffprobe',
+        name,
+        url: `${BASE_FFBINARIES_URL}${version}/${name}-${version}-macos-64.zip`,
+        outputName: name,
         extractType: 'zip'
       }
     case 'linux':
       return {
-        name: 'ffprobe',
-        url: `${BASE_FFPROBE_URL}${FFPROBE_VERSION}/ffprobe-${FFPROBE_VERSION}-linux-${arch === 'arm64' ? 'arm-64' : '64'}.zip`,
-        outputName: 'ffprobe',
+        name,
+        url: `${BASE_FFBINARIES_URL}${version}/${name}-${version}-linux-${arch === 'arm64' ? 'arm-64' : '64'}.zip`,
+        outputName: name,
         extractType: 'zip'
       }
     default:
       throw new Error(`Unsupported platform: ${platform}`)
   }
+}
+
+function getFfprobeSpec(): BinarySpec {
+  return getFfbinariesSpec('ffprobe', FFPROBE_VERSION)
+}
+
+function getFfmpegSpec(): BinarySpec {
+  return getFfbinariesSpec('ffmpeg', FFMPEG_VERSION)
 }
 
 // ── Download helpers ──
@@ -253,7 +276,7 @@ async function main(): Promise<void> {
 
   mkdirSync(BIN_DIR, { recursive: true })
 
-  const specs = [getYtDlpSpec(), getFfprobeSpec()]
+  const specs = [getYtDlpSpec(), getFfprobeSpec(), getFfmpegSpec()]
 
   for (const spec of specs) {
     await downloadBinary(spec)
