@@ -4,6 +4,7 @@ import type { IFileSystemReader, IFileSystemWriter, IPathResolver } from '@domai
 import type { Operation } from '@domain/entities'
 import { redactError } from '@domain/types/redact'
 import type { IRecoverOperations, RecoverResult } from './IRecoverOperations'
+import { renderCutOpPayloadSchema } from './RenderCutFromVideo'
 
 // Operation payloads are stored as JSON strings in `operations.payload`. A
 // tampered or partially-written row (e.g. from a crash mid-write or future
@@ -36,16 +37,9 @@ const migrateRootPayloadV2Schema = z.object({
 
 const migrateRootPayloadSchema = z.union([migrateRootPayloadV2Schema, migrateRootPayloadV1Schema])
 
-// Render-cut payloads — see `RenderCutOpPayload` in RenderCutFromVideo.ts.
-// The recovery sweep needs `cutId` (to drop the half-formed row) and
-// `stagingPath` (to delete the partial mp4); the rest is informational.
-const renderCutPayloadSchema = z.object({
-  version: z.literal(1),
-  cutId: z.string().min(1),
-  finalPath: z.string().min(1),
-  stagingPath: z.string().min(1),
-  cutDir: z.string().min(1)
-})
+// Render-cut payload schema is the single source of truth in
+// `RenderCutFromVideo.ts` (`renderCutOpPayloadSchema`); imported above so
+// the writer + reader cannot drift out of sync.
 
 type PayloadResult<T> =
   | { ok: true; value: T }
@@ -260,7 +254,7 @@ export class RecoverOperations implements IRecoverOperations {
    * the rename + sidecar write are both done.
    */
   private recoverRenderCutOp(op: Operation): boolean {
-    const result = parsePayload(op.payload, renderCutPayloadSchema)
+    const result = parsePayload(op.payload, renderCutOpPayloadSchema)
     if (!result.ok) {
       this.markRolledBack(
         op.id,

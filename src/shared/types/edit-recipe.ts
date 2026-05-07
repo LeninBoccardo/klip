@@ -19,46 +19,60 @@ import { z } from 'zod'
  * worth the small style departure from `ipc-schemas.ts`.
  */
 
-const trimOpSchema = z.object({
-  type: z.literal('trim'),
-  in: z.number().min(0),
-  out: z.number().min(0)
-})
+// Upper bound on any timestamp field. 24h covers every realistic source
+// klip touches (long stream archives, lectures); rejects garbage like
+// `1e308` or `Infinity` that would otherwise be coerced through ffmpeg.
+const MAX_SECONDS = 86_400
 
-const concatOpSchema = z.object({
-  type: z.literal('concat'),
-  segments: z
-    .array(
-      z.object({
-        sourceVideoId: z.string().min(1),
-        in: z.number().min(0),
-        out: z.number().min(0)
-      })
-    )
-    .min(1)
-    .max(64)
-})
+const trimOpSchema = z
+  .object({
+    type: z.literal('trim'),
+    in: z.number().finite().min(0).max(MAX_SECONDS),
+    out: z.number().finite().min(0).max(MAX_SECONDS)
+  })
+  .strict()
 
-const muteOpSchema = z.object({ type: z.literal('mute') })
+const concatSegmentSchema = z
+  .object({
+    sourceVideoId: z.string().min(1).max(256),
+    in: z.number().finite().min(0).max(MAX_SECONDS),
+    out: z.number().finite().min(0).max(MAX_SECONDS)
+  })
+  .strict()
 
-const cropOpSchema = z.object({
-  type: z.literal('crop'),
-  x: z.number().min(0),
-  y: z.number().min(0),
-  w: z.number().positive(),
-  h: z.number().positive()
-})
+const concatOpSchema = z
+  .object({
+    type: z.literal('concat'),
+    segments: z.array(concatSegmentSchema).min(1).max(64)
+  })
+  .strict()
 
-const speedOpSchema = z.object({
-  type: z.literal('speed'),
-  factor: z.number().positive()
-})
+const muteOpSchema = z.object({ type: z.literal('mute') }).strict()
 
-const fadeOpSchema = z.object({
-  type: z.literal('fade'),
-  durationMs: z.number().positive(),
-  kind: z.enum(['in', 'out'])
-})
+const cropOpSchema = z
+  .object({
+    type: z.literal('crop'),
+    x: z.number().finite().min(0),
+    y: z.number().finite().min(0),
+    w: z.number().finite().positive(),
+    h: z.number().finite().positive()
+  })
+  .strict()
+
+const speedOpSchema = z
+  .object({
+    type: z.literal('speed'),
+    factor: z.number().finite().positive()
+  })
+  .strict()
+
+const fadeOpSchema = z
+  .object({
+    type: z.literal('fade'),
+    durationMs: z.number().finite().positive(),
+    kind: z.enum(['in', 'out'])
+  })
+  .strict()
 
 export const editOpSchema = z.discriminatedUnion('type', [
   trimOpSchema,
@@ -71,15 +85,45 @@ export const editOpSchema = z.discriminatedUnion('type', [
 
 export type EditOp = z.infer<typeof editOpSchema>
 
-export const editRecipeSchema = z.object({
-  version: z.literal(1),
-  sourceVideoId: z.string().min(1),
-  ops: z.array(editOpSchema).min(1).max(64),
-  output: z.object({
-    container: z.enum(['mp4', 'webm', 'mkv']),
-    mode: z.enum(['copy', 'reencode'])
+export const editRecipeSchema = z
+  .object({
+    version: z.literal(1),
+    sourceVideoId: z.string().min(1).max(256),
+    ops: z.array(editOpSchema).min(1).max(64),
+    output: z
+      .object({
+        container: z.enum(['mp4', 'webm', 'mkv']),
+        mode: z.enum(['copy', 'reencode'])
+      })
+      .strict()
   })
-})
+  .strict()
+  .superRefine((recipe, ctx) => {
+    // Cross-field invariant: every interval in the recipe must satisfy
+    // `out > in`. Lives on the top-level schema (rather than the discrim-
+    // union variants) because Zod's discriminatedUnion only accepts
+    // plain ZodObject variants, not refined ones.
+    recipe.ops.forEach((op, opIdx) => {
+      if (op.type === 'trim' && op.out <= op.in) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ops', opIdx, 'out'],
+          message: 'trim.out must be greater than trim.in'
+        })
+      }
+      if (op.type === 'concat') {
+        op.segments.forEach((seg, segIdx) => {
+          if (seg.out <= seg.in) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['ops', opIdx, 'segments', segIdx, 'out'],
+              message: 'concat segment .out must be greater than .in'
+            })
+          }
+        })
+      }
+    })
+  })
 
 export type EditRecipe = z.infer<typeof editRecipeSchema>
 

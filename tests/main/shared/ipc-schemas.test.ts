@@ -385,6 +385,54 @@ const rows: Row[] = [
           title: '', // empty title
           tags: []
         }
+      ],
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'trim', in: 5, out: 5 }], // out == in (must be strictly greater)
+            output: { container: 'mp4', mode: 'copy' }
+          },
+          title: 'x',
+          tags: []
+        }
+      ],
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'trim', in: 10, out: 5 }], // out < in
+            output: { container: 'mp4', mode: 'copy' }
+          },
+          title: 'x',
+          tags: []
+        }
+      ],
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'trim', in: 0, out: Number.POSITIVE_INFINITY }], // .finite() rejects
+            output: { container: 'mp4', mode: 'copy' }
+          },
+          title: 'x',
+          tags: []
+        }
+      ],
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'trim', in: 0, out: 1, extra: 'nope' }], // .strict() rejects unknown keys
+            output: { container: 'mp4', mode: 'copy' }
+          },
+          title: 'x',
+          tags: []
+        }
       ]
     ]
   },

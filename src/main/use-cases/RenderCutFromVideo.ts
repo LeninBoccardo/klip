@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type { ICreatorRepository, ICutRepository, IOperationRepository } from '@domain/repositories'
 import type { IVideoRepository } from '@domain/repositories'
 import type {
@@ -393,13 +394,18 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
 
 /**
  * Payload shape persisted in `operations.payload` for `render_cut` rows.
- * Exported so the recovery sweep in `RecoverOperations` can parse it
- * without redeclaring the schema.
+ * Single declaration so the writer (this use-case) and the reader
+ * (`RecoverOperations`) cannot drift — adding a field here updates both
+ * the runtime parse and the TS shape in one place.
  */
-export interface RenderCutOpPayload {
-  version: 1
-  cutId: string
-  finalPath: string
-  stagingPath: string
-  cutDir: string
-}
+export const renderCutOpPayloadSchema = z
+  .object({
+    version: z.literal(1),
+    cutId: z.string().min(1),
+    finalPath: z.string().min(1),
+    stagingPath: z.string().min(1),
+    cutDir: z.string().min(1)
+  })
+  .strict()
+
+export type RenderCutOpPayload = z.infer<typeof renderCutOpPayloadSchema>
