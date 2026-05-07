@@ -99,10 +99,7 @@ interface RootResolution {
  * failure path produces a usable resolution with an explanatory
  * warning.
  */
-async function resolveRootPath(
-  override: string | null,
-  dbPath: string
-): Promise<RootResolution> {
+async function resolveRootPath(override: string | null, dbPath: string): Promise<RootResolution> {
   if (override) {
     return { path: override, source: 'flag' }
   }
@@ -195,7 +192,7 @@ async function main(): Promise<void> {
   console.log('')
 
   if (!args.yes) {
-    const ok = await confirm('Type "yes" to proceed: ')
+    const ok = await confirm('Type "yes (y)" to proceed: ')
     if (!ok) {
       console.log('Aborted.')
       return
