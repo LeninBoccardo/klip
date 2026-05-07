@@ -1,4 +1,13 @@
-import { mkdirSync, writeFileSync, renameSync, cpSync, rmSync, readdirSync, unlinkSync } from 'fs'
+import {
+  mkdirSync,
+  writeFileSync,
+  renameSync,
+  cpSync,
+  rmSync,
+  readdirSync,
+  unlinkSync,
+  rmdirSync
+} from 'fs'
 import { dirname } from 'path'
 import type { IFileSystemWriter } from '@domain/ports'
 
@@ -44,5 +53,17 @@ export class NodeFileSystemWriter implements IFileSystemWriter {
   isDirectoryEmpty(dirPath: string): boolean {
     const entries = readdirSync(dirPath)
     return entries.length === 0
+  }
+
+  removeDirectoryIfEmpty(dirPath: string): void {
+    try {
+      rmdirSync(dirPath)
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      // Idempotent: missing dir or non-empty dir → no-op. Anything else
+      // (permission, EBUSY) bubbles up so the caller can log it.
+      if (code === 'ENOENT' || code === 'ENOTEMPTY' || code === 'EEXIST') return
+      throw err
+    }
   }
 }

@@ -37,6 +37,7 @@ function mockFsWriter(overrides: Partial<IFileSystemWriter> = {}): IFileSystemWr
     moveDirectory: vi.fn(),
     deleteFile: vi.fn(),
     isDirectoryEmpty: vi.fn().mockReturnValue(true),
+    removeDirectoryIfEmpty: vi.fn(),
     ...overrides
   }
 }
@@ -449,6 +450,152 @@ describe('RecoverOperations', () => {
       'op-import-1',
       'rolled_back',
       'Bulk import interrupted — rolled back for safety'
+    )
+  })
+
+  // ── render_cut recovery (HP-1 + HP-2) ──
+
+  it('marks render_cut completed when finalPath exists (HP-1: do not destroy successful renders)', () => {
+    const renderOp = makeOperation({
+      id: 'op-render-1',
+      type: 'render_cut',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        version: 1,
+        cutId: 'cut-success',
+        finalPath: '/root/c/cuts/cut-success/cut-success.mp4',
+        stagingPath: '/root/.klip-render/cut-success.mp4',
+        cutDir: '/root/c/cuts/cut-success'
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [renderOp] : []
+    )
+    // The crash window (rename done, completed-write missed) — file is real.
+    vi.mocked(fsReader.fileExists).mockImplementation(
+      (p) => p === '/root/c/cuts/cut-success/cut-success.mp4'
+    )
+
+    const result = useCase.execute()
+
+    expect(result).toEqual({ completed: 1, rolledBack: 0, total: 1 })
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith('op-render-1', 'completed')
+    // Critical: the Cut row must NOT be deleted.
+    expect(cutRepo.delete).not.toHaveBeenCalled()
+    // The cut dir must NOT be removed (it has the user's file in it).
+    expect(fsWriter.removeDirectoryIfEmpty).not.toHaveBeenCalled()
+  })
+
+  it('rolls back and removes orphan cut dir when finalPath is missing (HP-2)', () => {
+    const renderOp = makeOperation({
+      id: 'op-render-2',
+      type: 'render_cut',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        version: 1,
+        cutId: 'cut-fail',
+        finalPath: '/root/c/cuts/cut-fail/cut-fail.mp4',
+        stagingPath: '/root/.klip-render/cut-fail.mp4',
+        cutDir: '/root/c/cuts/cut-fail'
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [renderOp] : []
+    )
+    // fileExists returns false → rollback path.
+
+    const result = useCase.execute()
+
+    expect(result).toEqual({ completed: 0, rolledBack: 1, total: 1 })
+    expect(fsWriter.deleteFile).toHaveBeenCalledWith('/root/.klip-render/cut-fail.mp4')
+    expect(cutRepo.delete).toHaveBeenCalledWith('cut-fail')
+    // HP-2: the empty cut dir must be removed so the next reconcile
+    // sweep doesn't re-discover it as a phantom row.
+    expect(fsWriter.removeDirectoryIfEmpty).toHaveBeenCalledWith('/root/c/cuts/cut-fail')
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-render-2',
+      'rolled_back',
+      expect.stringContaining('Render interrupted')
+    )
+  })
+
+  it('rolls back render_cut with parse-error message when payload is malformed JSON', () => {
+    const renderOp = makeOperation({
+      id: 'op-render-3',
+      type: 'render_cut',
+      status: 'pending',
+      payload: 'not-json{'
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'pending' ? [renderOp] : []
+    )
+
+    useCase.execute()
+
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-render-3',
+      'rolled_back',
+      expect.stringContaining('Failed to parse')
+    )
+    // No filesystem cleanup attempted on a payload we cannot trust.
+    expect(fsWriter.deleteFile).not.toHaveBeenCalled()
+    expect(cutRepo.delete).not.toHaveBeenCalled()
+    expect(fsWriter.removeDirectoryIfEmpty).not.toHaveBeenCalled()
+  })
+
+  it('rolls back render_cut with schema-error when fields are missing', () => {
+    const renderOp = makeOperation({
+      id: 'op-render-4',
+      type: 'render_cut',
+      status: 'pending',
+      payload: JSON.stringify({ version: 1, cutId: 'x' }) // missing finalPath/stagingPath/cutDir
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'pending' ? [renderOp] : []
+    )
+
+    useCase.execute()
+
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-render-4',
+      'rolled_back',
+      expect.stringContaining('Malformed')
+    )
+  })
+
+  it('continues rolling back even if individual cleanup steps throw', () => {
+    const renderOp = makeOperation({
+      id: 'op-render-5',
+      type: 'render_cut',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        version: 1,
+        cutId: 'cut-x',
+        finalPath: '/x/final.mp4',
+        stagingPath: '/x/staging.mp4',
+        cutDir: '/x/cutdir'
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [renderOp] : []
+    )
+    vi.mocked(fsWriter.deleteFile).mockImplementation(() => {
+      throw new Error('AV-locked')
+    })
+    vi.mocked(cutRepo.delete).mockImplementation(() => {
+      throw new Error('row-already-gone')
+    })
+    vi.mocked(fsWriter.removeDirectoryIfEmpty).mockImplementation(() => {
+      throw new Error('EBUSY')
+    })
+
+    // Must not throw — recovery is best-effort and the op still gets
+    // marked rolled-back so the UI doesn't see a stuck pending row.
+    expect(() => useCase.execute()).not.toThrow()
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith(
+      'op-render-5',
+      'rolled_back',
+      expect.any(String)
     )
   })
 

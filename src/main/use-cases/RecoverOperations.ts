@@ -242,16 +242,26 @@ export class RecoverOperations implements IRecoverOperations {
   }
 
   /**
-   * Recover an interrupted editor render. The `RenderCutFromVideo` use case
-   * inserts the operation row *before* the Cut row, so a crash at any point
-   * leaves at most: a Cut row with `probeStatus='pending'` (and no file at
-   * `filePath`), plus a possibly-partial mp4 in the staging dir. We delete
-   * both and mark the operation rolled-back so the cuts list isn't polluted
-   * with phantom rows.
+   * Recover an interrupted editor render. Two distinct scenarios share
+   * this code path because both leave the operation row in a non-terminal
+   * state on next launch:
    *
-   * Always rolls back — there is no "render completed but the row update
-   * crashed" path because the use case marks the op `completed` only after
-   * the rename + sidecar write are both done.
+   *   (a) Crash before the rename — `stagingPath` may hold a partial mp4,
+   *       `finalPath` doesn't exist, the Cut row is orphan-pending. We
+   *       delete the staging file, the Cut row, and the empty cut dir,
+   *       then mark the op rolled-back.
+   *
+   *   (b) Crash *after* rename but *before* `updateStatus('completed')`
+   *       — `finalPath` exists with a valid file, the Cut row is real,
+   *       and rolling back would destroy the user's successful cut
+   *       (HP-1). Detect this by checking `fileExists(finalPath)` and
+   *       mark the op `completed` instead.
+   *
+   * Sidecar parity in case (b): the `cut-data.json` may or may not have
+   * been written depending on which sub-step crashed. Reconcile-aware
+   * read-back tolerates a missing sidecar (the recipe lives on the Cut
+   * row's `editRecipeJson` column too), so we don't try to rewrite it
+   * here — the row is the source of truth.
    */
   private recoverRenderCutOp(op: Operation): boolean {
     const result = parsePayload(op.payload, renderCutOpPayloadSchema)
@@ -265,7 +275,23 @@ export class RecoverOperations implements IRecoverOperations {
       return false
     }
 
-    const { cutId, stagingPath } = result.value
+    const { cutId, stagingPath, finalPath, cutDir } = result.value
+
+    // HP-1: detect "render finished but op not marked completed" — the
+    // file at finalPath is the user's successful cut. Any cleanup here
+    // would silently destroy it.
+    if (this.fsReader.fileExists(finalPath)) {
+      // Best-effort: remove the staging file in case it was renamed but
+      // a copy lingered (cross-device fallback edge cases).
+      try {
+        this.fsWriter.deleteFile(stagingPath)
+      } catch {
+        // ignored — orphan staging file at worst, doesn't affect the
+        // user-visible cut.
+      }
+      this.operationRepo.updateStatus(op.id, 'completed')
+      return true
+    }
 
     try {
       this.fsWriter.deleteFile(stagingPath)
@@ -281,6 +307,17 @@ export class RecoverOperations implements IRecoverOperations {
     } catch (err) {
       console.warn(
         `[klip] render_cut recovery: failed to delete orphan Cut row:`,
+        err instanceof Error ? err.message : err
+      )
+    }
+
+    // HP-2: remove the orphan `<creator>/cuts/<cutId>/` shell so the
+    // next reconcile sweep doesn't re-discover it as a phantom row.
+    try {
+      this.fsWriter.removeDirectoryIfEmpty(cutDir)
+    } catch (err) {
+      console.warn(
+        `[klip] render_cut recovery: failed to remove orphan cut dir:`,
         err instanceof Error ? err.message : err
       )
     }

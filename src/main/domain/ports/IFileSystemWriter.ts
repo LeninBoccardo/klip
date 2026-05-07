@@ -24,4 +24,13 @@ export interface IFileSystemWriter {
 
   /** Check if a directory is empty (no files, no subdirectories) */
   isDirectoryEmpty(dirPath: string): boolean
+
+  /**
+   * Remove a directory only if it is empty. Idempotent — silently no-ops
+   * if the directory does not exist or is non-empty. Used by the editor's
+   * render-cleanup paths (cancel / failure / recovery) to avoid leaving
+   * orphan `<root>/<creator>/cuts/<cutId>/` shells behind that the next
+   * reconcile would otherwise re-discover as phantom Cut rows.
+   */
+  removeDirectoryIfEmpty(dirPath: string): void
 }

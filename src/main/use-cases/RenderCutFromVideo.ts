@@ -224,7 +224,7 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
           // Defence-in-depth: the inner task swallows its own errors. This
           // catches queue-level rejections (e.g. shutdown drain) so the UI
           // doesn't stay stuck in `queued`.
-          this.failGracefully(jobId, cutId, sourceVideo.id, stagingPath, err)
+          this.failGracefully(jobId, cutId, sourceVideo.id, stagingPath, cutDir, err)
         })
 
       return { jobId, cutId }
@@ -366,7 +366,7 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
       this.notifier.notify('db-updated', { scope: ['cuts'] })
     } catch (err) {
       const cancelled = err instanceof RenderCancelledError
-      this.cleanupOnFailure(stagingPath, cutId)
+      this.cleanupOnFailure(stagingPath, cutId, cutDir)
 
       if (cancelled) {
         this.operationRepo.updateStatus(jobId, 'rolled_back', 'Render cancelled by user')
@@ -393,11 +393,16 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
 
   /**
    * Best-effort cleanup of artifacts created by a failed/cancelled render.
-   * Both deletions are idempotent — the file may not exist (the backend
-   * may have crashed before writing anything), and the row may already
-   * be gone (a recovery sweep may have beaten us to it).
+   * All operations are idempotent — the file may not exist (the backend
+   * may have crashed before writing anything), the row may already be
+   * gone (a recovery sweep may have beaten us to it), and the cut dir
+   * may not yet have been created.
+   *
+   * HP-2: removing the empty `cutDir` is the load-bearing step. Without
+   * it, every failed render leaks an empty `<creator>/cuts/<cutId>/` that
+   * the next reconcile sweep would re-discover as a phantom Cut row.
    */
-  private cleanupOnFailure(stagingPath: string, cutId: string): void {
+  private cleanupOnFailure(stagingPath: string, cutId: string, cutDir: string): void {
     try {
       this.fsWriter.deleteFile(stagingPath)
     } catch {
@@ -409,6 +414,13 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
     } catch {
       // Same reasoning.
     }
+    try {
+      this.fsWriter.removeDirectoryIfEmpty(cutDir)
+    } catch {
+      // Same reasoning. Note the impl is a no-op when the dir is non-
+      // empty (e.g. a successful rename happened before cleanup hit) —
+      // the rename branch keeps the dir, this only targets orphans.
+    }
   }
 
   private failGracefully(
@@ -416,10 +428,14 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
     cutId: string,
     sourceVideoId: string,
     stagingPath: string,
+    cutDir: string,
     err: unknown
   ): void {
     const message = err instanceof Error ? err.message : String(err)
-    this.cleanupOnFailure(stagingPath, cutId)
+    // performRender wasn't entered (queue itself rejected), so cutDir was
+    // never created. cleanupOnFailure handles the missing-dir case
+    // idempotently.
+    this.cleanupOnFailure(stagingPath, cutId, cutDir)
     try {
       this.operationRepo.updateStatus(jobId, 'failed', message)
     } catch {
