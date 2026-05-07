@@ -1,6 +1,7 @@
 import type { Creator, Video, Cut } from '@domain/entities'
 import type { CreatorDto, VideoDto, CutDto } from '@shared/dtos'
-import type { PaginatedResult } from '@shared/types'
+import type { EditRecipe, PaginatedResult } from '@shared/types'
+import { editRecipeSchema } from '@shared/types'
 
 /**
  * Boundary-layer mappers from domain entities to renderer-facing DTOs.
@@ -75,11 +76,28 @@ export function toCutDto(cut: Cut): CutDto {
     resolution: cut.resolution,
     fileSize: cut.fileSize,
     hasThumbnail: cut.thumbnailPath !== null,
+    editRecipe: parseEditRecipeJson(cut.editRecipeJson),
     probeStatus: cut.probeStatus,
     status: cut.status,
     deletedAt: cut.deletedAt,
     createdAt: cut.createdAt,
     updatedAt: cut.updatedAt
+  }
+}
+
+/**
+ * Parse the entity's persisted JSON column through the canonical Zod
+ * schema. Returns null for missing or malformed payloads so a corrupted
+ * row never crashes the renderer; the v2 "re-edit this cut" path simply
+ * won't offer rehydration for that cut, which is the right fallback.
+ */
+function parseEditRecipeJson(raw: string | null): EditRecipe | null {
+  if (raw === null) return null
+  try {
+    const parsed = editRecipeSchema.safeParse(JSON.parse(raw))
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
   }
 }
 

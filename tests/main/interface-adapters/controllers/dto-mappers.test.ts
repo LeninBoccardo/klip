@@ -168,6 +168,37 @@ describe('toCutDto', () => {
     expect(dto.endTimestamp).toBe(47.5)
     expect(dto.probeStatus).toBe('complete')
   })
+
+  // ── editRecipe round-trip (HP-9) ──
+
+  it('parses a valid editRecipeJson into a structured EditRecipe', () => {
+    const recipe = {
+      version: 1,
+      sourceVideoId: 'video-1',
+      ops: [{ type: 'trim', in: 1, out: 5 }],
+      output: { container: 'mp4', mode: 'copy' }
+    }
+    const dto = toCutDto({ ...baseCut, editRecipeJson: JSON.stringify(recipe) })
+    expect(dto.editRecipe).toEqual(recipe)
+  })
+
+  it('returns null editRecipe when the column is null (legacy / sideloaded cuts)', () => {
+    const dto = toCutDto({ ...baseCut, editRecipeJson: null })
+    expect(dto.editRecipe).toBeNull()
+  })
+
+  it('returns null editRecipe (does not throw) when the JSON is malformed', () => {
+    const dto = toCutDto({ ...baseCut, editRecipeJson: 'not-json{' })
+    expect(dto.editRecipe).toBeNull()
+  })
+
+  it('returns null editRecipe (does not throw) when the JSON parses but fails the schema', () => {
+    const dto = toCutDto({
+      ...baseCut,
+      editRecipeJson: JSON.stringify({ version: 1, ops: [] }) // missing required fields
+    })
+    expect(dto.editRecipe).toBeNull()
+  })
 })
 
 describe('mapPaginated', () => {

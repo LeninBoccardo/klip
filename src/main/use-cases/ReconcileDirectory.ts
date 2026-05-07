@@ -1,6 +1,7 @@
 import type { ICreatorRepository, IVideoRepository, ICutRepository } from '@domain/repositories'
 import type { IFileSystemReader, IPathResolver, ITransactionScope } from '@domain/ports'
 import type { Creator, Video, Cut } from '@domain/entities'
+import { editRecipeSchema } from '@shared/types'
 import type { IReconcileDirectory, ReconcileResult } from './IReconcileDirectory'
 
 /** Metadata shape expected inside `meta.json` (video downloads) */
@@ -18,9 +19,9 @@ interface CutDataJson {
   startTimestamp?: number
   endTimestamp?: number
   // Editor-produced sidecars carry the recipe so v2's "re-edit this cut"
-  // can rehydrate the timeline state. Reconcile MVP doesn't read it back —
-  // the DB column is the authoritative store — but typing it here keeps
-  // future readers honest.
+  // can rehydrate the timeline state. Typed as `unknown` because the JSON
+  // is read from disk and may be missing/malformed; `upsertCutFromDisk`
+  // runs `editRecipeSchema.safeParse` before persisting.
   editRecipe?: unknown
 }
 
@@ -439,6 +440,13 @@ export class ReconcileDirectory implements IReconcileDirectory {
       files.find((f) => /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.includes('.info.')) ?? null
 
     const now = new Date().toISOString()
+    // HP-9: parse the sidecar's editRecipe through the canonical schema so
+    // a sideloaded folder produced by an older klip (or hand-edited) can
+    // round-trip the recipe into the DB. Malformed payloads → null, never
+    // throw, never persist garbage.
+    const recipeParse = editRecipeSchema.safeParse(cutData?.editRecipe)
+    const editRecipeJson = recipeParse.success ? JSON.stringify(recipeParse.data) : null
+
     const newCut: Cut = {
       id: cutId,
       creatorId: creator.id,
@@ -455,7 +463,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       probeStatus: 'pending',
       status: 'active',
       deletedAt: null,
-      editRecipeJson: null,
+      editRecipeJson,
       createdAt: now,
       updatedAt: now
     }

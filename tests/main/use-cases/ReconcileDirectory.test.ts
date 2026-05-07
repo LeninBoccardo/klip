@@ -610,6 +610,83 @@ describe('ReconcileDirectory', () => {
       )
     })
 
+    // ── editRecipe round-trip from sidecar (HP-9) ──
+
+    it('persists editRecipe from cut-data.json when the sidecar carries a valid recipe', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('cuts')) return ['cut-with-recipe']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['cut-with-recipe.mp4'])
+      const recipe = {
+        version: 1,
+        sourceVideoId: 'src-1',
+        ops: [{ type: 'trim', in: 1, out: 5 }],
+        output: { container: 'mp4', mode: 'copy' }
+      }
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('cut-data.json')) return { title: 'Edited', editRecipe: recipe }
+        return null
+      })
+
+      useCase.execute(ROOT)
+
+      expect(cutRepo.upsertWithPrevious).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'cut-with-recipe',
+          editRecipeJson: JSON.stringify(recipe)
+        }),
+        null
+      )
+    })
+
+    it('persists editRecipeJson=null when the sidecar omits the recipe (legacy/sideload)', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('cuts')) return ['legacy-cut']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['legacy-cut.mp4'])
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('cut-data.json')) return { title: 'Old', tags: ['legacy'] }
+        return null
+      })
+
+      useCase.execute(ROOT)
+
+      expect(cutRepo.upsertWithPrevious).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'legacy-cut', editRecipeJson: null }),
+        null
+      )
+    })
+
+    it('persists editRecipeJson=null when the sidecar carries a malformed recipe (does not throw)', () => {
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('cuts')) return ['bad-recipe-cut']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['bad-recipe-cut.mp4'])
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('cut-data.json'))
+          return {
+            title: 'Bad',
+            editRecipe: { version: 99, ops: 'not-an-array' } // garbage
+          }
+        return null
+      })
+
+      expect(() => useCase.execute(ROOT)).not.toThrow()
+      expect(cutRepo.upsertWithPrevious).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'bad-recipe-cut', editRecipeJson: null }),
+        null
+      )
+    })
+
     it('reads profileImagePath from creator.json', () => {
       fs.listDirectories = vi.fn().mockImplementation((p: string) => {
         if (p === ROOT) return ['new-creator']
