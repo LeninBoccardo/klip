@@ -51,17 +51,37 @@ describe('useEditorStore — in/out point clamping', () => {
     useEditorStore.getState().initSourceVideo({ sourceVideoId: 'abc', durationSec: 30 })
   })
 
-  it('clamps the in-point to [0, duration]', () => {
+  it('clamps a below-zero in-point to 0', () => {
     useEditorStore.getState().setInPoint(-5)
     expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region?.inSec).toBe(0)
-
-    useEditorStore.getState().setInPoint(100)
-    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region?.inSec).toBe(30)
   })
 
-  it('clamps the out-point to [0, duration]', () => {
+  it('clamps a below-zero out-point gracefully (refuses if it would invert)', () => {
+    useEditorStore.getState().setOutPoint(-5)
+    // Without an existing in-point, default in is 0 → out clamped to 0 →
+    // no room for a region; the call is refused and region stays null.
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toBeNull()
+  })
+
+  it('clamps an over-duration out-point to duration', () => {
     useEditorStore.getState().setOutPoint(100)
     expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region?.outSec).toBe(30)
+  })
+
+  it('seeds a saveable region from a single in-point (out defaults to end of clip)', () => {
+    useEditorStore.getState().setInPoint(5)
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toEqual({
+      inSec: 5,
+      outSec: 30
+    })
+  })
+
+  it('seeds a saveable region from a single out-point (in defaults to start of clip)', () => {
+    useEditorStore.getState().setOutPoint(20)
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toEqual({
+      inSec: 0,
+      outSec: 20
+    })
   })
 
   it('preserves an existing out-point when the new in-point is below it', () => {
@@ -80,6 +100,49 @@ describe('useEditorStore — in/out point clamping', () => {
       inSec: 5,
       outSec: 15
     })
+  })
+
+  // ── Silent-clobber regression tests (HP-5) ──
+
+  it('refuses an in-point at-or-past the existing out-point (does not destroy it)', () => {
+    useEditorStore.getState().setOutPoint(5)
+    // User now tries to mark in at 7, which would invert the region.
+    // Earlier behaviour silently set out to 7.001, destroying the user's 5.
+    useEditorStore.getState().setInPoint(7)
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toEqual({
+      inSec: 0,
+      outSec: 5
+    })
+  })
+
+  it('refuses an out-point at-or-before the existing in-point (does not destroy it)', () => {
+    useEditorStore.getState().setInPoint(10)
+    useEditorStore.getState().setOutPoint(3)
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toEqual({
+      inSec: 10,
+      outSec: 30
+    })
+  })
+
+  it('refuses an in-point exactly at the existing out-point (collapse)', () => {
+    useEditorStore.getState().setOutPoint(10)
+    useEditorStore.getState().setInPoint(10)
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toEqual({
+      inSec: 0,
+      outSec: 10
+    })
+  })
+
+  it('refuses an in-point at the very end of the clip (no room for out)', () => {
+    // Without an existing out, in=duration would synthesise an unsaveable
+    // out=duration+ε. The new behaviour refuses the mark instead.
+    useEditorStore.getState().setInPoint(30)
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toBeNull()
+  })
+
+  it('refuses an out-point at 0 with no existing in (no room for in)', () => {
+    useEditorStore.getState().setOutPoint(0)
+    expect(useEditorStore.getState().timeline?.tracks[0].clips[0].region).toBeNull()
   })
 
   it('clearRegion drops the region but keeps the rest of the timeline state', () => {

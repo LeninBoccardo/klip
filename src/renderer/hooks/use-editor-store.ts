@@ -109,11 +109,34 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!tl) return {}
       const clip = tl.tracks[0].clips[0]
       const clamped = clamp(sec, 0, clip.durationSec)
-      // If we have an out point, ensure in < out; otherwise just set in.
       const existingOut = clip.region?.outSec ?? null
-      const newOut = existingOut !== null && existingOut > clamped ? existingOut : null
+
+      // Refuse marks that would invert or collapse the region (new in
+      // at-or-past existing out). Earlier behaviour silently overwrote
+      // the user's existing out with `clamped + 0.001`, destroying their
+      // input. The user must `clearRegion()` to start over.
+      if (existingOut !== null && clamped >= existingOut) {
+        console.warn(
+          '[klip:editor] setInPoint refused — would invert the region; clearRegion() to reset'
+        )
+        return {}
+      }
+
+      // No existing out: default to end-of-clip so the region is
+      // immediately saveable. The user refines via setOutPoint.
+      const outSec = existingOut ?? clip.durationSec
+
+      // Boundary case: in-mark at the very end of the clip with no room
+      // for an out-mark. Refuse rather than emit an unsaveable region.
+      if (clamped >= outSec) {
+        console.warn(
+          '[klip:editor] setInPoint refused — no room for an out-point past the mark'
+        )
+        return {}
+      }
+
       return {
-        timeline: writeRegion(tl, { inSec: clamped, outSec: newOut ?? clamped + 0.001 })
+        timeline: writeRegion(tl, { inSec: clamped, outSec })
       }
     })
   },
@@ -123,11 +146,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!tl) return {}
       const clip = tl.tracks[0].clips[0]
       const clamped = clamp(sec, 0, clip.durationSec)
-      // If we have an in point, ensure out > in; otherwise default in to 0.
-      const existingIn = clip.region?.inSec ?? 0
-      const newIn = existingIn < clamped ? existingIn : Math.max(0, clamped - 0.001)
+      const existingIn = clip.region?.inSec ?? null
+
+      // Symmetric to setInPoint: refuse marks that would invert the
+      // region rather than silently clobber the existing in-point.
+      if (existingIn !== null && clamped <= existingIn) {
+        console.warn(
+          '[klip:editor] setOutPoint refused — would invert the region; clearRegion() to reset'
+        )
+        return {}
+      }
+
+      const inSec = existingIn ?? 0
+
+      if (clamped <= inSec) {
+        console.warn(
+          '[klip:editor] setOutPoint refused — no room for an in-point before the mark'
+        )
+        return {}
+      }
+
       return {
-        timeline: writeRegion(tl, { inSec: newIn, outSec: clamped })
+        timeline: writeRegion(tl, { inSec, outSec: clamped })
       }
     })
   },
