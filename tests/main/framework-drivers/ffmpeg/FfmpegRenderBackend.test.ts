@@ -1,10 +1,53 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { EventEmitter } from 'events'
 import {
   FfmpegRenderBackend,
   parseProgressLine
 } from '@main/framework-drivers/ffmpeg/FfmpegRenderBackend'
 import type { IBinaryResolver } from '@domain/ports'
 import type { EditOp, EditRecipe } from '@shared/types'
+
+// Hoisted mock for child_process.spawn so the cancellation-ladder tests
+// can drive a fake child process deterministically.
+const { mockSpawn, lastChild } = vi.hoisted(() => {
+  return {
+    mockSpawn: vi.fn(),
+    lastChild: { current: null as FakeChild | null }
+  }
+})
+
+vi.mock('child_process', () => ({
+  spawn: mockSpawn
+}))
+
+class FakeStdin extends EventEmitter {
+  written: string[] = []
+  ended = false
+  write(data: string): boolean {
+    this.written.push(data)
+    return true
+  }
+  end(): void {
+    this.ended = true
+  }
+}
+
+class FakeChild extends EventEmitter {
+  stdin = new FakeStdin()
+  stdout = new EventEmitter()
+  stderr = new EventEmitter()
+  killed = false
+  killSignals: NodeJS.Signals[] = []
+  kill(signal?: NodeJS.Signals | number): boolean {
+    this.killSignals.push((signal as NodeJS.Signals) ?? 'SIGTERM')
+    this.killed = true
+    return true
+  }
+  /** Helper for tests — simulate the child exiting. */
+  emitClose(code: number | null, signal: NodeJS.Signals | null = null): void {
+    this.emit('close', code, signal)
+  }
+}
 
 function mockResolver(): IBinaryResolver {
   return { resolve: vi.fn().mockReturnValue('/fake/ffmpeg') }
@@ -139,6 +182,7 @@ describe('parseProgressLine', () => {
 
 describe('FfmpegRenderBackend.render — pre-flight cancellation', () => {
   it('rejects with RenderCancelledError without spawning when the signal is already aborted', async () => {
+    mockSpawn.mockClear()
     const backend = new FfmpegRenderBackend(mockResolver())
     const controller = new AbortController()
     controller.abort()
@@ -155,5 +199,137 @@ describe('FfmpegRenderBackend.render — pre-flight cancellation', () => {
       )
     ).rejects.toMatchObject({ name: 'RenderCancelledError' })
     expect(onProgress).not.toHaveBeenCalled()
+    // Pre-flight short-circuit: must not even spawn.
+    expect(mockSpawn).not.toHaveBeenCalled()
+  })
+})
+
+describe('FfmpegRenderBackend.render — cancellation ladder (HP-4)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    mockSpawn.mockReset()
+    mockSpawn.mockImplementation(() => {
+      const child = new FakeChild()
+      lastChild.current = child
+      return child
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("writes 'q\\n' to stdin first so ffmpeg can flush moov before any kill", async () => {
+    const backend = new FfmpegRenderBackend(mockResolver())
+    const controller = new AbortController()
+    const onProgress = vi.fn()
+
+    const promise = backend.render(
+      {
+        recipe: trimRecipe(),
+        sourcePath: '/fake/src.mp4',
+        stagingPath: '/fake/staging.mp4'
+      },
+      { signal: controller.signal, onProgress }
+    )
+
+    // Spawn happened, child is live.
+    expect(mockSpawn).toHaveBeenCalledTimes(1)
+    const child = lastChild.current!
+    expect(child.killSignals).toEqual([])
+
+    // User clicks cancel. Step 1 of the ladder is synchronous.
+    controller.abort()
+    expect(child.stdin.written).toEqual(['q\n'])
+    expect(child.stdin.ended).toBe(true)
+    // No kill signal yet — graceful window is still open.
+    expect(child.killSignals).toEqual([])
+
+    // Simulate ffmpeg honouring 'q' and exiting before any timer fires.
+    child.emitClose(0, null)
+    await expect(promise).rejects.toMatchObject({ name: 'RenderCancelledError' })
+    // Timers were cleared on close — no kill ever fired.
+    expect(child.killSignals).toEqual([])
+  })
+
+  it('escalates to SIGTERM after the graceful window if the child is still running', async () => {
+    const backend = new FfmpegRenderBackend(mockResolver())
+    const controller = new AbortController()
+
+    const promise = backend.render(
+      {
+        recipe: trimRecipe(),
+        sourcePath: '/x',
+        stagingPath: '/y'
+      },
+      { signal: controller.signal, onProgress: vi.fn() }
+    )
+
+    const child = lastChild.current!
+    controller.abort()
+
+    // Just under the graceful timeout — no SIGTERM yet.
+    vi.advanceTimersByTime(1_999)
+    expect(child.killSignals).toEqual([])
+
+    // Cross the graceful threshold.
+    vi.advanceTimersByTime(2)
+    expect(child.killSignals).toContain('SIGTERM')
+
+    // Simulate the SIGTERM landing.
+    child.emitClose(null, 'SIGTERM')
+    await expect(promise).rejects.toMatchObject({ name: 'RenderCancelledError' })
+  })
+
+  it('escalates to SIGKILL after the force window if the child ignores SIGTERM', async () => {
+    const backend = new FfmpegRenderBackend(mockResolver())
+    const controller = new AbortController()
+
+    const promise = backend.render(
+      {
+        recipe: trimRecipe(),
+        sourcePath: '/x',
+        stagingPath: '/y'
+      },
+      { signal: controller.signal, onProgress: vi.fn() }
+    )
+
+    const child = lastChild.current!
+    controller.abort()
+
+    // Walk past both timers.
+    vi.advanceTimersByTime(2_000)
+    expect(child.killSignals).toContain('SIGTERM')
+
+    vi.advanceTimersByTime(3_000)
+    expect(child.killSignals).toContain('SIGKILL')
+
+    // SIGKILL forces exit.
+    child.emitClose(null, 'SIGKILL')
+    await expect(promise).rejects.toMatchObject({ name: 'RenderCancelledError' })
+  })
+
+  it('clears all timers on a natural close (no kill on completion)', async () => {
+    const backend = new FfmpegRenderBackend(mockResolver())
+    const controller = new AbortController()
+
+    const promise = backend.render(
+      {
+        recipe: trimRecipe({ in: 0, out: 1 }),
+        sourcePath: '/x',
+        stagingPath: '/y'
+      },
+      { signal: controller.signal, onProgress: vi.fn() }
+    )
+
+    const child = lastChild.current!
+    // Render completes naturally without a cancel.
+    child.emitClose(0, null)
+    await expect(promise).resolves.toMatchObject({ durationMs: expect.any(Number) })
+
+    // Even after the timer windows pass, no kill should fire — abort
+    // never happened, so the timers were never armed.
+    vi.advanceTimersByTime(10_000)
+    expect(child.killSignals).toEqual([])
   })
 })
