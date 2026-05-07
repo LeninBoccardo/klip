@@ -59,6 +59,7 @@ function EditorBootstrap({ sourceVideoId }: { sourceVideoId: string }): React.Re
   useRenderProgressListener()
   useHashChangeReload()
   useSourceVideoBootstrap(sourceVideoId)
+  useResumeActiveRender(sourceVideoId)
 
   return <EditorView sourceVideoId={sourceVideoId} />
 }
@@ -79,6 +80,54 @@ function useHashChangeReload(): void {
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+}
+
+/**
+ * HP-7 — rehydrate the editor's job mirror after a window close→reopen
+ * mid-render. The render-progress listener filters events by activeJobId,
+ * so without this hook the renderer would silently drop progress for the
+ * job that's still running in main, and the user would see a clean
+ * editor with no indication anything is happening.
+ *
+ * Asks main for any non-terminal session matching the current source.
+ * Primes `beginTracking` + `updateJob` so the next push event lands
+ * inside the filter.
+ *
+ * Gates on `timeline !== null` so this runs *after* `initSourceVideo`
+ * (which clears the job mirror as part of seeding a fresh source). If
+ * we fired earlier, source bootstrap could land second and wipe the
+ * primed mirror — a real race, since both hooks await IPC in parallel.
+ */
+function useResumeActiveRender(sourceVideoId: string): void {
+  const timelineReady = useEditorStore((s) => s.timeline !== null)
+  const beginTracking = useEditorStore((s) => s.beginTracking)
+  const updateJob = useEditorStore((s) => s.updateJob)
+
+  useEffect(() => {
+    if (!timelineReady) return
+    let cancelled = false
+    window.api
+      .editorFindSessionBySource(sourceVideoId)
+      .then((session) => {
+        if (cancelled || !session) return
+        beginTracking({ jobId: session.jobId, cutId: session.cutId })
+        updateJob({
+          jobId: session.jobId,
+          status: session.status,
+          percent: session.percent,
+          errorMessage: session.errorMessage ?? undefined
+        })
+      })
+      .catch((err) => {
+        // Rehydration is best-effort. If the lookup fails, the user
+        // just won't see live progress until the next event lands —
+        // but the render itself is unaffected.
+        console.warn('[klip:editor] failed to rehydrate active session:', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [timelineReady, sourceVideoId, beginTracking, updateJob])
 }
 
 /**

@@ -256,7 +256,8 @@ export const ipcSchemas = {
   // the use-case (defence-in-depth + the forward-compat sentinel).
   'editor-start-render': z.tuple([renderCutRequestSchema]),
   'editor-cancel-render': z.tuple([z.string().min(1).max(256)]),
-  'editor-get-session': z.tuple([z.string().min(1).max(256)])
+  'editor-get-session': z.tuple([z.string().min(1).max(256)]),
+  'editor-find-session-by-source': z.tuple([z.string().min(1).max(256)])
 } as const satisfies Record<InvokeChannel, z.ZodTypeAny>
 
 export type IpcSchemaFor<C extends InvokeChannel> = (typeof ipcSchemas)[C]

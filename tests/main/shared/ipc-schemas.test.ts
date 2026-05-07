@@ -445,6 +445,11 @@ const rows: Row[] = [
     channel: 'editor-get-session',
     accept: ['job-1'],
     reject: [[], [''], [longString(257)]]
+  },
+  {
+    channel: 'editor-find-session-by-source',
+    accept: ['vid-1'],
+    reject: [[], [''], [longString(257)]]
   }
 ]
 

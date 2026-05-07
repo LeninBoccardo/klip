@@ -106,6 +106,7 @@ const api = {
   editorStartRender: createTypedInvoker('editor-start-render'),
   editorCancelRender: createTypedInvoker('editor-cancel-render'),
   editorGetSession: createTypedInvoker('editor-get-session'),
+  editorFindSessionBySource: createTypedInvoker('editor-find-session-by-source'),
 
   // ── Push event listeners ──
   onDownloadProgress: (

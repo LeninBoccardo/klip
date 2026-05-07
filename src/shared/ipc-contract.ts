@@ -245,6 +245,16 @@ export interface IpcContract {
   'editor-start-render': { params: [request: RenderCutRequest]; result: RenderCutResponse }
   'editor-cancel-render': { params: [jobId: string]; result: void }
   'editor-get-session': { params: [jobId: string]; result: EditorSessionState | null }
+  /**
+   * Look up the active (non-terminal) session for a source video. Used
+   * by the editor window to rehydrate progress state after a window-
+   * close-mid-render → reopen flow. Returns null if no in-flight render
+   * is associated with the source.
+   */
+  'editor-find-session-by-source': {
+    params: [sourceVideoId: string]
+    result: EditorSessionState | null
+  }
 
   // ── Push events (main → renderer) ──
   'db-updated': { params: [data: DbUpdatedPayload]; result: void }

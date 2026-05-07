@@ -96,6 +96,7 @@ export const IpcChannels = {
   EditorStartRender: 'editor-start-render',
   EditorCancelRender: 'editor-cancel-render',
   EditorGetSession: 'editor-get-session',
+  EditorFindSessionBySource: 'editor-find-session-by-source',
 
   // ── Push events (webContents.send → ipcRenderer.on) ──
   DbUpdated: 'db-updated',

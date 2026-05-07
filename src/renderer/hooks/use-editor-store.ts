@@ -15,9 +15,11 @@ import { timelineForSource } from '@/lib/recipe-from-timeline'
  *
  * The mirror is fed by `useRenderProgressListener`; if the editor window
  * is closed mid-render, the main process keeps owning the AbortController
- * and the session, and a reopened editor rehydrates by calling
- * `editorGetSession(jobId)`. We do not try to keep two independent
- * sources of truth.
+ * and the session. A reopened editor rehydrates the mirror via
+ * `useResumeActiveRender` in `EditorApp.tsx`, which calls
+ * `editorFindSessionBySource(sourceVideoId)` and primes
+ * `beginTracking` + `updateJob` from the snapshot before the next push
+ * event lands. We do not try to keep two independent sources of truth.
  */
 export type RenderMode = 'copy' | 'reencode'
 

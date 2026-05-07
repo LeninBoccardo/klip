@@ -151,6 +151,12 @@ interface KlipAPI {
   editorCancelRender(jobId: string): Promise<void>
   /** Read-back current session state — used by the sidebar progress chip. */
   editorGetSession(jobId: string): Promise<EditorSessionState | null>
+  /**
+   * Look up the active session for a source video. Used by the editor
+   * window on bootstrap to rehydrate progress state after a close+reopen
+   * mid-render. Returns null if no non-terminal session matches.
+   */
+  editorFindSessionBySource(sourceVideoId: string): Promise<EditorSessionState | null>
 
   // ── Push event listeners ──
   /** Subscribe to download progress events; returns an unsubscribe function */
