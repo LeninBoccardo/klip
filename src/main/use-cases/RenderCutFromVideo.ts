@@ -75,10 +75,15 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
     }
     const { recipe, title, tags } = parsed.data
 
-    const backend = this.pickBackend(recipe)
-    if (!backend) {
-      throw new Error('No render backend can handle this recipe (this should not happen in MVP)')
+    const pick = this.pickBackend(recipe)
+    if (!pick.ok) {
+      // HP-10: surface the per-backend reasons rather than a generic
+      // "this should not happen" — when v2 reserved op variants reach
+      // here from a future client, the reasons explain *why* each
+      // backend bailed instead of swallowing the contract.
+      throw new Error(`No render backend can handle this recipe: ${pick.reasons.join('; ')}`)
     }
+    const backend = pick.backend
 
     const sourceVideo = this.videoRepo.findById(recipe.sourceVideoId)
     if (!sourceVideo) {
@@ -106,117 +111,166 @@ export class RenderCutFromVideo implements IRenderCutFromVideo {
     const recipeJson = JSON.stringify(recipe)
     const now = new Date().toISOString()
 
-    // 1. Persist an Operation for crash-recovery before any DB row exists.
-    //    If we crash between here and the rename, the recovery sweep finds
-    //    the operation row, deletes any partial staging file, and removes
-    //    the Cut row inserted in step 2.
-    const operation: Operation = {
-      id: jobId,
-      type: 'render_cut',
-      status: 'pending',
-      payload: JSON.stringify({
-        version: 1,
-        cutId,
-        finalPath,
-        stagingPath,
-        cutDir
-      } satisfies RenderCutOpPayload),
-      error: null,
-      startedAt: null,
-      completedAt: null,
-      createdAt: now
-    }
-    this.operationRepo.create(operation)
+    // HP-6: the prelude below performs four DB / in-memory writes back-
+    // to-back on the IPC thread (operation create → cut upsert → session
+    // open → emit). Earlier behaviour let any of those throws leak partial
+    // state — a stranded operation row, an orphan Cut row, a session
+    // entry — which only the next-launch recovery sweep would clean up.
+    // The try/catch reverses each write that succeeded before re-throwing
+    // so the rejection is observed by the IPC caller in a clean state.
+    let opCreated = false
+    let cutCreated = false
+    let sessionOpened = false
 
-    // 2. Insert the Cut row up front — see §6 of the plan. The file isn't
-    //    on disk yet at finalPath; the renderer's klip-media://cut/<id>/file
-    //    will 404 during the brief render window, which is acceptable
-    //    because the user is in the editor window watching the progress
-    //    bar, not browsing the main window's cuts list.
-    const trim = recipe.ops[0]
-    const startTimestamp = trim.type === 'trim' ? trim.in : null
-    const endTimestamp = trim.type === 'trim' ? trim.out : null
-    const cut: Cut = {
-      id: cutId,
-      creatorId: creator.id,
-      videoId: sourceVideo.id,
-      title,
-      tags,
-      startTimestamp,
-      endTimestamp,
-      duration: null,
-      resolution: null,
-      fileSize: null,
-      filePath: finalPath,
-      thumbnailPath: null,
-      probeStatus: 'pending',
-      status: 'active',
-      deletedAt: null,
-      editRecipeJson: recipeJson,
-      createdAt: now,
-      updatedAt: now
-    }
-    this.cutRepo.upsertWithPrevious(cut, null)
+    try {
+      // 1. Persist an Operation for crash-recovery before any DB row exists.
+      //    If we crash between here and the rename, the recovery sweep finds
+      //    the operation row, deletes any partial staging file, and removes
+      //    the Cut row inserted in step 2.
+      const operation: Operation = {
+        id: jobId,
+        type: 'render_cut',
+        status: 'pending',
+        payload: JSON.stringify({
+          version: 1,
+          cutId,
+          finalPath,
+          stagingPath,
+          cutDir
+        } satisfies RenderCutOpPayload),
+        error: null,
+        startedAt: null,
+        completedAt: null,
+        createdAt: now
+      }
+      this.operationRepo.create(operation)
+      opCreated = true
 
-    // 3. Open the session before enqueue so a fast cancel
-    //    (user clicks before the queue picks up the task) finds the
-    //    AbortController and routes correctly.
-    const controller = new AbortController()
-    this.sessions.open(
-      {
-        jobId,
-        cutId,
-        recipe,
-        status: 'queued',
-        percent: null,
-        startedAt: now,
-        finishedAt: null,
-        errorMessage: null
-      },
-      controller
-    )
+      // 2. Insert the Cut row up front — see §6 of the plan. The file isn't
+      //    on disk yet at finalPath; the renderer's klip-media://cut/<id>/file
+      //    will 404 during the brief render window, which is acceptable
+      //    because the user is in the editor window watching the progress
+      //    bar, not browsing the main window's cuts list.
+      const trim = recipe.ops[0]
+      const startTimestamp = trim.type === 'trim' ? trim.in : null
+      const endTimestamp = trim.type === 'trim' ? trim.out : null
+      const cut: Cut = {
+        id: cutId,
+        creatorId: creator.id,
+        videoId: sourceVideo.id,
+        title,
+        tags,
+        startTimestamp,
+        endTimestamp,
+        duration: null,
+        resolution: null,
+        fileSize: null,
+        filePath: finalPath,
+        thumbnailPath: null,
+        probeStatus: 'pending',
+        status: 'active',
+        deletedAt: null,
+        editRecipeJson: recipeJson,
+        createdAt: now,
+        updatedAt: now
+      }
+      this.cutRepo.upsertWithPrevious(cut, null)
+      cutCreated = true
 
-    this.emit({
-      jobId,
-      cutId,
-      sourceVideoId: sourceVideo.id,
-      status: 'queued',
-      percent: null
-    })
-
-    this.queue
-      .enqueue(() =>
-        this.performRender({
+      // 3. Open the session before enqueue so a fast cancel
+      //    (user clicks before the queue picks up the task) finds the
+      //    AbortController and routes correctly.
+      const controller = new AbortController()
+      this.sessions.open(
+        {
           jobId,
           cutId,
-          sourceVideoId: sourceVideo.id,
-          backend,
           recipe,
-          sourcePath: sourceVideo.filePath,
-          stagingPath,
-          finalPath,
-          cutDir,
-          title,
-          tags
-        })
+          status: 'queued',
+          percent: null,
+          startedAt: now,
+          finishedAt: null,
+          errorMessage: null
+        },
+        controller
       )
-      .catch((err) => {
-        // Defence-in-depth: the inner task swallows its own errors. This
-        // catches queue-level rejections (e.g. shutdown drain) so the UI
-        // doesn't stay stuck in `queued`.
-        this.failGracefully(jobId, cutId, sourceVideo.id, stagingPath, err)
+      sessionOpened = true
+
+      this.emit({
+        jobId,
+        cutId,
+        sourceVideoId: sourceVideo.id,
+        status: 'queued',
+        percent: null
       })
 
-    return { jobId, cutId }
+      this.queue
+        .enqueue(() =>
+          this.performRender({
+            jobId,
+            cutId,
+            sourceVideoId: sourceVideo.id,
+            backend,
+            recipe,
+            sourcePath: sourceVideo.filePath,
+            stagingPath,
+            finalPath,
+            cutDir,
+            title,
+            tags
+          })
+        )
+        .catch((err) => {
+          // Defence-in-depth: the inner task swallows its own errors. This
+          // catches queue-level rejections (e.g. shutdown drain) so the UI
+          // doesn't stay stuck in `queued`.
+          this.failGracefully(jobId, cutId, sourceVideo.id, stagingPath, err)
+        })
+
+      return { jobId, cutId }
+    } catch (err) {
+      // Best-effort rollback of everything created above. Order is
+      // reverse-insertion: drop session → drop Cut row → mark op failed.
+      // Each step is wrapped because cleanup paths must not mask the
+      // original error with their own throw.
+      if (sessionOpened) {
+        try {
+          this.sessions.remove(jobId)
+        } catch {
+          // ignored
+        }
+      }
+      if (cutCreated) {
+        try {
+          this.cutRepo.delete(cutId)
+        } catch {
+          // ignored
+        }
+      }
+      if (opCreated) {
+        const message = err instanceof Error ? err.message : String(err)
+        try {
+          this.operationRepo.updateStatus(jobId, 'failed', message)
+        } catch {
+          // ignored
+        }
+      }
+      throw err
+    }
   }
 
   // ── Private ──
 
-  private pickBackend(recipe: EditRecipe): IRenderBackend | null {
+  private pickBackend(
+    recipe: EditRecipe
+  ): { ok: true; backend: IRenderBackend } | { ok: false; reasons: string[] } {
+    const reasons: string[] = []
     for (const backend of this.backends) {
-      if (backend.canRender(recipe).ok) return backend
+      const result = backend.canRender(recipe)
+      if (result.ok) return { ok: true, backend }
+      reasons.push(result.reason)
     }
-    return null
+    return { ok: false, reasons }
   }
 
   private async performRender(args: {
