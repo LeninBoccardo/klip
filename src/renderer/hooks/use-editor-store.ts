@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { RenderJobStatus } from '@shared/types'
 import type { TimelineState } from '@/lib/recipe-from-timeline'
-import { timelineForSource } from '@/lib/recipe-from-timeline'
+import { getActiveClip, timelineForSource, updateActiveClip } from '@/lib/recipe-from-timeline'
 
 /**
  * Zustand store for the editor window. Per plan §9.2 the *authoritative*
@@ -108,8 +108,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setInPoint(sec) {
     set((state) => {
       const tl = state.timeline
-      if (!tl) return {}
-      const clip = tl.tracks[0].clips[0]
+      const clip = tl ? getActiveClip(tl) : null
+      if (!tl || !clip) return {}
       const clamped = clamp(sec, 0, clip.durationSec)
       const existingOut = clip.region?.outSec ?? null
 
@@ -138,15 +138,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
 
       return {
-        timeline: writeRegion(tl, { inSec: clamped, outSec })
+        timeline: updateActiveClip(tl, (c) => ({
+          ...c,
+          region: { inSec: clamped, outSec }
+        }))
       }
     })
   },
   setOutPoint(sec) {
     set((state) => {
       const tl = state.timeline
-      if (!tl) return {}
-      const clip = tl.tracks[0].clips[0]
+      const clip = tl ? getActiveClip(tl) : null
+      if (!tl || !clip) return {}
       const clamped = clamp(sec, 0, clip.durationSec)
       const existingIn = clip.region?.inSec ?? null
 
@@ -169,12 +172,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
 
       return {
-        timeline: writeRegion(tl, { inSec, outSec: clamped })
+        timeline: updateActiveClip(tl, (c) => ({
+          ...c,
+          region: { inSec, outSec: clamped }
+        }))
       }
     })
   },
   clearRegion() {
-    set((state) => (state.timeline ? { timeline: writeRegion(state.timeline, null) } : {}))
+    set((state) =>
+      state.timeline
+        ? { timeline: updateActiveClip(state.timeline, (c) => ({ ...c, region: null })) }
+        : {}
+    )
   },
 
   setRenderMode(mode) {
@@ -215,19 +225,4 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
-}
-
-function writeRegion(
-  state: TimelineState,
-  region: { inSec: number; outSec: number } | null
-): TimelineState {
-  return {
-    ...state,
-    tracks: [
-      {
-        ...state.tracks[0],
-        clips: [{ ...state.tracks[0].clips[0], region }]
-      }
-    ]
-  }
 }

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { ThumbnailStrip } from './ThumbnailStrip'
 import type { TimelineState } from '@/lib/recipe-from-timeline'
+import { getActiveClip } from '@/lib/recipe-from-timeline'
 
 interface TimelineProps {
   state: TimelineState
@@ -21,11 +22,11 @@ interface TimelineProps {
  *   2. Region — colored band between in and out, only when both set.
  *   3. Cursor — vertical line at the current playhead.
  */
-export function Timeline({ state, onSeek }: TimelineProps): React.ReactElement {
+export function Timeline({ state, onSeek }: TimelineProps): React.ReactElement | null {
   const trackRef = useRef<HTMLDivElement>(null)
-  const clip = state.tracks[0].clips[0]
-  const duration = clip.durationSec
-  const region = clip.region
+  const clip = getActiveClip(state)
+  const duration = clip?.durationSec ?? 0
+  const region = clip?.region ?? null
 
   const cursorPct = duration > 0 ? clamp01(state.cursorSec / duration) * 100 : 0
   const regionStyle = useMemo(() => {
@@ -46,6 +47,8 @@ export function Timeline({ state, onSeek }: TimelineProps): React.ReactElement {
     },
     [duration, onSeek]
   )
+
+  if (!clip) return null
 
   return (
     <div className="flex flex-col gap-1">

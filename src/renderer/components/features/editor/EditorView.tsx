@@ -6,7 +6,7 @@ import { Kbd } from '@ui/kbd'
 import { mediaUrl } from '@/lib/format'
 import { useEditorStore } from '@/hooks/use-editor-store'
 import { useShortcut } from '@/hooks/use-shortcut'
-import { isTimelineSaveable } from '@/lib/recipe-from-timeline'
+import { getActiveClip, isTimelineSaveable } from '@/lib/recipe-from-timeline'
 import { Timeline } from './Timeline'
 import { SaveCutDialog } from './SaveCutDialog'
 import { RenderProgress } from './RenderProgress'
@@ -101,6 +101,7 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
   // closing a Radix dialog on Esc is handled by the dialog itself, and
   // Esc inside the editor window otherwise has no useful target (no
   // route history to back out of).
+  const activeClip = timeline ? getActiveClip(timeline) : null
   const saveable = !!timeline && isTimelineSaveable(timeline)
   useShortcut('i', handleMarkIn)
   useShortcut('o', handleMarkOut)
@@ -138,12 +139,11 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
         </div>
 
         {/* Controls + timeline. Pinned to the bottom of the editor. */}
-        {timeline && (
+        {timeline && activeClip && (
           <div className="flex shrink-0 flex-col gap-3 border-t bg-background p-4">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-mono text-xs text-muted-foreground">
-                {formatSeconds(timeline.cursorSec)} /{' '}
-                {formatSeconds(timeline.tracks[0].clips[0].durationSec)}
+                {formatSeconds(timeline.cursorSec)} / {formatSeconds(activeClip.durationSec)}
               </span>
               <span className="ml-2 flex items-center gap-2">
                 <Tooltip>
@@ -166,16 +166,16 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
                   size="sm"
                   variant="ghost"
                   onClick={clearRegion}
-                  disabled={!timeline.tracks[0].clips[0].region}
+                  disabled={!activeClip.region}
                 >
                   {t('controls.clearRegion')}
                 </Button>
               </span>
               <span className="ml-auto flex items-center gap-2">
-                {timeline.tracks[0].clips[0].region && (
+                {activeClip.region && (
                   <span className="font-mono text-xs text-muted-foreground">
-                    {formatSeconds(timeline.tracks[0].clips[0].region.inSec)} →{' '}
-                    {formatSeconds(timeline.tracks[0].clips[0].region.outSec)}
+                    {formatSeconds(activeClip.region.inSec)} →{' '}
+                    {formatSeconds(activeClip.region.outSec)}
                   </span>
                 )}
                 <Button size="sm" onClick={handleSave} disabled={!saveable || inFlight}>

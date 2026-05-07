@@ -48,6 +48,50 @@ export function assertSingleClipInvariant(state: TimelineState): void {
   }
 }
 
+// ── Active-clip access helpers (HP-8) ──
+//
+// MVP enforces "exactly one track with one clip"; consumers used to
+// reach into `state.tracks[0].clips[0]` directly, which both broke the
+// "graph shape is real, not theatre" claim of plan §10.4 *and* meant
+// every v2 multi-clip change required edits at every call site.
+//
+// The helpers below centralise that access. v2 widens `getActiveClip`
+// to honour a `selectedClipId` field on `TimelineState`; today it
+// returns clips[0] of tracks[0]. Consumer code stays unchanged.
+
+/**
+ * The clip the user is currently working on. MVP: always
+ * `tracks[0].clips[0]`. v2: the clip whose id matches a future
+ * `state.selectedClipId`. Returns null only if the timeline is
+ * uninitialised — calling code should typically check `timeline !== null`
+ * before reaching for the clip.
+ */
+export function getActiveClip(state: TimelineState): Clip | null {
+  return state.tracks[0]?.clips[0] ?? null
+}
+
+/**
+ * Pure transform that replaces the active clip with the result of
+ * `updater(clip)`. Preserves track ordering, never mutates the input,
+ * and is the single write path the store mutators use to keep the
+ * graph shape consistent. v2 lifts the invariant by iterating the
+ * full graph here.
+ */
+export function updateActiveClip(
+  state: TimelineState,
+  updater: (clip: Clip) => Clip
+): TimelineState {
+  const track = state.tracks[0]
+  if (!track || track.clips.length === 0) return state
+  const clip = track.clips[0]
+  const nextClip = updater(clip)
+  if (nextClip === clip) return state
+  return {
+    ...state,
+    tracks: [{ ...track, clips: [nextClip] }, ...state.tracks.slice(1)]
+  }
+}
+
 /**
  * Build a fresh timeline for a single source video. Region starts unset;
  * the user marks in/out before saving. `durationSec` comes from the
@@ -94,7 +138,10 @@ export function recipeFromTimeline(
   output: { container: 'mp4' | 'webm' | 'mkv'; mode: 'copy' | 'reencode' }
 ): EditRecipe {
   assertSingleClipInvariant(state)
-  const clip = state.tracks[0].clips[0]
+  const clip = getActiveClip(state)
+  if (!clip) {
+    throw new Error('No active clip — initialise the timeline before building a recipe')
+  }
   const region = clip.region
 
   if (!region) {
@@ -163,7 +210,8 @@ export function timelineFromRecipe(
 /** Predicate version of the projection — used by the save button to know if it's clickable. */
 export function isTimelineSaveable(state: TimelineState): boolean {
   if (state.tracks.length !== 1 || state.tracks[0].clips.length !== 1) return false
-  const clip = state.tracks[0].clips[0]
+  const clip = getActiveClip(state)
+  if (!clip) return false
   const region = clip.region
   if (!region) return false
   if (region.outSec <= region.inSec) return false

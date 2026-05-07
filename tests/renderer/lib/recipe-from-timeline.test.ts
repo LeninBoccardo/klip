@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
   assertSingleClipInvariant,
+  getActiveClip,
   isTimelineSaveable,
   recipeFromTimeline,
   timelineForSource,
   timelineFromRecipe,
+  updateActiveClip,
   type TimelineState
 } from '@/lib/recipe-from-timeline'
 import type { EditRecipe } from '@shared/types'
@@ -201,5 +203,48 @@ describe('round-trip', () => {
       mode: 'reencode'
     })
     expect(restored).toEqual(original)
+  })
+})
+
+describe('getActiveClip / updateActiveClip (HP-8)', () => {
+  it('getActiveClip returns the only clip on the only track in MVP shape', () => {
+    const state = timeline()
+    const clip = getActiveClip(state)
+    expect(clip).not.toBeNull()
+    expect(clip?.id).toBe('clip-0')
+    expect(clip?.sourceVideoId).toBe('src-1')
+  })
+
+  it('getActiveClip returns null on a state with no tracks (defensive)', () => {
+    const state = { ...timeline(), tracks: [] }
+    expect(getActiveClip(state)).toBeNull()
+  })
+
+  it('updateActiveClip replaces the active clip via the updater', () => {
+    const state = timeline()
+    const next = updateActiveClip(state, (c) => ({
+      ...c,
+      region: { inSec: 1, outSec: 5 }
+    }))
+    expect(next.tracks[0].clips[0].region).toEqual({ inSec: 1, outSec: 5 })
+    // Returns a fresh object (immutability check).
+    expect(next).not.toBe(state)
+    expect(next.tracks[0]).not.toBe(state.tracks[0])
+    // Other state slots are untouched.
+    expect(next.zoomPxPerSec).toBe(state.zoomPxPerSec)
+    expect(next.cursorSec).toBe(state.cursorSec)
+  })
+
+  it('updateActiveClip returns the same reference when the updater is a no-op', () => {
+    const state = timeline()
+    const next = updateActiveClip(state, (c) => c)
+    // Identity-preserving optimisation — avoids unnecessary React re-renders.
+    expect(next).toBe(state)
+  })
+
+  it('updateActiveClip is a no-op when the timeline has no clips', () => {
+    const state = { ...timeline(), tracks: [{ id: 'track-0', clips: [] }] }
+    const next = updateActiveClip(state, (c) => ({ ...c, durationSec: 999 }))
+    expect(next).toBe(state)
   })
 })
