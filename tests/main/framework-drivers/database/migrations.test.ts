@@ -82,9 +82,9 @@ describe('Migrations — fresh apply', () => {
   it('creates the videos_fts virtual table with the unicode61 tokenizer', () => {
     const { raw } = initializeDatabase(dbPath)
 
-    const ddl = raw
-      .prepare("SELECT sql FROM sqlite_master WHERE name = 'videos_fts'")
-      .get() as { sql: string } | undefined
+    const ddl = raw.prepare("SELECT sql FROM sqlite_master WHERE name = 'videos_fts'").get() as
+      | { sql: string }
+      | undefined
 
     expect(ddl?.sql).toMatch(/USING fts5/i)
     expect(ddl?.sql).toMatch(/unicode61 remove_diacritics 2/i)
@@ -136,9 +136,7 @@ describe('Migrations — 0009 backfill semantics', () => {
     // create triggers, and back-fill the existing 3 rows.
     applyMigrationFile(raw, '0009_swift_silent_search.sql')
 
-    const ftsCount = raw
-      .prepare('SELECT count(*) as c FROM videos_fts')
-      .get() as { c: number }
+    const ftsCount = raw.prepare('SELECT count(*) as c FROM videos_fts').get() as { c: number }
     expect(ftsCount.c).toBe(3)
 
     // Spot-check that the title is searchable.
@@ -167,9 +165,7 @@ describe('Migrations — 0009 backfill semantics', () => {
       )
       .run('v-1', 'c-1', 'Hello World', '/tmp/v1.mkv', 'lorem ipsum dolor')
 
-    let count = (
-      raw.prepare('SELECT count(*) as c FROM videos_fts').get() as { c: number }
-    ).c
+    let count = (raw.prepare('SELECT count(*) as c FROM videos_fts').get() as { c: number }).c
     expect(count).toBe(1)
 
     let hits = raw
@@ -222,9 +218,9 @@ describe('Migrations — idempotency', () => {
 
     // Triggers should also be unchanged.
     const triggers = (
-      second.raw
-        .prepare("SELECT count(*) as c FROM sqlite_master WHERE type='trigger'")
-        .get() as { c: number }
+      second.raw.prepare("SELECT count(*) as c FROM sqlite_master WHERE type='trigger'").get() as {
+        c: number
+      }
     ).c
     expect(triggers).toBe(3)
 

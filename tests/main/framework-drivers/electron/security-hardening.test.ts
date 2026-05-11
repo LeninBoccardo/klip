@@ -45,9 +45,7 @@ interface FakeContents {
   navListener?: (event: { preventDefault: () => void }, url: string) => void
   windowOpenHandler?: (args: { url: string }) => { action: 'deny' | 'allow' }
   on(event: string, listener: (event: { preventDefault: () => void }, url: string) => void): void
-  setWindowOpenHandler(
-    handler: (args: { url: string }) => { action: 'deny' | 'allow' }
-  ): void
+  setWindowOpenHandler(handler: (args: { url: string }) => { action: 'deny' | 'allow' }): void
 }
 
 function makeContents(): FakeContents {
@@ -113,20 +111,12 @@ describe('applySecurityHardening', () => {
     applySecurityHardening()
 
     expect(electronMock.appListeners.has('web-contents-created')).toBe(true)
-    expect(
-      electronMock.session.defaultSession.setPermissionRequestHandler
-    ).toHaveBeenCalledTimes(1)
-    expect(
-      electronMock.session.defaultSession.setPermissionCheckHandler
-    ).toHaveBeenCalledTimes(1)
+    expect(electronMock.session.defaultSession.setPermissionRequestHandler).toHaveBeenCalledTimes(1)
+    expect(electronMock.session.defaultSession.setPermissionCheckHandler).toHaveBeenCalledTimes(1)
 
     // Permission request handler always denies.
     const requestHandler = electronMock.session.defaultSession.setPermissionRequestHandler.mock
-      .calls[0][0] as (
-      wc: WebContents,
-      perm: string,
-      cb: (granted: boolean) => void
-    ) => void
+      .calls[0][0] as (wc: WebContents, perm: string, cb: (granted: boolean) => void) => void
     const cb = vi.fn()
     requestHandler({} as WebContents, 'media', cb)
     expect(cb).toHaveBeenCalledWith(false)
@@ -146,9 +136,7 @@ describe('applySecurityHardening', () => {
     contents.navListener!(ev, 'https://youtube.com/watch?v=abc')
 
     expect(ev.preventDefault).toHaveBeenCalled()
-    expect(electronMock.shell.openExternal).toHaveBeenCalledWith(
-      'https://youtube.com/watch?v=abc'
-    )
+    expect(electronMock.shell.openExternal).toHaveBeenCalledWith('https://youtube.com/watch?v=abc')
   })
 
   it('blocks will-navigate to non-allowlisted external hosts without opening a browser', () => {

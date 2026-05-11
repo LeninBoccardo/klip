@@ -3,6 +3,7 @@
 **Companion document to** [editor-review-findings.md](editor-review-findings.md).
 
 This file tracks findings that are either:
+
 - Backed only by agent reports (not personally verified by me), AND
 - Not load-bearing for correctness or daily UX.
 

@@ -35,6 +35,7 @@ export function RenameTagDialog({
 
   // Reset the input each time the dialog opens for a new tag.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open && tag) setNext(tag.tag)
   }, [open, tag])
 

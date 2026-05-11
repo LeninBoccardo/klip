@@ -20,8 +20,7 @@ export function initLogger(app: App): typeof log {
   // `app.getPath('logs')` once `initialize()` has been called. Setting the
   // path explicitly removes ambiguity between dev / packaged runs.
   log.initialize()
-  log.transports.file.resolvePathFn = (): string =>
-    join(app.getPath('logs'), 'klip.log')
+  log.transports.file.resolvePathFn = (): string => join(app.getPath('logs'), 'klip.log')
   log.transports.file.maxSize = 5 * 1024 * 1024
   log.transports.file.level = 'info'
   log.transports.console.level = 'info'

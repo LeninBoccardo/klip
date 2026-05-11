@@ -103,27 +103,22 @@ describe('initLogger', () => {
     const origOn = process.on
     // Capture process.on calls registered by initLogger so we can fire them
     // without crashing the test runner with a real uncaughtException.
-    vi.spyOn(process, 'on').mockImplementation(
-      ((event: string, listener: (...args: unknown[]) => void) => {
-        const list = procListeners.get(event) ?? []
-        list.push(listener)
-        procListeners.set(event, list)
-        return process
-      }) as typeof process.on
-    )
+    vi.spyOn(process, 'on').mockImplementation(((
+      event: string,
+      listener: (...args: unknown[]) => void
+    ) => {
+      const list = procListeners.get(event) ?? []
+      list.push(listener)
+      procListeners.set(event, list)
+      return process
+    }) as typeof process.on)
 
     initLogger(app as unknown as App)
     procListeners.get('uncaughtException')?.forEach((l) => l(new Error('boom')))
     procListeners.get('unhandledRejection')?.forEach((l) => l(new Error('promise-boom')))
 
-    expect(mockLog.error).toHaveBeenCalledWith(
-      '[klip] uncaughtException',
-      expect.any(Error)
-    )
-    expect(mockLog.error).toHaveBeenCalledWith(
-      '[klip] unhandledRejection',
-      expect.any(Error)
-    )
+    expect(mockLog.error).toHaveBeenCalledWith('[klip] uncaughtException', expect.any(Error))
+    expect(mockLog.error).toHaveBeenCalledWith('[klip] unhandledRejection', expect.any(Error))
     process.on = origOn
   })
 })

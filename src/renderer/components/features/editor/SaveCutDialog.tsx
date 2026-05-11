@@ -51,10 +51,12 @@ export function SaveCutDialog({
   // should not pre-populate with the previous title/tags.
   useEffect(() => {
     if (open) {
+      /* eslint-disable react-hooks/set-state-in-effect */
       setTitle('')
       setTags([])
       setSubmitError(null)
       setSubmitting(false)
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [open])
 

@@ -47,6 +47,17 @@ export default defineConfig(
       '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
+  // TanStack Router file routes export `Route = createFileRoute(...)(...)`
+  // alongside the route component. The plugin doesn't recognise the router's
+  // function-call factory as a constant, so allowExportNames/allowConstantExport
+  // don't help — disabling the rule for the routes directory is the cleanest
+  // fit for this codebase's one-file-per-route pattern.
+  {
+    files: ['src/renderer/src/routes/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off'
+    }
+  },
   // Test files: prioritise readability over return-type annotations. Tests
   // are read top-to-bottom and the assertion vocabulary makes return shapes
   // obvious; explicit annotations would just be noise.
@@ -54,6 +65,15 @@ export default defineConfig(
     files: ['tests/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off'
+    }
+  },
+  // Playwright fixture callbacks receive a `use` argument that the
+  // react-hooks rule misreads as React's `use()` hook. The fixture files
+  // are not React code, so the rule does not apply.
+  {
+    files: ['tests/e2e/fixtures/**/*.{ts,tsx}'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off'
     }
   },
   eslintConfigPrettier

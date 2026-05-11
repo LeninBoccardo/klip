@@ -131,9 +131,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       // Boundary case: in-mark at the very end of the clip with no room
       // for an out-mark. Refuse rather than emit an unsaveable region.
       if (clamped >= outSec) {
-        console.warn(
-          '[klip:editor] setInPoint refused — no room for an out-point past the mark'
-        )
+        console.warn('[klip:editor] setInPoint refused — no room for an out-point past the mark')
         return {}
       }
 
@@ -165,9 +163,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const inSec = existingIn ?? 0
 
       if (clamped <= inSec) {
-        console.warn(
-          '[klip:editor] setOutPoint refused — no room for an in-point before the mark'
-        )
+        console.warn('[klip:editor] setOutPoint refused — no room for an in-point before the mark')
         return {}
       }
 

@@ -129,11 +129,7 @@ export class DownloadVideo implements IDownloadVideo {
       //     (status='missing' / 'deleted', or file gone from disk) fall
       //     through to a normal download so the row is repaired in place.
       const existing = this.videoRepo.findByYoutubeVideoId(videoId)
-      if (
-        existing &&
-        existing.status === 'active' &&
-        this.fsReader.fileExists(existing.filePath)
-      ) {
+      if (existing && existing.status === 'active' && this.fsReader.fileExists(existing.filePath)) {
         this.notifier.notify('download-progress', {
           downloadId,
           url,

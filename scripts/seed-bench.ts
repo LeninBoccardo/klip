@@ -20,8 +20,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 
-const DB_PATH =
-  process.env.KLIP_DB ?? join(homedir(), 'AppData', 'Roaming', 'klip', 'klip.db')
+const DB_PATH = process.env.KLIP_DB ?? join(homedir(), 'AppData', 'Roaming', 'klip', 'klip.db')
 const CREATORS = Number(process.env.CREATORS ?? 5000)
 const VIDEOS_PER_CREATOR = Number(process.env.VIDEOS_PER_CREATOR ?? 1)
 const CUTS = Number(process.env.CUTS ?? 1000)
@@ -64,7 +63,6 @@ const tx = raw.transaction(() => {
       // Spread download_date over the last 30 days so the dashboard chart
       // gets meaningful data.
       const dayOffset = (c + v) % 30
-      const ts = `datetime('now', '-${dayOffset} days')`
       insertVideo.run(
         id,
         folder,

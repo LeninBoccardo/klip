@@ -3,6 +3,7 @@
 **Scope:** the 12 commits `8d98e0b → d91b289` that shipped the in-app video editor (phases 1–11).
 **Method:** four parallel deep-review agents (backend, renderer, architecture, security) cross-checked, then load-bearing claims personally verified by reading the source.
 **Confidence rubric:**
+
 - 95–100% — verified in the source by hand
 - 80–94% — multiple agents converged + claim is specific enough that misreading is unlikely
 - 60–79% — single agent claim with specific evidence, not yet personally verified
@@ -146,7 +147,7 @@ The whole multi-window architectural promise (plan §9.4: "closing the editor mi
 **Files:** [src/renderer/components/features/editor/Timeline.tsx:26](../src/renderer/components/features/editor/Timeline.tsx#L26), [src/renderer/components/features/editor/EditorView.tsx:146-179](../src/renderer/components/features/editor/EditorView.tsx#L146-L179), [src/renderer/hooks/use-editor-store.ts:110,124,184-189](../src/renderer/hooks/use-editor-store.ts#L110-L189), [src/renderer/lib/recipe-from-timeline.ts:97,134-138,165-166](../src/renderer/lib/recipe-from-timeline.ts#L97-L166)
 **Confidence:** 100%
 
-Every consumer hard-codes `state.tracks[0].clips[0]`. The runtime invariant `assertSingleClipInvariant` *enforces* `length === 1`, contradicting the rationale that "components iterate the arrays" ([recipe-from-timeline.ts:5-7](../src/renderer/lib/recipe-from-timeline.ts#L5-L7)).
+Every consumer hard-codes `state.tracks[0].clips[0]`. The runtime invariant `assertSingleClipInvariant` _enforces_ `length === 1`, contradicting the rationale that "components iterate the arrays" ([recipe-from-timeline.ts:5-7](../src/renderer/lib/recipe-from-timeline.ts#L5-L7)).
 
 Forward-compat principle ("MVP without closing doors") is violated: v2 multi-clip will require rewriting every store mutator + Timeline + EditorView, not just lifting an invariant.
 
@@ -162,6 +163,7 @@ Forward-compat principle ("MVP without closing doors") is violated: v2 multi-cli
 **Confidence:** 100% on the reconcile path; 75% that no other code path reads it (CutDto unverified)
 
 Editor writes `editRecipeJson` on Cut row insert (line 154) and writes `editRecipe` to `cut-data.json` (line 300). Reconcile types the sidecar field as `editRecipe?: unknown` (line 24) but **never parses it** — line 458 hardcodes `editRecipeJson: null` on disk-discovered cuts. So:
+
 - A sideloaded cut whose folder contains a recipe never gets it into the DB.
 - An editor-produced cut whose row was deleted (e.g. by recovery) and is later re-discovered by reconcile loses the recipe.
 - The "v2 re-edit this cut" feature has no read path because `CutDto` doesn't expose `editRecipe` either (75% — agent claim, unverified).
@@ -212,6 +214,7 @@ These are plausible issues backed by specific agent evidence I have NOT personal
 Agent reported that `discoverCuts` walks `cutsDir`, finds the empty `cutId` directory, runs `upsertCutFromDisk`, and at line 453 falls back to `filePath: mediaFile ? join(cutDir, mediaFile) : cutDir` — inserting a phantom row whose filePath is the directory itself.
 
 **To verify:** read `ReconcileDirectory.ts` lines 405-460. Confirm:
+
 1. `discoverCuts` enters empty directories.
 2. The fallback at line 453 produces a row with no media file.
 3. The guard at line 411 (`if (existing) ... continue`) does not save us in the orphan-after-cleanup case (because the row was already deleted).
@@ -307,6 +310,7 @@ Agent claim. Practical impact: stuck "Cancelling…" spinner when the job comple
 **Confidence:** 100%
 
 Personally verified:
+
 - Line 87: `throw new Error('Source video file is missing on disk: ${sourceVideo.filePath}')` — full path.
 - Lines 321-330: `errorMessage: message` (raw `err.message`) sent across IPC; only the `console.error` at line 332 runs `redactError`.
 
@@ -369,4 +373,4 @@ Agent claim that `CutDto` does not expose `editRecipe` and `toCutDto` strips `ed
 
 ## Next step
 
-Once the MI-* items are investigated and graduated to either "confirmed bug" or "ruled out," produce a fix plan covering all confirmed items, sequenced by blast-radius.
+Once the MI-\* items are investigated and graduated to either "confirmed bug" or "ruled out," produce a fix plan covering all confirmed items, sequenced by blast-radius.

@@ -247,6 +247,7 @@ function ResponsiveSidebarProvider({
       // Stash the user's current preference before the auto-collapse so
       // we can restore it when the viewport widens again.
       userPreferenceRef.current = open
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false)
     } else {
       setOpen(userPreferenceRef.current)

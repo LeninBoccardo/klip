@@ -52,6 +52,7 @@ function DownloadsPage(): React.ReactElement {
     if (!pendingDropUrl) return
     const url = pendingDropUrl
     setPendingDropUrl(null)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     handleFetchInfo(url)
     // handleFetchInfo is recreated on every render but only depends on stable
     // references; we intentionally run this effect once per pending URL.

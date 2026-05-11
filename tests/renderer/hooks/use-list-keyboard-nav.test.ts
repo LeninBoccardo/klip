@@ -112,9 +112,7 @@ describe('useListKeyboardNav', () => {
 
   it('disabled prevents all shortcuts from firing', () => {
     const onOpen = vi.fn()
-    const { result } = renderHook(() =>
-      useListKeyboardNav({ count: 3, onOpen, enabled: false })
-    )
+    const { result } = renderHook(() => useListKeyboardNav({ count: 3, onOpen, enabled: false }))
     act(() => dispatchKey('j'))
     expect(result.current.focusedIndex).toBe(-1)
     act(() => dispatchKey('Enter'))

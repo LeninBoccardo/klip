@@ -6,12 +6,7 @@ import { CreatorCard } from '@components/features/creators/CreatorCard'
 import { CreatorContextMenu } from '@components/features/creators/CreatorContextMenu'
 import { CreatorFilters } from '@components/features/creators/CreatorFilters'
 import { RegisterCreatorDialog } from '@components/features/creators/RegisterCreatorDialog'
-import {
-  PageContainer,
-  PageHeader,
-  ResponsiveGrid,
-  PaginationControls
-} from '@/components/shared'
+import { PageContainer, PageHeader, ResponsiveGrid, PaginationControls } from '@/components/shared'
 import { useListKeyboardNav } from '@/hooks/use-list-keyboard-nav'
 import { Button } from '@ui/button'
 import {

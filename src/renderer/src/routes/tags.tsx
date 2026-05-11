@@ -184,36 +184,33 @@ function TagsPage(): React.ReactElement {
                   onRename={() => setRenameTarget(tag)}
                   onDelete={() => setDeleteTarget(tag)}
                 >
-                  <TableRow
-                    {...getItemProps(i)}
-                    className="data-[focused=true]:bg-accent/50"
-                  >
+                  <TableRow {...getItemProps(i)} className="data-[focused=true]:bg-accent/50">
                     <TableCell className="font-mono text-sm">{tag.tag}</TableCell>
-                  <TableCell className="text-right tabular-nums">{tag.videoCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">{tag.cutCount}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">
-                    {tag.videoCount + tag.cutCount}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setRenameTarget(tag)}
-                        aria-label={t('manage.actions.rename')}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setDeleteTarget(tag)}
-                        aria-label={t('manage.actions.delete')}
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                    <TableCell className="text-right tabular-nums">{tag.videoCount}</TableCell>
+                    <TableCell className="text-right tabular-nums">{tag.cutCount}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {tag.videoCount + tag.cutCount}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setRenameTarget(tag)}
+                          aria-label={t('manage.actions.rename')}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setDeleteTarget(tag)}
+                          aria-label={t('manage.actions.delete')}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 </TagContextMenu>
               ))}

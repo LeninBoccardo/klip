@@ -47,6 +47,7 @@ export function useListKeyboardNav({
   // Clamp focus when the list shrinks (e.g. after delete or filter change).
   useEffect(() => {
     if (focusedIndex >= count) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFocusedIndex(count > 0 ? count - 1 : -1)
     }
   }, [count, focusedIndex])

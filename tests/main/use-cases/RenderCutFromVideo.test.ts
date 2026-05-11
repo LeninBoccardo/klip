@@ -22,7 +22,9 @@ import type { EditRecipe, RenderCutRequest } from '@shared/types'
 
 // ── Minimal mock builders for the orchestrator ──
 
-function mockBackend(canRenderResult?: { ok: true } | { ok: false; reason: string }): IRenderBackend {
+function mockBackend(
+  canRenderResult?: { ok: true } | { ok: false; reason: string }
+): IRenderBackend {
   return {
     canRender: vi.fn().mockReturnValue(canRenderResult ?? { ok: true }),
     render: vi.fn().mockResolvedValue({ durationMs: 0 })

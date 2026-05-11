@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  classifyYoutubeError,
-  shouldMarkMissing
-} from '@main/domain/types/youtube-error'
+import { classifyYoutubeError, shouldMarkMissing } from '@main/domain/types/youtube-error'
 
 describe('classifyYoutubeError', () => {
   it('classifies HTTP 404 as unavailable', () => {
@@ -41,9 +38,7 @@ describe('classifyYoutubeError', () => {
 
   it('classifies HTTP 5xx as transient', () => {
     expect(classifyYoutubeError(new Error('HTTP Error 502: Bad Gateway'))).toBe('transient')
-    expect(classifyYoutubeError(new Error('HTTP Error 503: Service Unavailable'))).toBe(
-      'transient'
-    )
+    expect(classifyYoutubeError(new Error('HTTP Error 503: Service Unavailable'))).toBe('transient')
   })
 
   it('classifies HTTP 429 (rate limit) as transient', () => {

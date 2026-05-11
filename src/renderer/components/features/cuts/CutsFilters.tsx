@@ -23,6 +23,7 @@ const SORT_VALUES = ['recent', 'oldest', 'longest', 'shortest'] as const
 
 export type CutsSortKey = (typeof SORT_VALUES)[number]
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function sortKeyToParams(key: CutsSortKey): {
   sortBy: 'createdAt' | 'duration'
   sortDirection: SortDirection
