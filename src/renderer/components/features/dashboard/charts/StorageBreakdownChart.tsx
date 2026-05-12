@@ -9,18 +9,23 @@ interface StorageBreakdownChartProps {
 
 export function StorageBreakdownChart({ storage }: StorageBreakdownChartProps): React.ReactElement {
   const { t } = useTranslation('dashboard')
+  // Direct `var(--name)` references — see DownloadsTimelineChart for the
+  // hsl/oklch incompatibility note. Using `--chart-1` and `--chart-2`
+  // gives two visually-distinct palette colors instead of the old
+  // primary + accent-foreground combo where the latter collapsed to a
+  // near-black slice in dark mode.
   const data = [
     {
       key: 'videos',
       label: t('storage.videos'),
       value: storage.videosBytes,
-      color: 'hsl(var(--primary))'
+      color: 'var(--chart-1)'
     },
     {
       key: 'cuts',
       label: t('storage.cuts'),
       value: storage.cutsBytes,
-      color: 'hsl(var(--accent-foreground))'
+      color: 'var(--chart-2)'
     }
   ].filter((d) => d.value > 0)
 
@@ -42,6 +47,7 @@ export function StorageBreakdownChart({ storage }: StorageBreakdownChartProps): 
           innerRadius={50}
           outerRadius={80}
           paddingAngle={2}
+          stroke="var(--card)"
         >
           {data.map((d) => (
             <Cell key={d.key} fill={d.color} />
@@ -50,11 +56,13 @@ export function StorageBreakdownChart({ storage }: StorageBreakdownChartProps): 
         <Tooltip
           formatter={(value) => formatFileSize(Number(value ?? 0))}
           contentStyle={{
-            background: 'hsl(var(--popover))',
-            border: '1px solid hsl(var(--border))',
+            background: 'var(--popover)',
+            border: '1px solid var(--border)',
             borderRadius: '0.5rem',
-            fontSize: '0.8rem'
+            fontSize: '0.8rem',
+            color: 'var(--popover-foreground)'
           }}
+          labelStyle={{ color: 'var(--popover-foreground)' }}
         />
       </PieChart>
     </ResponsiveContainer>

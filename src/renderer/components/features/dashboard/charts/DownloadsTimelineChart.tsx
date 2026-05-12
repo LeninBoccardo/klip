@@ -29,38 +29,46 @@ export function DownloadsTimelineChart({ data }: DownloadsTimelineChartProps): R
   // the tooltip for precision.
   const formatTick = (iso: string): string => iso.slice(5)
 
+  // CSS tokens are stored as fully-resolved `oklch(...)` values (Tailwind
+  // v4 convention), so they must be referenced as `var(--name)` directly
+  // — wrapping in `hsl(var(--name))` produces invalid CSS that browsers
+  // silently drop, leaving chart elements rendered with default
+  // transparent/black colors. (Was the bug across all three dashboard
+  // charts before this fix.)
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey="date"
           tickFormatter={formatTick}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={11}
           interval="preserveStartEnd"
         />
         <YAxis
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={11}
           allowDecimals={false}
           width={32}
         />
         <Tooltip
           contentStyle={{
-            background: 'hsl(var(--popover))',
-            border: '1px solid hsl(var(--border))',
+            background: 'var(--popover)',
+            border: '1px solid var(--border)',
             borderRadius: '0.5rem',
-            fontSize: '0.8rem'
+            fontSize: '0.8rem',
+            color: 'var(--popover-foreground)'
           }}
+          labelStyle={{ color: 'var(--popover-foreground)' }}
         />
         <Line
           type="monotone"
           dataKey="count"
-          stroke="hsl(var(--primary))"
+          stroke="var(--chart-1)"
           strokeWidth={2}
           dot={false}
-          activeDot={{ r: 4 }}
+          activeDot={{ r: 4, fill: 'var(--chart-1)' }}
         />
       </LineChart>
     </ResponsiveContainer>

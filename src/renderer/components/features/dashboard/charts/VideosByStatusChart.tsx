@@ -7,10 +7,15 @@ interface VideosByStatusChartProps {
 }
 
 const STATUSES: Array<keyof LibraryStats['videos']['byStatus']> = ['active', 'missing', 'deleted']
+// Direct `var(--name)` references — see DownloadsTimelineChart for why
+// `hsl(var(--name))` doesn't work with this codebase's oklch tokens.
+// `--chart-2` (warm orange) for "missing" matches the design system's
+// chart palette instead of the never-defined `--warning` token the old
+// fallback referenced.
 const COLORS: Record<keyof LibraryStats['videos']['byStatus'], string> = {
-  active: 'hsl(var(--primary))',
-  missing: 'hsl(var(--warning, 35 90% 50%))',
-  deleted: 'hsl(var(--destructive))'
+  active: 'var(--chart-1)',
+  missing: 'var(--chart-2)',
+  deleted: 'var(--destructive)'
 }
 
 export function VideosByStatusChart({ byStatus }: VideosByStatusChartProps): React.ReactElement {
@@ -32,20 +37,23 @@ export function VideosByStatusChart({ byStatus }: VideosByStatusChartProps): Rea
   return (
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
-        <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+        <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={11} />
         <YAxis
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={11}
           allowDecimals={false}
           width={32}
         />
         <Tooltip
+          cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
           contentStyle={{
-            background: 'hsl(var(--popover))',
-            border: '1px solid hsl(var(--border))',
+            background: 'var(--popover)',
+            border: '1px solid var(--border)',
             borderRadius: '0.5rem',
-            fontSize: '0.8rem'
+            fontSize: '0.8rem',
+            color: 'var(--popover-foreground)'
           }}
+          labelStyle={{ color: 'var(--popover-foreground)' }}
         />
         <Bar dataKey="count" radius={[4, 4, 0, 0]}>
           {data.map((d) => (
