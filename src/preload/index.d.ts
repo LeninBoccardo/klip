@@ -33,6 +33,7 @@ import type {
   ReorderCollectionRequest,
   RegisterCreatorRequest,
   RegisterCreatorResult,
+  RefreshCreatorAvatarResult,
   MoveVideosToCreatorRequest,
   MoveVideosToCreatorResult,
   SearchTranscriptsParams,
@@ -71,6 +72,7 @@ interface KlipAPI {
   deleteCreator(id: string): Promise<void>
   restoreCreator(id: string): Promise<void>
   registerCreator(request: RegisterCreatorRequest): Promise<RegisterCreatorResult>
+  refreshCreatorAvatar(creatorId: string): Promise<RefreshCreatorAvatarResult>
 
   // ── Videos ──
   getVideosPaginated(params: VideoQueryParams): Promise<PaginatedResult<VideoDto>>

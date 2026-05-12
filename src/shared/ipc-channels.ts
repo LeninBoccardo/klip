@@ -19,6 +19,7 @@ export const IpcChannels = {
   DeleteCreator: 'delete-creator',
   RestoreCreator: 'restore-creator',
   RegisterCreator: 'register-creator',
+  RefreshCreatorAvatar: 'refresh-creator-avatar',
 
   // ── Videos ──
   GetVideosPaginated: 'get-videos-paginated',

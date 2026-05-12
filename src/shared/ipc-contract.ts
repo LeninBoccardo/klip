@@ -32,6 +32,7 @@ import type {
   ReorderCollectionRequest,
   RegisterCreatorRequest,
   RegisterCreatorResult,
+  RefreshCreatorAvatarResult,
   MoveVideosToCreatorRequest,
   MoveVideosToCreatorResult,
   SearchTranscriptsParams,
@@ -79,6 +80,10 @@ export interface IpcContract {
   'delete-creator': { params: [id: string]; result: void }
   'restore-creator': { params: [id: string]; result: void }
   'register-creator': { params: [request: RegisterCreatorRequest]; result: RegisterCreatorResult }
+  'refresh-creator-avatar': {
+    params: [creatorId: string]
+    result: RefreshCreatorAvatarResult
+  }
 
   // ── Videos ──
   'get-videos-paginated': {

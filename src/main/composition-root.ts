@@ -37,6 +37,7 @@ import type { IRecoverOperations } from '@use-cases/IRecoverOperations'
 import type { IEnrichMediaMetadata } from '@use-cases/IEnrichMediaMetadata'
 import type { IFetchChannelInfo } from '@use-cases/IFetchChannelInfo'
 import type { IRegisterCreator } from '@use-cases/IRegisterCreator'
+import type { IRefreshCreatorAvatar } from '@use-cases/IRefreshCreatorAvatar'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
@@ -102,6 +103,7 @@ import { RecoverOperations } from '@use-cases/RecoverOperations'
 import { EnrichMediaMetadata } from '@use-cases/EnrichMediaMetadata'
 import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
 import { RegisterCreator } from '@use-cases/RegisterCreator'
+import { RefreshCreatorAvatar } from '@use-cases/RefreshCreatorAvatar'
 import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
 import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
 import { MarkVideoMissing } from '@use-cases/MarkVideoMissing'
@@ -184,6 +186,7 @@ export interface AppContainer {
     enrichMedia: IEnrichMediaMetadata
     fetchChannelInfo: IFetchChannelInfo
     registerCreator: IRegisterCreator
+    refreshCreatorAvatar: IRefreshCreatorAvatar
     migrateRootFolder: IMigrateRootFolder
     fetchVideoDetail: IFetchVideoDetail
     enrichAllVideos: IEnrichAllVideos
@@ -340,6 +343,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
     rootPathRef,
     transactionScope
   )
+  const refreshCreatorAvatar = new RefreshCreatorAvatar(videoDownloader, creatorRepo, notifier)
 
   const downloadVideo = new DownloadVideo(
     videoDownloader,
@@ -541,6 +545,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
       enrichMedia,
       fetchChannelInfo,
       registerCreator,
+      refreshCreatorAvatar,
       migrateRootFolder,
       fetchVideoDetail,
       enrichAllVideos,

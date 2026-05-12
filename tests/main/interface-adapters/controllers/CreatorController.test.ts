@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ICreatorRepository } from '@domain/repositories'
 import type { IRegisterCreator } from '@use-cases/IRegisterCreator'
+import type { IRefreshCreatorAvatar } from '@use-cases/IRefreshCreatorAvatar'
 
 const electron = vi.hoisted(() => {
   const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
@@ -37,6 +38,10 @@ function makeRegisterCreator(): IRegisterCreator {
   return { execute: vi.fn().mockResolvedValue({ creatorId: 'new-id' }) }
 }
 
+function makeRefreshCreatorAvatar(refreshed = false): IRefreshCreatorAvatar {
+  return { execute: vi.fn().mockResolvedValue({ refreshed }) }
+}
+
 async function invoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T> {
   const handler = electron.handlers.get(channel)
   if (!handler) throw new Error(`No handler for "${channel}"`)
@@ -49,23 +54,32 @@ describe('CreatorController', () => {
     electron.ipcMain.handle.mockClear()
   })
 
-  it('registers all five creator channels', () => {
-    registerCreatorController(makeRepo(), makeRegisterCreator())
+  it('registers all six creator channels', () => {
+    registerCreatorController(makeRepo(), makeRegisterCreator(), makeRefreshCreatorAvatar())
     expect([...electron.handlers.keys()].sort()).toEqual(
       [
         'delete-creator',
         'get-creator-by-id',
         'get-creators-paginated',
+        'refresh-creator-avatar',
         'register-creator',
         'restore-creator'
       ].sort()
     )
   })
 
+  it('"refresh-creator-avatar" forwards id to RefreshCreatorAvatar.execute', async () => {
+    const refresh = makeRefreshCreatorAvatar(true)
+    registerCreatorController(makeRepo(), makeRegisterCreator(), refresh)
+    const result = await invoke('refresh-creator-avatar', 'creator-1')
+    expect(refresh.execute).toHaveBeenCalledWith('creator-1')
+    expect(result).toEqual({ refreshed: true })
+  })
+
   it('"register-creator" forwards request to RegisterCreator.execute', async () => {
     const repo = makeRepo()
     const useCase = makeRegisterCreator()
-    registerCreatorController(repo, useCase)
+    registerCreatorController(repo, useCase, makeRefreshCreatorAvatar())
     const request = {
       channelInfo: {
         channelId: 'UC_x',

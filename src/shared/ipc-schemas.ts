@@ -98,6 +98,7 @@ export const ipcSchemas = {
   'delete-creator': z.tuple([z.string()]),
   'restore-creator': z.tuple([z.string()]),
   'register-creator': z.tuple([registerCreatorRequestSchema]),
+  'refresh-creator-avatar': z.tuple([z.string()]),
 
   // ── Videos ──
   'get-videos-paginated': z.tuple([videoQueryParamsSchema]),

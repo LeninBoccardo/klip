@@ -125,7 +125,11 @@ app.whenReady().then(() => {
     container.useCases.probeMediaFile,
     container.useCases.fetchChannelInfo
   )
-  registerCreatorController(container.repositories.creator, container.useCases.registerCreator)
+  registerCreatorController(
+    container.repositories.creator,
+    container.useCases.registerCreator,
+    container.useCases.refreshCreatorAvatar
+  )
   registerVideoController(
     container.repositories.video,
     container.useCases.fetchVideoDetail,
