@@ -18,7 +18,18 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        // `[&>div]:!block` overrides the `display: table` Radix applies to
+        // the viewport's internal content wrapper. The table layout was
+        // intended to support both horizontal and vertical scroll
+        // calculation, but it makes the wrapper grow to fit content width
+        // — defeating text wrap inside (long lines in comments / chat
+        // messages overflowed past the right edge instead of wrapping at
+        // word boundaries). Forcing block layout keeps the wrapper at its
+        // parent's width so `wrap-break-word` / `whitespace-pre-wrap` can
+        // do their job. If a future use case genuinely needs horizontal
+        // scroll, it should reach for `overflow-x-auto` on its own
+        // container rather than nesting it inside ScrollArea.
+        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none [&>div]:block! focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

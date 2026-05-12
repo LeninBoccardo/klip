@@ -51,8 +51,17 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = 'item-aligned',
-  align = 'center',
+  // `popper` (not Radix's default `item-aligned`) — item-aligned positions
+  // the popover so the SELECTED item lines up with the trigger, which
+  // means the dropdown renders ON TOP of the trigger and extends upward
+  // and downward from there. With many options this also forces the
+  // page to scroll to fit the popover, producing the "content jumps
+  // above the title bar when a dropdown opens" symptom. Popper anchors
+  // the popover cleanly to one side of the trigger (below by default,
+  // above when there's no room) without disturbing the page layout.
+  position = 'popper',
+  align = 'start',
+  sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -68,13 +77,20 @@ function SelectContent({
         )}
         position={position}
         align={align}
+        sideOffset={sideOffset}
         {...props}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
           data-position={position}
+          // `h-(--radix-select-trigger-height)` was set on the viewport in
+          // the previous template — that squashed the scrollable area to
+          // a single row (trigger height) in popper mode. Content's
+          // `max-h-(--radix-select-content-available-height)` already
+          // caps the popover height to whatever's available; the viewport
+          // just needs to match the trigger width.
           className={cn(
-            'data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)',
+            'data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)',
             position === 'popper' && ''
           )}
         >
