@@ -319,7 +319,10 @@ describe('ReconcileDirectory', () => {
       if (p.endsWith('downloads')) return ['new-video']
       return []
     })
-    fs.listFiles = vi.fn().mockReturnValue(['video.mp4', 'thumbnail.jpg'])
+    // Filename must be `<videoId>.<media-ext>` exactly — see
+    // ReconcileDirectory.upsertVideoFromDisk for the rationale (yt-dlp HLS
+    // intermediate-file race).
+    fs.listFiles = vi.fn().mockReturnValue(['new-video.mp4', 'thumbnail.jpg'])
     fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
       if (p.endsWith('meta.json')) return { title: 'My Video', url: 'https://yt.com/abc' }
       return null
@@ -603,7 +606,14 @@ describe('ReconcileDirectory', () => {
         if (p.endsWith('cuts')) return ['new-cut']
         return []
       })
-      fs.listFiles = vi.fn().mockReturnValue(['video.mp4'])
+      // listFiles is called for BOTH the video and cut subdirs; only the
+      // video lookup needs `<videoId>.<ext>`. Cuts still use the legacy
+      // free-form filename match — only the video path got the exact-anchor
+      // tightening for the yt-dlp intermediate race.
+      fs.listFiles = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('new-vid')) return ['new-vid.mp4']
+        return ['cut.mp4']
+      })
       fs.readJsonFile = vi.fn().mockReturnValue(null)
 
       const result = useCase.executeForCreator(ROOT, 'c1')
@@ -801,15 +811,63 @@ describe('ReconcileDirectory', () => {
         if (p.endsWith('downloads')) return ['vid-mkv']
         return []
       })
-      fs.listFiles = vi.fn().mockReturnValue(['clip.mkv', 'thumbnail.png'])
+      fs.listFiles = vi.fn().mockReturnValue(['vid-mkv.mkv', 'thumbnail.png'])
       fs.readJsonFile = vi.fn().mockReturnValue(null)
 
       useCase.execute(ROOT)
 
       expect(videoRepo.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          filePath: expect.stringContaining('clip.mkv'),
+          filePath: expect.stringContaining('vid-mkv.mkv'),
           thumbnailPath: expect.stringContaining('thumbnail.png')
+        })
+      )
+    })
+
+    it('skips yt-dlp intermediate format files (regression: HLS race)', () => {
+      // With `--merge-output-format mkv`, yt-dlp downloads HLS / DASH streams
+      // as `<videoId>.fNNN.<ext>` intermediates, then merges into the final
+      // `<videoId>.mkv` and deletes the intermediates. If the file watcher
+      // fires mid-merge, an earlier prefix-only match would have catalogued
+      // the `.f234.mp4` intermediate — and once yt-dlp deletes it post-merge,
+      // the DB row points at a vanished path, surfacing as "Browser can't
+      // play this codec" in the renderer. The exact `<videoId>.<ext>` anchor
+      // makes the intermediate ineligible by construction.
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('downloads')) return ['ox4ReD-Z_EE']
+        return []
+      })
+      // Mid-merge state: video fragment muxed but final mkv not yet written.
+      fs.listFiles = vi
+        .fn()
+        .mockReturnValue(['ox4ReD-Z_EE.f234.mp4', 'ox4ReD-Z_EE.f140.m4a', 'ox4ReD-Z_EE.info.json'])
+      fs.readJsonFile = vi.fn().mockReturnValue(null)
+
+      useCase.execute(ROOT)
+
+      expect(videoRepo.upsert).not.toHaveBeenCalled()
+      expect(videoRepo.upsertWithPrevious).not.toHaveBeenCalled()
+    })
+
+    it('catalogues the final muxed file after merge completes', () => {
+      // Post-merge state: yt-dlp finished and only `<videoId>.mkv` remains.
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('downloads')) return ['ox4ReD-Z_EE']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue(['ox4ReD-Z_EE.mkv', 'ox4ReD-Z_EE.jpg'])
+      fs.readJsonFile = vi.fn().mockReturnValue(null)
+
+      useCase.execute(ROOT)
+
+      expect(videoRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'ox4ReD-Z_EE',
+          filePath: expect.stringContaining('ox4ReD-Z_EE.mkv')
         })
       )
     })
@@ -1122,7 +1180,10 @@ describe('ReconcileDirectory', () => {
         if (p.endsWith('cuts')) return ['cut-1']
         return []
       })
-      fs.listFiles = vi.fn().mockReturnValue(['video.mp4'])
+      fs.listFiles = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('vid-1')) return ['vid-1.mp4']
+        return ['cut.mp4']
+      })
       fs.readJsonFile = vi.fn().mockReturnValue(null)
 
       useCase.execute(ROOT)

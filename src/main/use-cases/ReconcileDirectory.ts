@@ -356,16 +356,24 @@ export class ReconcileDirectory implements IReconcileDirectory {
     const metaJson = this.fs.readJsonFile<MetaJson>(this.path.join(videoDir, 'meta.json'))
     const files = this.fs.listFiles(videoDir)
 
-    // Match every container that YtDlpDownloader.resolveMediaFilePath accepts.
-    // The previous narrower regex (`mp4|mkv|webm` only) missed `.m4a`, `.mov`,
-    // `.flv`, etc., and silently set `filePath = videoDir`. EnrichMediaMetadata
-    // then ran ffprobe against the directory → "Permission denied" → the
-    // renderer surfaced it as "Browser can't play this codec". `.part` is
-    // excluded so a partial download isn't catalogued as the real file.
-    const MEDIA_EXT_RE =
-      /\.(mp4|mkv|webm|m4a|mp3|mov|avi|flv|m4v|ts|opus|ogg|ogv|wmv|3gp|aac|wav)$/i
-    const mediaFile =
-      files.find((f) => MEDIA_EXT_RE.test(f) && !f.endsWith('.part')) ?? null
+    // Match ONLY the final muxed file — `<videoId>.<media-ext>` exactly.
+    // yt-dlp's HLS / DASH flows produce transient intermediate files named
+    // `<videoId>.fNNN.<ext>` (where `NNN` is the format-id) before the merge
+    // step into the final container. With `--merge-output-format mkv` the
+    // final is `<videoId>.mkv`; the intermediates are e.g. `<videoId>.f234.mp4`
+    // and `<videoId>.f140.m4a`. A prefix-based match would catalogue the
+    // intermediate `.mp4` as the canonical file, then yt-dlp would delete it
+    // post-merge, leaving the DB pointing at a vanished path — the renderer
+    // surfaces this as "Browser can't play this codec" via its generic
+    // `<video>` `onerror` fallback. The exact-match anchor closes the race by
+    // construction: nothing with a dot between `<videoId>` and the extension
+    // is eligible. `.part` is implicitly excluded.
+    const escapedVideoId = videoId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const FINAL_FILE_RE = new RegExp(
+      `^${escapedVideoId}\\.(mp4|mkv|webm|m4a|mp3|mov|avi|flv|m4v|ts|opus|ogg|ogv|wmv|3gp|aac|wav)$`,
+      'i'
+    )
+    const mediaFile = files.find((f) => FINAL_FILE_RE.test(f)) ?? null
     // Accept either the literal `thumbnail.<ext>` (manual sideload convention) or
     // any image alongside the media file as long as it isn't yt-dlp's `.info.json`
     // sidecar (e.g. `<videoId>.jpg` written by `--write-thumbnail --convert-thumbnails jpg`).
