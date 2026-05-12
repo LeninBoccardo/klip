@@ -24,8 +24,35 @@ import { join } from 'path'
 import { initializeDatabase } from './framework-drivers/database'
 
 // ── Register custom protocol for serving local media files ──
+//
+// `stream: true` is THE critical privilege for `<video>` playback through
+// a custom protocol. Without it, Chromium's media stack rejects the
+// source with `MEDIA_ERR_SRC_NOT_SUPPORTED` (code 4) before it ever
+// attempts to demux — regardless of the file's container, codec, or the
+// MIME we serve. This rejection mode was misdiagnosed as a container /
+// MIME / demuxer problem across several rounds of "fix the codec error"
+// (Phase A MKV everywhere → MIME override → `mp4/webm` per codec), all
+// of which were rendered moot by the missing privilege. Field log
+// finally pinned it: H.264-High + AAC-LC in a clean MP4 container with
+// `final-CT=video/mp4` STILL rejected by `<video>` — the file was
+// universally playable, but the *scheme* wasn't a valid media source.
+//
+// `supportFetchAPI: true` — already present, lets the renderer `fetch()`
+// `klip-media://` URLs (used by the transcript VTT loader path).
+// `secure: true` — already present, treats the scheme as a secure
+// context (needed for some media-related Web APIs in modern Chromium).
+// `standard: false` — keep; we don't want HTTP-like origin semantics
+// for this scheme.
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'klip-media', privileges: { standard: false, secure: true, supportFetchAPI: true } }
+  {
+    scheme: 'klip-media',
+    privileges: {
+      standard: false,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true
+    }
+  }
 ])
 
 // ── Initialise persistent logger before app.whenReady so even boot-time
