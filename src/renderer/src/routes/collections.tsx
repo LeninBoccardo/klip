@@ -1,4 +1,9 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  useNavigate,
+  useMatchRoute,
+  Outlet
+} from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCollectionsPaginated, useDeleteCollection } from '@/hooks/use-collections'
@@ -16,8 +21,27 @@ import { toast } from 'sonner'
 import type { CollectionDto } from '@shared/dtos'
 
 export const Route = createFileRoute('/collections')({
-  component: CollectionsPage
+  component: CollectionsRouteComponent
 })
+
+/**
+ * TanStack Router treats `routes/collections.tsx` as the parent layout for
+ * any nested route file under `routes/collections/` (e.g. `$collectionId.tsx`).
+ * That means clicking a card and navigating to `/collections/$id` causes
+ * the detail route to mount INSIDE this parent's `<Outlet />` — and if no
+ * Outlet exists, the URL changes (breadcrumb updates) but the detail
+ * component never renders.
+ *
+ * We don't actually want a layout — we want list and detail as sibling
+ * pages. Conditionally rendering Outlet vs the list page gives that UX
+ * without fighting TanStack's file conventions: when the detail route
+ * matches, the Outlet hosts it; otherwise we render the list.
+ */
+function CollectionsRouteComponent(): React.ReactElement {
+  const matchRoute = useMatchRoute()
+  const detailMatch = matchRoute({ to: '/collections/$collectionId', fuzzy: true })
+  return detailMatch ? <Outlet /> : <CollectionsPage />
+}
 
 const PAGE_SIZE = 24
 
