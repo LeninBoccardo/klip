@@ -208,16 +208,20 @@ export class YtDlpDownloader implements IVideoDownloader {
   async fetchTranscript(
     url: string,
     outputDir: string,
-    lang: string = 'en'
+    languagesPriority: string[]
   ): Promise<string | null> {
     const bin = this.binaryResolver.resolve('yt-dlp')
     const outputTemplate = join(outputDir, 'transcript')
+
+    // Defensive: an empty priority list is a caller bug, but treating it as
+    // "English" keeps the downloader robust during refactors.
+    const langs = languagesPriority.length > 0 ? languagesPriority : ['en']
 
     return new Promise((resolve, reject) => {
       const args = [
         '--write-auto-subs',
         '--sub-langs',
-        lang,
+        langs.join(','),
         '--sub-format',
         'vtt',
         '--skip-download',
@@ -246,16 +250,30 @@ export class YtDlpDownloader implements IVideoDownloader {
           return
         }
 
-        // yt-dlp writes <template>.<lang>.vtt
+        // yt-dlp writes `<template>.<lang>.vtt` for every available language in
+        // `langs`. Walk the priority list and return the first match so a
+        // non-English user gets their native captions instead of whichever
+        // file readdir happened to surface first.
         try {
-          const candidates = readdirSync(outputDir).filter(
+          const all = readdirSync(outputDir).filter(
             (f) => f.startsWith('transcript.') && f.endsWith('.vtt')
           )
-          if (candidates.length === 0) {
+          if (all.length === 0) {
             resolve(null)
             return
           }
-          resolve(join(outputDir, candidates[0]))
+          for (const lang of langs) {
+            const match = all.find((f) => f === `transcript.${lang}.vtt`)
+            if (match) {
+              resolve(join(outputDir, match))
+              return
+            }
+          }
+          // None of the priority entries matched a filename verbatim (regex /
+          // alias resolution can produce a different suffix). Fall back to the
+          // first available file so we still surface something rather than
+          // silently dropping a downloaded VTT.
+          resolve(join(outputDir, all[0]))
         } catch (e) {
           reject(new Error(`yt-dlp fetchTranscript: failed to locate output: ${e}`))
         }

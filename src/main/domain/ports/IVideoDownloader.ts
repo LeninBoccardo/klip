@@ -30,10 +30,17 @@ export interface IVideoDownloader {
 
   /**
    * Fetch the auto-generated transcript for a video.
-   * Writes a `.vtt` file to `outputDir` and returns its path, or null if no
-   * auto-subtitles are available for the requested language.
+   *
+   * `languagesPriority` is a priority list — yt-dlp downloads subs for any
+   * listed languages that are available, and the implementation returns the
+   * path of the highest-priority file that ended up on disk. Returns null
+   * when none of the requested languages have auto-captions.
    */
-  fetchTranscript(url: string, outputDir: string, lang?: string): Promise<string | null>
+  fetchTranscript(
+    url: string,
+    outputDir: string,
+    languagesPriority: string[]
+  ): Promise<string | null>
 
   /**
    * Fetch top-level comments and replies for a video on demand.

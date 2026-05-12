@@ -384,7 +384,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
     fsReader,
     pathResolver,
     markVideoMissing,
-    markVideoActive
+    markVideoActive,
+    settingsRepo
   )
 
   // Dedicated queue (concurrency 1) keeps batch enrichment from competing with

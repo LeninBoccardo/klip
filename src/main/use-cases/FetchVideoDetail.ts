@@ -1,12 +1,26 @@
-import type { IVideoRepository } from '@domain/repositories'
+import type { IVideoRepository, ISettingsRepository } from '@domain/repositories'
 import type { IVideoDownloader, IFileSystemReader, IPathResolver } from '@domain/ports'
 import type { VideoDetailWithTranscript, TranscriptFetchStatus } from '@shared/types'
+import { DEFAULT_LANGUAGE, isLanguage } from '@shared/types'
 import { parseVtt } from '@domain/types'
 import { redactError } from '@domain/types/redact'
 import { classifyYoutubeError } from '@domain/types/youtube-error'
 import type { IFetchVideoDetail } from './IFetchVideoDetail'
 import type { IMarkVideoMissing } from './IMarkVideoMissing'
 import type { IMarkVideoActive } from './IMarkVideoActive'
+
+/**
+ * Build the language priority list passed to yt-dlp's `--sub-langs`.
+ *
+ * For English users we ask for `en` only. For everyone else we ask for the
+ * user's locale first, English as a universal fallback, and finally `all`
+ * so a video whose only auto-captions are in a third language (e.g. only
+ * Japanese on an anime channel) still produces a transcript.
+ */
+export function buildTranscriptLanguagePriority(appLang: string): string[] {
+  if (appLang === 'en') return ['en']
+  return [appLang, 'en', 'all']
+}
 
 /**
  * Map a thrown transcript-fetch error to a coarse classification the UI
@@ -62,8 +76,20 @@ export class FetchVideoDetail implements IFetchVideoDetail {
     private fsReader: IFileSystemReader,
     private pathResolver: IPathResolver,
     private markMissing: IMarkVideoMissing,
-    private markActive: IMarkVideoActive
+    private markActive: IMarkVideoActive,
+    private settingsRepo: ISettingsRepository
   ) {}
+
+  /**
+   * Read the current UI language from settings, defaulting to English. The
+   * value is the same locale string i18next uses (`'en'`, `'pt-BR'`, `'es'`),
+   * so passing it through unchanged is safe — yt-dlp accepts the BCP-47
+   * variants YouTube serves.
+   */
+  private resolveAppLanguage(): string {
+    const raw = this.settingsRepo.get('language')
+    return isLanguage(raw) ? raw : DEFAULT_LANGUAGE
+  }
 
   async execute(videoId: string): Promise<VideoDetailWithTranscript> {
     const video = this.videoRepo.findById(videoId)
@@ -99,7 +125,12 @@ export class FetchVideoDetail implements IFetchVideoDetail {
     let transcriptStatus: TranscriptFetchStatus = 'ok'
     let transcriptError: string | null = null
     try {
-      transcriptPath = await this.downloader.fetchTranscript(video.url, videoDir, 'en')
+      const languagesPriority = buildTranscriptLanguagePriority(this.resolveAppLanguage())
+      transcriptPath = await this.downloader.fetchTranscript(
+        video.url,
+        videoDir,
+        languagesPriority
+      )
       if (transcriptPath) {
         const raw = this.fsReader.readTextFile(transcriptPath)
         transcriptText = raw ? parseVtt(raw) : null

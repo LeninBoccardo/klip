@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
-import type { IVideoRepository } from '@domain/repositories'
+import { FetchVideoDetail, buildTranscriptLanguagePriority } from '@use-cases/FetchVideoDetail'
+import type { IVideoRepository, ISettingsRepository } from '@domain/repositories'
 import type { IVideoDownloader, IFileSystemReader, IPathResolver } from '@domain/ports'
 import type { Video } from '@domain/entities'
 
@@ -43,6 +43,7 @@ function makeMocks(): {
   pathResolver: IPathResolver
   markMissing: { execute: ReturnType<typeof vi.fn> }
   markActive: { execute: ReturnType<typeof vi.fn> }
+  settingsRepo: ISettingsRepository
 } {
   const videoRepo = {
     findAll: vi.fn(),
@@ -81,7 +82,12 @@ function makeMocks(): {
     join: vi.fn((...s) => s.join('/')),
     dirname: vi.fn((p: string) => p.split('/').slice(0, -1).join('/') || '/')
   }
-  return { videoRepo, downloader, fsReader, pathResolver, markMissing, markActive }
+  const settingsRepo: ISettingsRepository = {
+    get: vi.fn().mockReturnValue(null),
+    set: vi.fn(),
+    getAll: vi.fn().mockReturnValue({})
+  }
+  return { videoRepo, downloader, fsReader, pathResolver, markMissing, markActive, settingsRepo }
 }
 
 describe('FetchVideoDetail', () => {
@@ -96,7 +102,8 @@ describe('FetchVideoDetail', () => {
       mocks.fsReader,
       mocks.pathResolver,
       mocks.markMissing,
-      mocks.markActive
+      mocks.markActive,
+      mocks.settingsRepo
     )
   })
 
@@ -259,6 +266,64 @@ describe('FetchVideoDetail', () => {
 
     expect(mocks.markActive.execute).toHaveBeenCalledWith('video-1')
     expect(mocks.markMissing.execute).not.toHaveBeenCalled()
+  })
+
+  it('passes the user-language-first priority list to fetchTranscript (pt-BR user)', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.settingsRepo.get).mockReturnValue('pt-BR')
+    vi.mocked(mocks.downloader.fetchVideoDetail).mockResolvedValue({
+      videoId: 'abc',
+      likeCount: null,
+      dislikeCount: null,
+      commentCount: null,
+      viewCount: null,
+      category: null,
+      tags: [],
+      uploadDate: null,
+      description: null,
+      isShort: false
+    })
+    vi.mocked(mocks.downloader.fetchTranscript).mockResolvedValue(null)
+
+    await useCase.execute('video-1')
+
+    expect(mocks.downloader.fetchTranscript).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      ['pt-BR', 'en', 'all']
+    )
+  })
+
+  it('passes ["en"] only for English users — no extra fallback probes', async () => {
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.settingsRepo.get).mockReturnValue('en')
+    vi.mocked(mocks.downloader.fetchVideoDetail).mockResolvedValue({
+      videoId: 'abc',
+      likeCount: null,
+      dislikeCount: null,
+      commentCount: null,
+      viewCount: null,
+      category: null,
+      tags: [],
+      uploadDate: null,
+      description: null,
+      isShort: false
+    })
+    vi.mocked(mocks.downloader.fetchTranscript).mockResolvedValue(null)
+
+    await useCase.execute('video-1')
+
+    expect(mocks.downloader.fetchTranscript).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      ['en']
+    )
+  })
+
+  it('falls back to default English when language setting is missing or invalid', () => {
+    expect(buildTranscriptLanguagePriority('en')).toEqual(['en'])
+    expect(buildTranscriptLanguagePriority('pt-BR')).toEqual(['pt-BR', 'en', 'all'])
+    expect(buildTranscriptLanguagePriority('es')).toEqual(['es', 'en', 'all'])
   })
 
   it('does NOT call markActive on a successful fetch of an already-active video', async () => {
