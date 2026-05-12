@@ -366,9 +366,21 @@ export class DownloadVideo implements IDownloadVideo {
    * track prior upserts). Never throws — avatars are cosmetic.
    */
   private scheduleAvatarFetch(creator: Creator, info: VideoInfo, videoUrl: string): void {
+    const targetUrl = info.channelUrl ?? videoUrl
+    console.log(
+      `[DownloadVideo] avatar fetch starting for "${creator.folderName}" via ${targetUrl}`
+    )
     void this.fetchChannelAvatar(info, videoUrl, creator.folderName)
       .then((avatarUrl) => {
-        if (avatarUrl === null) return
+        if (avatarUrl === null) {
+          console.warn(
+            `[DownloadVideo] avatar fetch returned null for "${creator.folderName}" — channel had no usable thumbnail or yt-dlp failed silently`
+          )
+          return
+        }
+        console.log(
+          `[DownloadVideo] avatar fetch resolved for "${creator.folderName}" — persisting`
+        )
         this.creatorRepo.upsert({
           ...creator,
           avatarUrl,
@@ -378,7 +390,7 @@ export class DownloadVideo implements IDownloadVideo {
       })
       .catch((err) => {
         console.warn(
-          `[DownloadVideo.scheduleAvatarFetch] Background avatar fetch failed for "${creator.folderName}":`,
+          `[DownloadVideo] background avatar fetch failed for "${creator.folderName}":`,
           err instanceof Error ? err.message : err
         )
       })

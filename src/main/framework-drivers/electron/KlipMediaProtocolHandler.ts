@@ -1,10 +1,46 @@
 import { protocol, net } from 'electron'
 import { statSync } from 'fs'
+import { extname } from 'path'
 import { pathToFileURL } from 'url'
 import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
 import type { RootPathRef } from '@domain/ports'
 import { redactPath } from '@domain/types/redact'
 import { parseKlipMediaUrl, checkPathInsideRoot } from './klip-media-protocol'
+
+/**
+ * Mime-type override table for the protocol's responses. Chromium's
+ * built-in file MIME guesser is inconsistent across platforms — on
+ * Windows, `.mkv` often comes back as `application/octet-stream` (or
+ * `video/x-matroska` if the registry has it), and HTML5 `<video>`
+ * refuses to play either. Specifically, `canPlayType('video/x-matroska')`
+ * returns `''` even though Chromium's Matroska/WebM demuxer is built
+ * in and would happily decode the file. Forcing `video/webm` for `.mkv`
+ * routes the response through the same demuxer with a MIME `<video>`
+ * recognises — playback works without any container/transcode change.
+ *
+ * `.mp4` we also pin explicitly: defends against a misconfigured
+ * Windows MIME registry returning something unexpected. Image MIMEs
+ * are pinned so the renderer's `<img>` tags work for thumbnails /
+ * avatars even when Chromium's sniffer is uncertain.
+ */
+const EXT_TO_MIME: Record<string, string> = {
+  '.mkv': 'video/webm',
+  '.webm': 'video/webm',
+  '.mp4': 'video/mp4',
+  '.m4v': 'video/mp4',
+  '.mov': 'video/mp4',
+  '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac',
+  '.mp3': 'audio/mpeg',
+  '.opus': 'audio/ogg',
+  '.ogg': 'audio/ogg',
+  '.wav': 'audio/wav',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif'
+}
 
 /**
  * Registers and serves the `klip-media://` custom protocol.
@@ -36,7 +72,7 @@ export class KlipMediaProtocolHandler {
     protocol.handle('klip-media', (request) => this.handle(request))
   }
 
-  private handle(request: Request): Response | Promise<Response> {
+  private async handle(request: Request): Promise<Response> {
     const parsed = parseKlipMediaUrl(request.url)
     if (!parsed.ok) {
       return new Response(null, { status: parsed.status })
@@ -83,6 +119,21 @@ export class KlipMediaProtocolHandler {
       return new Response(null, { status: 404 })
     }
 
-    return net.fetch(pathToFileURL(checked.absolutePath).href)
+    const upstream = await net.fetch(pathToFileURL(checked.absolutePath).href)
+    const ext = extname(checked.absolutePath).toLowerCase()
+    const override = EXT_TO_MIME[ext]
+    if (!override) return upstream
+
+    // Rewrap with the corrected Content-Type. We keep the upstream body
+    // (which honours byte-range requests via Chromium's file handler —
+    // critical for `<video>` seekability) and only swap the response's
+    // headers. Range / 206 status / Content-Length carry through.
+    const headers = new Headers(upstream.headers)
+    headers.set('Content-Type', override)
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers
+    })
   }
 }
