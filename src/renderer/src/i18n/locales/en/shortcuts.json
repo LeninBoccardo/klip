@@ -39,6 +39,13 @@
     "playerJumpPercent": "Jump to 0%–90%",
     "editorMarkIn": "Mark in-point at playhead",
     "editorMarkOut": "Mark out-point at playhead",
-    "editorSave": "Open save-cut dialog"
+    "editorFrameStepBack": "Step back one frame",
+    "editorFrameStepForward": "Step forward one frame",
+    "editorSeekBack1": "Seek -1s",
+    "editorSeekForward1": "Seek +1s",
+    "editorSeekBack5": "Seek -5s",
+    "editorSeekForward5": "Seek +5s",
+    "editorSave": "Open save-cut dialog",
+    "editorClose": "Close editor window"
   }
 }

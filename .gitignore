@@ -9,6 +9,7 @@ build
 .DS_Store
 .eslintcache
 *.log*
+logs/
 coverage
 
 # External binaries (downloaded via `npm run setup`)

@@ -20,9 +20,43 @@ export interface VideoDetail {
   hasTranscript: boolean
 }
 
+/**
+ * Outcome of the transcript fetch sub-step inside fetch-video-detail.
+ *
+ *  - `ok`            — transcript was fetched and persisted (transcriptText is present).
+ *  - `unavailable`   — yt-dlp reported no subtitles exist for the video (a permanent state).
+ *  - `rate-limited`  — YouTube returned HTTP 429; the user can retry later.
+ *  - `error`         — any other failure (network, parse, IO). `transcriptError` carries
+ *                      a short, redacted message for the UI to display.
+ *  - `not-attempted` — the parent fetch failed before the transcript step ran.
+ *
+ * The renderer differentiates these on the "Refresh metadata" toast so the
+ * user knows whether to retry or give up.
+ */
+export type TranscriptFetchStatus =
+  | 'ok'
+  | 'unavailable'
+  | 'rate-limited'
+  | 'error'
+  | 'not-attempted'
+
 /** Renderer payload returned by `fetch-video-detail` — includes parsed transcript text */
 export interface VideoDetailWithTranscript extends VideoDetail {
   transcriptText: string | null
+  transcriptStatus: TranscriptFetchStatus
+  /** Short human-readable message when transcriptStatus !== 'ok'. Null otherwise. */
+  transcriptError: string | null
+}
+
+/**
+ * One timed line from a transcript. Sourced from the on-disk WebVTT file
+ * (kept verbatim alongside the media); the renderer uses {@link startMs} both
+ * for the displayed timestamp and for seeking the player on click.
+ */
+export interface TranscriptSegment {
+  startMs: number
+  endMs: number
+  text: string
 }
 
 /** Summary returned by the batch enrichment use case */

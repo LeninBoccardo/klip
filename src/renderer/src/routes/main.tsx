@@ -1,3 +1,7 @@
+// Side-effect import: must be first so console.* + window error/rejection
+// handlers are installed before any other module runs (otherwise early
+// import-time errors and logs would miss the file).
+import '../logger'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'

@@ -98,11 +98,13 @@ const rows: Row[] = [
   { channel: 'fetch-video-detail', accept: ['v-1'], reject: [[42]] },
   { channel: 'enrich-all-videos', accept: [], reject: [['extra']] },
   { channel: 'get-transcript', accept: ['v-1'], reject: [[42]] },
+  { channel: 'get-transcript-segments', accept: ['v-1'], reject: [[42]] },
   {
     channel: 'fetch-video-comments',
     accept: ['v-1', 200],
-    reject: [['v-1', 0], ['v-1', 5001], ['v-1', 1.5], ['v-1', Infinity], [42]]
+    reject: [['v-1', 0], ['v-1', 50_001], ['v-1', 1.5], ['v-1', Infinity], [42]]
   },
+  { channel: 'get-cached-video-comments', accept: ['v-1'], reject: [[42]] },
   {
     channel: 'move-videos-to-creator',
     accept: [{ videoIds: ['v-1', 'v-2'], targetCreatorId: 'mrbeast' }],

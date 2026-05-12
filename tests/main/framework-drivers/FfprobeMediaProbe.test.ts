@@ -149,9 +149,11 @@ describe('FfprobeMediaProbe', () => {
   it('passes the resolved binary path and the file path to spawn', async () => {
     emitFfprobeRun(JSON.stringify({ format: {}, streams: [] }), 0)
     await probe.probe('C:/x.mp4')
+    // `-v error` (not `-v quiet`) so ffprobe's own diagnostics reach stderr
+    // and surface in the thrown error message when it fails.
     expect(spawnMock).toHaveBeenCalledWith(
       '/fake/ffprobe',
-      expect.arrayContaining(['-v', 'quiet', '-print_format', 'json', 'C:/x.mp4']),
+      expect.arrayContaining(['-v', 'error', '-print_format', 'json', 'C:/x.mp4']),
       expect.objectContaining({ stdio: ['ignore', 'pipe', 'pipe'] })
     )
   })

@@ -221,6 +221,27 @@ describe('ReconcileDirectory', () => {
     )
   })
 
+  it('matches existing creators by folderName even when id is a UUID (no spurious discover-new)', () => {
+    // Regression: the bulk-reconcile path used `new Map(creators.map(c => [c.id, c]))`
+    // and then checked `dbCreatorMap.has(dirName)` against disk folder
+    // names. For a registered creator (id=UUID, folderName='soro'), the
+    // lookup missed → discover-new fired → INSERT collided with the
+    // UNIQUE constraint on creators.folder_name (see logs/klip-dev.log).
+    // The fix keys the map by folderName.
+    creatorRepo.findAll = vi
+      .fn()
+      .mockReturnValue([makeCreator({ id: 'b9e3a7-uuid', folderName: 'soro', name: 'Soro' })])
+    fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+      if (p === ROOT) return ['soro']
+      return []
+    })
+
+    const result = useCase.execute(ROOT)
+
+    expect(result.creatorsAdded).toBe(0)
+    expect(creatorRepo.upsertWithPrevious).not.toHaveBeenCalled()
+  })
+
   it('uses creator.json for name when available', () => {
     fs.listDirectories = vi.fn().mockImplementation((p: string) => {
       if (p === ROOT) return ['some-creator']
@@ -386,7 +407,10 @@ describe('ReconcileDirectory', () => {
       if (p.endsWith('downloads')) return ['some-video-id']
       return []
     })
-    fs.listFiles = vi.fn().mockReturnValue([])
+    // A media file MUST be present for the row to be catalogued — empty
+    // directories are skipped on purpose (see "skips directories that have
+    // no media file" below).
+    fs.listFiles = vi.fn().mockReturnValue(['some-video-id.mp4'])
     fs.readJsonFile = vi.fn().mockReturnValue(null)
 
     useCase.execute(ROOT)
@@ -494,7 +518,9 @@ describe('ReconcileDirectory', () => {
     })
 
     it('marks existing creator as missing when folder is gone', () => {
-      creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
+      creatorRepo.findByFolderName = vi
+        .fn()
+        .mockReturnValue(makeCreator({ id: 'c1', folderName: 'c1', name: 'c1' }))
       fs.directoryExists = vi.fn().mockReturnValue(false)
       videoRepo.findByCreatorId = vi.fn().mockReturnValue([])
       cutRepo.findByCreatorId = vi.fn().mockReturnValue([])
@@ -506,9 +532,9 @@ describe('ReconcileDirectory', () => {
     })
 
     it('recovers a missing creator when folder reappears', () => {
-      creatorRepo.findById = vi
+      creatorRepo.findByFolderName = vi
         .fn()
-        .mockReturnValue(makeCreator({ id: 'c1', name: 'c1', status: 'missing' }))
+        .mockReturnValue(makeCreator({ id: 'c1', folderName: 'c1', name: 'c1', status: 'missing' }))
       fs.directoryExists = vi.fn().mockReturnValue(true)
       fs.listDirectories = vi.fn().mockReturnValue([])
 
@@ -519,9 +545,9 @@ describe('ReconcileDirectory', () => {
     })
 
     it('skips deleted creators even if folder reappears', () => {
-      creatorRepo.findById = vi
+      creatorRepo.findByFolderName = vi
         .fn()
-        .mockReturnValue(makeCreator({ id: 'c1', name: 'c1', status: 'deleted' }))
+        .mockReturnValue(makeCreator({ id: 'c1', folderName: 'c1', name: 'c1', status: 'deleted' }))
       fs.directoryExists = vi.fn().mockReturnValue(true)
 
       const result = useCase.executeForCreator(ROOT, 'c1')
@@ -540,8 +566,37 @@ describe('ReconcileDirectory', () => {
       expect(result.creatorsMarkedMissing).toBe(0)
     })
 
+    it('finds a UUID-id creator by folderName instead of misclassifying it as new', () => {
+      // Regression: the previous lookup was `findById(creatorName)`, which
+      // only matched when id === folderName. RegisterCreator assigns a
+      // UUID id with folderName as a separate field, so a file-watcher
+      // event on a registered creator's folder used to fall through to
+      // the discover-new path and trip the UNIQUE constraint on
+      // creators.folder_name. The fix is to look up by folderName.
+      creatorRepo.findByFolderName = vi
+        .fn()
+        .mockReturnValue(
+          makeCreator({ id: 'a4d3-uuid-not-folder', folderName: 'soro', name: 'Soro' })
+        )
+      fs.directoryExists = vi.fn().mockReturnValue(true)
+      videoRepo.findByCreatorId = vi.fn().mockReturnValue([])
+      cutRepo.findByCreatorId = vi.fn().mockReturnValue([])
+
+      const result = useCase.executeForCreator(ROOT, 'soro')
+
+      // No discover-new insert (would have collided with folder_name).
+      expect(result.creatorsAdded).toBe(0)
+      // Existing-creator path with status 'active' and folder present:
+      // no recovery is needed either.
+      expect(result.creatorsRecovered).toBe(0)
+      expect(creatorRepo.upsert).not.toHaveBeenCalled()
+      expect(creatorRepo.findByFolderName).toHaveBeenCalledWith('soro')
+    })
+
     it('reconciles videos and cuts for an existing active creator', () => {
-      creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
+      creatorRepo.findByFolderName = vi
+        .fn()
+        .mockReturnValue(makeCreator({ id: 'c1', folderName: 'c1', name: 'c1' }))
       fs.directoryExists = vi.fn().mockReturnValue(true)
       fs.listDirectories = vi.fn().mockImplementation((p: string) => {
         if (p.endsWith('downloads')) return ['new-vid']
@@ -568,7 +623,7 @@ describe('ReconcileDirectory', () => {
         if (p.endsWith('downloads')) return ['vid-partial']
         return []
       })
-      fs.listFiles = vi.fn().mockReturnValue([])
+      fs.listFiles = vi.fn().mockReturnValue(['vid-partial.mp4'])
       fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
         if (p.endsWith('meta.json')) return { url: 'https://yt.com/x' } // no title
         return null
@@ -759,7 +814,13 @@ describe('ReconcileDirectory', () => {
       )
     })
 
-    it('ignores non-media files and non-thumbnail files', () => {
+    it('skips directories that have no media file', () => {
+      // A directory without any recognised media file is almost always a
+      // mid-download race (yt-dlp wrote sidecars before the final container)
+      // or a stray folder. Either way, we MUST NOT catalogue the directory
+      // itself as a video — that produces `filePath = <dir>` which makes
+      // ffprobe fail with "Permission denied" and the renderer surface it
+      // as "Browser can't play this codec".
       creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
       fs.listDirectories = vi.fn().mockImplementation((p: string) => {
         if (p === ROOT) return ['creator-1']
@@ -771,13 +832,8 @@ describe('ReconcileDirectory', () => {
 
       useCase.execute(ROOT)
 
-      // filePath falls back to videoDir, thumbnailPath is null
-      expect(videoRepo.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          filePath: expect.stringContaining('vid-other'),
-          thumbnailPath: null
-        })
-      )
+      expect(videoRepo.upsert).not.toHaveBeenCalled()
+      expect(videoRepo.upsertWithPrevious).not.toHaveBeenCalled()
     })
 
     it('detects thumbnail.webp format', () => {
@@ -915,7 +971,9 @@ describe('ReconcileDirectory', () => {
 
   describe('executeForCreator cascading', () => {
     it('marks children missing when creator folder disappears', () => {
-      creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
+      creatorRepo.findByFolderName = vi
+        .fn()
+        .mockReturnValue(makeCreator({ id: 'c1', folderName: 'c1', name: 'c1' }))
       fs.directoryExists = vi.fn().mockReturnValue(false)
       videoRepo.findByCreatorId = vi
         .fn()
@@ -930,7 +988,9 @@ describe('ReconcileDirectory', () => {
     })
 
     it('does not mark already-missing/deleted children when cascading', () => {
-      creatorRepo.findById = vi.fn().mockReturnValue(makeCreator({ id: 'c1', name: 'c1' }))
+      creatorRepo.findByFolderName = vi
+        .fn()
+        .mockReturnValue(makeCreator({ id: 'c1', folderName: 'c1', name: 'c1' }))
       fs.directoryExists = vi.fn().mockReturnValue(false)
       videoRepo.findByCreatorId = vi.fn().mockReturnValue([
         makeVideo({ id: 'v-active', creatorId: 'c1', status: 'active' }),

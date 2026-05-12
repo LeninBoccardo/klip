@@ -5,6 +5,14 @@ const mockLog = vi.hoisted(() => ({
   initialize: vi.fn(),
   error: vi.fn(),
   info: vi.fn(),
+  functions: {
+    log: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  },
+  variables: {} as Record<string, unknown>,
   transports: {
     file: {
       resolvePathFn: undefined as ((variables?: unknown) => string) | undefined,
@@ -53,9 +61,10 @@ describe('initLogger', () => {
     mockLog.transports.file.maxSize = 0
     mockLog.transports.file.level = 'silly'
     mockLog.transports.console.level = 'silly'
+    mockLog.variables = {}
   })
 
-  it('configures the file transport path under app.getPath("logs")', () => {
+  it('configures the file transport path under app.getPath("logs") in production', () => {
     const app = makeFakeApp()
     initLogger(app as unknown as App)
 
@@ -66,11 +75,43 @@ describe('initLogger', () => {
     expect(resolved).toMatch(/klip\.log$/)
   })
 
-  it('sets a 5MB rotation cap and info-level filtering', () => {
+  it('writes the log into the project-local logs/ folder in dev mode', () => {
+    const app = makeFakeApp()
+    initLogger(app as unknown as App, { isDev: true })
+    const resolved = mockLog.transports.file.resolvePathFn?.()
+    expect(resolved).toMatch(/klip-dev\.log$/)
+    expect(resolved).not.toMatch(/klip-logs/)
+  })
+
+  it('sets a 5MB rotation cap and info-level filtering in production', () => {
     initLogger(makeFakeApp() as unknown as App)
     expect(mockLog.transports.file.maxSize).toBe(5 * 1024 * 1024)
     expect(mockLog.transports.file.level).toBe('info')
     expect(mockLog.transports.console.level).toBe('info')
+  })
+
+  it('uses debug-level filtering in dev mode', () => {
+    initLogger(makeFakeApp() as unknown as App, { isDev: true })
+    expect(mockLog.transports.file.level).toBe('debug')
+    expect(mockLog.transports.console.level).toBe('debug')
+  })
+
+  it('monkey-patches console.* to route through electron-log', () => {
+    // Save and restore so other tests aren't polluted by the patch.
+    const origConsole = { ...console }
+    try {
+      initLogger(makeFakeApp() as unknown as App)
+      expect(console.log).toBe(mockLog.functions.log)
+      expect(console.error).toBe(mockLog.functions.error)
+      expect(console.warn).toBe(mockLog.functions.warn)
+    } finally {
+      Object.assign(console, origConsole)
+    }
+  })
+
+  it('tags entries with processType=main', () => {
+    initLogger(makeFakeApp() as unknown as App)
+    expect(mockLog.variables.processType).toBe('main')
   })
 
   it('logs render-process-gone events', () => {

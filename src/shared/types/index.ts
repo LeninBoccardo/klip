@@ -26,6 +26,8 @@ export type { MigrateRootProgress, MigrateRootResult } from './migrate-root'
 export type {
   VideoDetail,
   VideoDetailWithTranscript,
+  TranscriptFetchStatus,
+  TranscriptSegment,
   EnrichVideosResult,
   EnrichProgress
 } from './video-detail'

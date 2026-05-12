@@ -16,6 +16,9 @@
     "metadataRefreshed": "Metadatos actualizados",
     "refreshFailed": "Error al actualizar: {{message}}",
     "transcriptCopied": "Transcripción copiada al portapapeles",
+    "transcriptUnavailable": "Este video no tiene subtítulos disponibles",
+    "transcriptRateLimited": "YouTube limitó la tasa de la solicitud de transcripción. Intenta actualizar de nuevo más tarde.",
+    "transcriptFetchFailed": "Error al obtener la transcripción: {{message}}",
     "playAria": "Reproducir {{title}}",
     "notFound": "Video no encontrado",
     "missing": {
@@ -54,7 +57,8 @@
       "notFetched": "Aún no se ha obtenido ninguna transcripción.",
       "noneTitle": "No hay transcripción disponible",
       "noneDescriptionEnriched": "Este video no tiene subtítulos generados automáticamente.",
-      "noneDescriptionNotEnriched": "Haz clic en “Obtener metadatos” para recuperar la transcripción automática."
+      "noneDescriptionNotEnriched": "Haz clic en “Obtener metadatos” para recuperar la transcripción automática.",
+      "seekAria": "Saltar a {{time}}"
     }
   },
   "comments": {
@@ -68,12 +72,18 @@
     "noneOnVideo": "Sin comentarios en este video",
     "summaryComments": "comentarios",
     "summaryReplies": "respuestas",
-    "truncatedBadge": "Solo los primeros 500",
+    "truncatedBadge": "Solo los primeros {{count}}",
     "pinnedBadge": "Fijado",
     "viewReplies": "Ver {{count}} respuestas",
     "hideReplies": "Ocultar {{count}} respuestas",
     "copySuccess": "Comentarios copiados al portapapeles",
-    "copyError": "Error al copiar comentarios"
+    "copyError": "Error al copiar comentarios",
+    "loadMore": "Cargar más",
+    "loadMoreHint": "Obtiene el siguiente lote desde YouTube.",
+    "fetchAll": "Obtener todos",
+    "fetchAllHint": "Puede tardar varios minutos en videos populares.",
+    "loadingMoreTitle": "Obteniendo más comentarios…",
+    "loadingMoreHint": "Vuelve a obtener desde YouTube hasta el límite solicitado. Los comentarios actuales se mantienen visibles hasta que llega el nuevo lote."
   },
   "tags": {
     "title": "Etiquetas",

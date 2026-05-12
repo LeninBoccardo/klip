@@ -50,7 +50,7 @@ describe('useRestoreVideo', () => {
 })
 
 describe('useFetchVideoDetail', () => {
-  it('invalidates both detail and transcript keys for the affected video', async () => {
+  it('invalidates detail, transcript, and transcript-segments keys for the affected video', async () => {
     const { result, invalidateSpy } = renderMutationHook(() => useFetchVideoDetail())
 
     act(() => {
@@ -59,12 +59,15 @@ describe('useFetchVideoDetail', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(api.fetchVideoDetail).toHaveBeenCalledWith('video-1')
-    // Two scoped invalidations — keyed on the videoId, not the full list.
+    // Three scoped invalidations — keyed on the videoId, not the full list.
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.videos.detail('video-1') })
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: queryKeys.videos.transcript('video-1')
     })
-    expect(invalidateSpy).toHaveBeenCalledTimes(2)
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.videos.transcriptSegments('video-1')
+    })
+    expect(invalidateSpy).toHaveBeenCalledTimes(3)
   })
 })
 

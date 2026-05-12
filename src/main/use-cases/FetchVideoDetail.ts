@@ -1,12 +1,42 @@
 import type { IVideoRepository } from '@domain/repositories'
 import type { IVideoDownloader, IFileSystemReader, IPathResolver } from '@domain/ports'
-import type { VideoDetailWithTranscript } from '@shared/types'
+import type { VideoDetailWithTranscript, TranscriptFetchStatus } from '@shared/types'
 import { parseVtt } from '@domain/types'
 import { redactError } from '@domain/types/redact'
 import { classifyYoutubeError } from '@domain/types/youtube-error'
 import type { IFetchVideoDetail } from './IFetchVideoDetail'
 import type { IMarkVideoMissing } from './IMarkVideoMissing'
 import type { IMarkVideoActive } from './IMarkVideoActive'
+
+/**
+ * Map a thrown transcript-fetch error to a coarse classification the UI
+ * can act on. yt-dlp's stderr is our only signal; we look for distinctive
+ * substrings rather than parsing structurally, because yt-dlp's wording
+ * changes between versions and we just need three buckets.
+ *
+ *  - HTTP 429 / "Too Many Requests"  → 'rate-limited' (user can retry).
+ *  - "no subtitles" / "There are no subtitles" → 'unavailable' (permanent).
+ *  - anything else                   → 'error' (with a short message).
+ */
+function classifyTranscriptError(err: unknown): {
+  status: Exclude<TranscriptFetchStatus, 'ok' | 'not-attempted'>
+  message: string
+} {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (/HTTP Error 429|Too Many Requests/i.test(msg)) {
+    return {
+      status: 'rate-limited',
+      message: 'YouTube rate-limited the request. Try again later.'
+    }
+  }
+  if (/There are no subtitles|no.*subtitles/i.test(msg)) {
+    return { status: 'unavailable', message: 'No subtitles available for this video.' }
+  }
+  // Trim to the first line so multi-line yt-dlp stderr doesn't blow up
+  // the toast; keep ≤200 chars so the renderer can render it inline.
+  const firstLine = msg.split('\n')[0].slice(0, 200)
+  return { status: 'error', message: firstLine }
+}
 
 /**
  * Fetch extended metadata + auto-transcript for a single video on demand.
@@ -66,16 +96,33 @@ export class FetchVideoDetail implements IFetchVideoDetail {
     const videoDir = this.pathResolver.dirname(video.filePath)
     let transcriptPath: string | null = null
     let transcriptText: string | null = null
+    let transcriptStatus: TranscriptFetchStatus = 'ok'
+    let transcriptError: string | null = null
     try {
       transcriptPath = await this.downloader.fetchTranscript(video.url, videoDir, 'en')
       if (transcriptPath) {
         const raw = this.fsReader.readTextFile(transcriptPath)
         transcriptText = raw ? parseVtt(raw) : null
+        if (transcriptText === null) {
+          // We got a file but couldn't parse it — treat as a soft error so
+          // the user sees something actionable rather than an empty tab.
+          transcriptStatus = 'error'
+          transcriptError = 'Subtitle file was downloaded but could not be parsed.'
+        }
+      } else {
+        // yt-dlp's fetchTranscript returns null (not throw) when subs simply
+        // don't exist — surface that as the permanent 'unavailable' state.
+        transcriptStatus = 'unavailable'
+        transcriptError = 'No subtitles available for this video.'
       }
     } catch (err) {
-      // Transcript fetch is best-effort — log and leave null on failure so the
-      // detail enrichment still commits.
+      // Transcript fetch is best-effort — log, classify, and leave the
+      // text fields null so the detail enrichment still commits. The
+      // status is what tells the renderer whether to offer a retry.
       console.warn(`[klip] Transcript fetch failed for video ${video.id}:`, redactError(err))
+      const classified = classifyTranscriptError(err)
+      transcriptStatus = classified.status
+      transcriptError = classified.message
       transcriptPath = null
       transcriptText = null
     }
@@ -117,7 +164,9 @@ export class FetchVideoDetail implements IFetchVideoDetail {
       description: detail.description,
       isShort: detail.isShort,
       hasTranscript: transcriptPath !== null,
-      transcriptText
+      transcriptText,
+      transcriptStatus,
+      transcriptError
     }
   }
 }

@@ -1,7 +1,9 @@
 import { protocol, net } from 'electron'
+import { statSync } from 'fs'
 import { pathToFileURL } from 'url'
 import type { IResolveMediaUrl } from '@use-cases/IResolveMediaUrl'
 import type { RootPathRef } from '@domain/ports'
+import { redactPath } from '@domain/types/redact'
 import { parseKlipMediaUrl, checkPathInsideRoot } from './klip-media-protocol'
 
 /**
@@ -52,6 +54,33 @@ export class KlipMediaProtocolHandler {
     const checked = checkPathInsideRoot(path, this.rootPathRef.value)
     if (!checked.ok) {
       return new Response(null, { status: checked.status })
+    }
+
+    // Explicit stat-then-classify so failures here produce a real
+    // diagnostic in the log, instead of a silent `net.fetch` that the
+    // renderer's <video> reports as "Browser can't play this codec".
+    //
+    // The directory case in particular is how the previous DownloadVideo
+    // bug surfaced: when buildResult couldn't match the media file's
+    // extension it stored the output directory as the video's filePath,
+    // and net.fetch on a directory file:// URL went through but yielded
+    // an unplayable response. We now log that explicitly so the next
+    // occurrence is identifiable from logs/klip-dev.log alone.
+    let stat
+    try {
+      stat = statSync(checked.absolutePath)
+    } catch (err) {
+      console.warn(
+        `[klip-media] file not on disk for ${request.url}: ${redactPath(checked.absolutePath, this.rootPathRef.value)} — ${err instanceof Error ? err.message : err}`
+      )
+      return new Response(null, { status: 404 })
+    }
+    if (!stat.isFile()) {
+      console.warn(
+        `[klip-media] resolved path is not a regular file (kind=${parsed.kind}, id=${parsed.id}, asset=${parsed.asset}): ${redactPath(checked.absolutePath, this.rootPathRef.value)}. ` +
+          `This usually means the entity's filePath in the DB points at a directory — re-download or run reconciliation to repair.`
+      )
+      return new Response(null, { status: 404 })
     }
 
     return net.fetch(pathToFileURL(checked.absolutePath).href)

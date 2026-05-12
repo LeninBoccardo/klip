@@ -32,8 +32,16 @@ import { RenderProgress } from './RenderProgress'
  * Range scrubbing works because the klip-media:// handler delegates
  * to `net.fetch(file://)`, which honours Range natively.
  */
+// Frame-step shortcut delta. The probe doesn't currently capture frame rate
+// (MediaProbeResult exposes duration / resolution / fileSize only), so we
+// fall back to 1/30s — the right magnitude for "nudge by one frame" until
+// the probe pipeline grows a frameRate field in a later phase.
+const FRAME_DURATION_SEC = 1 / 30
+
 export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.ReactElement {
   const { t } = useTranslation('editor')
+  const sourceTitle = useEditorStore((s) => s.sourceTitle)
+  const sourceCreatorName = useEditorStore((s) => s.sourceCreatorName)
   const timeline = useEditorStore((s) => s.timeline)
   const setCursor = useEditorStore((s) => s.setCursor)
   const setInPoint = useEditorStore((s) => s.setInPoint)
@@ -94,20 +102,69 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
     await window.api.editorCancelRender(activeJobId)
   }, [activeJobId])
 
+  // Shared seek helper for frame-step + arrow shortcuts. Mirrors into the
+  // store immediately so the timeline cursor jumps without waiting for the
+  // next `timeupdate` (which lands ~250ms later — long enough to feel laggy
+  // during keyboard scrubbing). The store→video effect higher up will
+  // no-op on the round-trip because the values match within its 0.05s
+  // threshold.
+  const seekRelative = useCallback(
+    (deltaSec: number): void => {
+      const el = videoRef.current
+      if (!el) return
+      const max = Number.isFinite(el.duration) ? el.duration : Infinity
+      const next = Math.min(Math.max(el.currentTime + deltaSec, 0), max)
+      el.currentTime = next
+      setCursor(next)
+    },
+    [setCursor]
+  )
+
+  const handleFrameStepBack = useCallback(() => {
+    seekRelative(-FRAME_DURATION_SEC)
+  }, [seekRelative])
+  const handleFrameStepForward = useCallback(() => {
+    seekRelative(FRAME_DURATION_SEC)
+  }, [seekRelative])
+  const handleArrowLeft = useCallback(
+    (e: KeyboardEvent) => {
+      seekRelative(e.shiftKey ? -5 : -1)
+    },
+    [seekRelative]
+  )
+  const handleArrowRight = useCallback(
+    (e: KeyboardEvent) => {
+      seekRelative(e.shiftKey ? 5 : 1)
+    },
+    [seekRelative]
+  )
+
   // ── Editor shortcuts ──
-  // I / O capture the playhead into the in/out region — the same mental
-  // model as LosslessCut. Mod+Enter opens the save dialog when the
-  // timeline is saveable. Esc/Backspace are deliberately NOT bound here:
-  // closing a Radix dialog on Esc is handled by the dialog itself, and
-  // Esc inside the editor window otherwise has no useful target (no
-  // route history to back out of).
+  // I / O capture the playhead into the in/out region — same mental model
+  // as LosslessCut. Mod+Enter opens the save dialog when the timeline is
+  // saveable. Arrow keys read shiftKey at fire time so a single binding
+  // covers ±1s and ±5s without double-firing (single-key shortcuts in
+  // useShortcut don't filter shift). Esc closes the editor window, but is
+  // disabled while the save dialog is open so Radix's native Esc-to-close
+  // dialog handling wins.
   const activeClip = timeline ? getActiveClip(timeline) : null
   const saveable = !!timeline && isTimelineSaveable(timeline)
   useShortcut('i', handleMarkIn)
   useShortcut('o', handleMarkOut)
+  useShortcut(',', handleFrameStepBack)
+  useShortcut('.', handleFrameStepForward)
+  useShortcut('arrowleft', handleArrowLeft)
+  useShortcut('arrowright', handleArrowRight)
   useShortcut('mod+enter', () => {
     if (saveable) handleSave()
   })
+  useShortcut(
+    'escape',
+    () => {
+      window.close()
+    },
+    { enabled: !saveOpen }
+  )
   const inFlight =
     activeJobStatus === 'queued' ||
     activeJobStatus === 'rendering' ||
@@ -117,9 +174,17 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4 text-sm">
-        <span className="font-medium">{t('header.title')}</span>
-        <span className="text-muted-foreground">·</span>
-        <code className="text-xs text-muted-foreground">{sourceVideoId}</code>
+        <span className="shrink-0 font-medium">{t('header.title')}</span>
+        <span className="shrink-0 text-muted-foreground">·</span>
+        <span className="min-w-0 truncate font-medium" title={sourceVideoId}>
+          {sourceTitle ?? sourceVideoId}
+        </span>
+        {sourceCreatorName && (
+          <>
+            <span className="shrink-0 text-muted-foreground">—</span>
+            <span className="min-w-0 truncate text-muted-foreground">{sourceCreatorName}</span>
+          </>
+        )}
       </header>
 
       <div className="relative flex flex-1 flex-col overflow-hidden">
@@ -132,6 +197,7 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
               controls
               className="h-full w-full"
               preload="metadata"
+              aria-label={t('preview.aria')}
             />
           ) : (
             <span className="text-sm text-muted-foreground">{t('loading')}</span>

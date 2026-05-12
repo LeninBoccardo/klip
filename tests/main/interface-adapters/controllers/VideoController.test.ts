@@ -4,6 +4,7 @@ import type { IFileSystemReader } from '@domain/ports'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
+import type { IGetCachedVideoComments } from '@use-cases/GetCachedVideoComments'
 import type { IMoveVideosToCreator } from '@use-cases/IMoveVideosToCreator'
 
 const electron = vi.hoisted(() => {
@@ -47,6 +48,7 @@ function makeDeps(): {
   fetchVideoDetail: IFetchVideoDetail
   enrichAllVideos: IEnrichAllVideos
   fetchVideoComments: IFetchVideoComments
+  getCachedVideoComments: IGetCachedVideoComments
   moveVideosToCreator: IMoveVideosToCreator
   fsReader: IFileSystemReader
 } {
@@ -54,6 +56,7 @@ function makeDeps(): {
     fetchVideoDetail: { execute: vi.fn() },
     enrichAllVideos: { execute: vi.fn() },
     fetchVideoComments: { execute: vi.fn() },
+    getCachedVideoComments: { execute: vi.fn().mockResolvedValue(null) },
     moveVideosToCreator: {
       execute: vi.fn().mockResolvedValue({ moved: 0, skipped: 0, errors: {} })
     },
@@ -87,6 +90,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -96,7 +100,9 @@ describe('VideoController', () => {
         'enrich-all-videos',
         'fetch-video-comments',
         'fetch-video-detail',
+        'get-cached-video-comments',
         'get-transcript',
+        'get-transcript-segments',
         'get-video-by-id',
         'get-videos-paginated',
         'move-videos-to-creator',
@@ -113,12 +119,39 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
     const request = { videoIds: ['v-1', 'v-2'], targetCreatorId: 'mrbeast' }
     await invoke('move-videos-to-creator', request)
     expect(d.moveVideosToCreator.execute).toHaveBeenCalledWith(request)
+  })
+
+  it('"get-cached-video-comments" delegates to GetCachedVideoComments use case', async () => {
+    const repo = makeRepo()
+    const d = makeDeps()
+    const cached = {
+      videoId: 'video-1',
+      comments: [],
+      totalFetched: 0,
+      wasTruncated: false,
+      fetchedAt: '2026-05-12T00:00:00.000Z',
+      fromCache: true
+    }
+    vi.mocked(d.getCachedVideoComments.execute).mockResolvedValue(cached)
+    registerVideoController(
+      repo,
+      d.fetchVideoDetail,
+      d.enrichAllVideos,
+      d.fetchVideoComments,
+      d.getCachedVideoComments,
+      d.fsReader,
+      d.moveVideosToCreator
+    )
+    const result = await invoke('get-cached-video-comments', 'video-1')
+    expect(d.getCachedVideoComments.execute).toHaveBeenCalledWith('video-1')
+    expect(result).toEqual(cached)
   })
 
   it('"fetch-video-comments" delegates to FetchVideoComments use case', async () => {
@@ -128,13 +161,16 @@ describe('VideoController', () => {
       videoId: 'video-1',
       comments: [],
       totalFetched: 0,
-      wasTruncated: false
+      wasTruncated: false,
+      fetchedAt: '2026-05-12T00:00:00.000Z',
+      fromCache: false
     })
     registerVideoController(
       repo,
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -151,6 +187,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -167,6 +204,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -182,6 +220,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -197,6 +236,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -219,13 +259,16 @@ describe('VideoController', () => {
       description: null,
       isShort: false,
       hasTranscript: false,
-      transcriptText: null
+      transcriptText: null,
+      transcriptStatus: 'ok',
+      transcriptError: null
     })
     registerVideoController(
       repo,
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -248,6 +291,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -271,6 +315,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )
@@ -290,6 +335,7 @@ describe('VideoController', () => {
       d.fetchVideoDetail,
       d.enrichAllVideos,
       d.fetchVideoComments,
+      d.getCachedVideoComments,
       d.fsReader,
       d.moveVideosToCreator
     )

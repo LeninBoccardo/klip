@@ -34,6 +34,7 @@
     "check:full": "npm run check && npm run smoke",
     "setup": "npm install && tsx scripts/download-binaries.ts && npm run rebuild",
     "clean": "tsx scripts/clean-app-data.ts",
+    "logs:clear": "tsx scripts/clear-logs.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"

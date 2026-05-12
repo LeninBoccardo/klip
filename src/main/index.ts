@@ -29,8 +29,10 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 // ── Initialise persistent logger before app.whenReady so even boot-time
-//    crashes leave a trail at <userData>/logs/klip.log.
-initLogger(app)
+//    crashes leave a trail. Dev runs land at <cwd>/logs/klip-dev.log so
+//    the file is readable from the project root during manual testing;
+//    packaged runs use <userData>/logs/klip.log as before.
+initLogger(app, { isDev: is.dev })
 
 // ── Test-only overrides ──
 // E2E tests need to point the user-data path at a temp directory so they
@@ -102,6 +104,7 @@ app.whenReady().then(() => {
     container.useCases.fetchVideoDetail,
     container.useCases.enrichAllVideos,
     container.useCases.fetchVideoComments,
+    container.useCases.getCachedVideoComments,
     container.ports.fsReader,
     container.useCases.moveVideosToCreator
   )

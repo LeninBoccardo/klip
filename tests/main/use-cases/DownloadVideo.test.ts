@@ -11,7 +11,7 @@ import type {
   IIdGenerator
 } from '@domain/ports'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
-import type { VideoInfo, DownloadProgress, DownloadResult } from '@domain/types'
+import type { VideoInfo, DownloadProgress, DownloadResult, ChannelInfo } from '@domain/types'
 import type { Creator } from '@domain/entities'
 
 // ── Mock builders ──
@@ -144,6 +144,21 @@ const videoInfo: VideoInfo = {
   viewCount: null
 }
 
+/**
+ * Default mock channel info returned by the downloader's
+ * `fetchChannelInfo` stub. Carries an avatarUrl so the new
+ * creator-creation path in DownloadVideo has something to persist —
+ * tests that need a different shape override per-case.
+ */
+const channelInfo: ChannelInfo = {
+  channelId: 'UC_test',
+  channelName: 'TestChannel',
+  channelUrl: 'https://youtube.com/channel/UC_test',
+  uploaderUrl: 'https://youtube.com/@TestChannel',
+  subscriberCount: 1234,
+  avatarUrl: 'https://yt3.googleusercontent.com/test-avatar.jpg'
+}
+
 const downloadResult: DownloadResult = {
   downloadId: 'will-be-overwritten',
   videoId: 'abc123',
@@ -193,6 +208,10 @@ describe('DownloadVideo', () => {
     idGenerator = mockIdGenerator()
 
     vi.mocked(fetchInfo.execute).mockResolvedValue(videoInfo)
+    // Default channel-info resolver returns a populated avatar so the
+    // creator-creation path persists a non-null avatarUrl. Per-test
+    // overrides handle the "no avatar available" and "fetch fails" cases.
+    vi.mocked(downloader.fetchChannelInfo).mockResolvedValue(channelInfo)
     vi.mocked(downloader.download).mockImplementation(async (opts, onProgress) => {
       onProgress({
         downloadId: opts.downloadId,
@@ -291,7 +310,7 @@ describe('DownloadVideo', () => {
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
 
-    expect(creatorRepo.findById).toHaveBeenCalledWith('testcreator')
+    expect(creatorRepo.findByFolderName).toHaveBeenCalledWith('testcreator')
     expect(creatorRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'testcreator',
@@ -319,7 +338,7 @@ describe('DownloadVideo', () => {
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z'
     }
-    vi.mocked(creatorRepo.findById).mockReturnValue(missingCreator)
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(missingCreator)
 
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
@@ -524,6 +543,9 @@ describe('DownloadVideo', () => {
   // ── Edge: existing active creator (no upsert/updateStatus needed) ──
 
   it('should not upsert or updateStatus for an existing active creator', async () => {
+    // avatarUrl is populated here so the test exercises the truly
+    // "complete creator, no work needed" path — leaving it null would
+    // trigger the avatar-backfill branch and a legitimate upsert.
     const activeCreator: Creator = {
       id: 'testcreator',
       folderName: 'testcreator',
@@ -532,7 +554,7 @@ describe('DownloadVideo', () => {
       youtubeChannelId: null,
       youtubeChannelUrl: null,
       subscriberCount: null,
-      avatarUrl: null,
+      avatarUrl: 'https://yt3.googleusercontent.com/existing-avatar.jpg',
       notes: null,
       tags: [],
       status: 'active',
@@ -540,13 +562,16 @@ describe('DownloadVideo', () => {
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z'
     }
-    vi.mocked(creatorRepo.findById).mockReturnValue(activeCreator)
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(activeCreator)
 
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
 
     expect(creatorRepo.upsert).not.toHaveBeenCalled()
     expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
+    // No avatar fetch should happen when one is already on file —
+    // saves an extra yt-dlp invocation per download.
+    expect(downloader.fetchChannelInfo).not.toHaveBeenCalled()
   })
 
   // ── Edge: deleted creator — left as-is (intentional) ──
@@ -568,7 +593,7 @@ describe('DownloadVideo', () => {
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z'
     }
-    vi.mocked(creatorRepo.findById).mockReturnValue(deletedCreator)
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(deletedCreator)
 
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
@@ -770,7 +795,7 @@ describe('DownloadVideo', () => {
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z'
     }
-    vi.mocked(creatorRepo.findById).mockReturnValue(activeCreator)
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(activeCreator)
 
     const infoWithChannel: VideoInfo = {
       ...videoInfo,
@@ -904,6 +929,8 @@ describe('DownloadVideo', () => {
   })
 
   it('should NOT overwrite existing youtubeChannelId on a Creator', async () => {
+    // avatarUrl is set so the avatar-backfill branch doesn't add noise to
+    // this test — the assertion below targets youtubeChannelId immutability.
     const linkedCreator: Creator = {
       id: 'testcreator',
       folderName: 'testcreator',
@@ -912,7 +939,7 @@ describe('DownloadVideo', () => {
       youtubeChannelId: 'UC_already_linked',
       youtubeChannelUrl: 'https://youtube.com/channel/UC_already_linked',
       subscriberCount: 9999,
-      avatarUrl: null,
+      avatarUrl: 'https://yt3.googleusercontent.com/existing-avatar.jpg',
       notes: null,
       tags: [],
       status: 'active',
@@ -920,7 +947,7 @@ describe('DownloadVideo', () => {
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z'
     }
-    vi.mocked(creatorRepo.findById).mockReturnValue(linkedCreator)
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(linkedCreator)
 
     const infoWithDifferentChannel: VideoInfo = {
       ...videoInfo,
@@ -933,8 +960,200 @@ describe('DownloadVideo', () => {
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
 
-    // Should NOT upsert because existing.youtubeChannelId is already set
+    // Should NOT upsert because every backfill condition is already satisfied
+    // (channel id/url, subscriber count, avatar) — there's literally nothing
+    // new to write.
     expect(creatorRepo.upsert).not.toHaveBeenCalled()
     expect(creatorRepo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  // ── Avatar fetch on ensureCreator ──
+  //
+  // The per-video yt-dlp JSON doesn't carry the channel thumbnail, so a
+  // dedicated fetchChannelInfo call is what pulls avatarUrl into the DB.
+  // These tests guard the three observable behaviours: fetch + persist on
+  // create, backfill on existing, and graceful failure when yt-dlp errors.
+
+  it('persists avatarUrl from fetchChannelInfo when creating a new Creator', async () => {
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(downloader.fetchChannelInfo).toHaveBeenCalledTimes(1)
+    expect(creatorRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'testcreator',
+        avatarUrl: 'https://yt3.googleusercontent.com/test-avatar.jpg'
+      })
+    )
+  })
+
+  it('prefers info.channelUrl over the raw video URL when fetching channel info', async () => {
+    vi.mocked(fetchInfo.execute).mockResolvedValue({
+      ...videoInfo,
+      channelUrl: 'https://youtube.com/channel/UC_canonical'
+    })
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(downloader.fetchChannelInfo).toHaveBeenCalledWith(
+      'https://youtube.com/channel/UC_canonical'
+    )
+  })
+
+  it('falls back to the video URL when info.channelUrl is null', async () => {
+    // videoInfo default has channelUrl: null — this is the common case for
+    // a yt-dlp `--dump-json` against a watch URL that doesn't surface
+    // channel_url in its output. fetchChannelInfo still resolves a channel
+    // from a video URL, so we hand it through unchanged.
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(downloader.fetchChannelInfo).toHaveBeenCalledWith('https://youtube.com/watch?v=abc123')
+  })
+
+  it('backfills avatarUrl on an existing creator that lacks one', async () => {
+    const avatarlessCreator: Creator = {
+      id: 'testcreator',
+      folderName: 'testcreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      youtubeChannelId: 'UC_test',
+      youtubeChannelUrl: 'https://youtube.com/channel/UC_test',
+      subscriberCount: 1234,
+      avatarUrl: null,
+      notes: null,
+      tags: [],
+      status: 'active',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(avatarlessCreator)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(downloader.fetchChannelInfo).toHaveBeenCalledTimes(1)
+    expect(creatorRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'testcreator',
+        avatarUrl: 'https://yt3.googleusercontent.com/test-avatar.jpg',
+        // Other fields stay put — backfill must only fill nulls.
+        youtubeChannelId: 'UC_test',
+        subscriberCount: 1234
+      })
+    )
+  })
+
+  it('does not fetch channel info when the existing creator already has an avatar', async () => {
+    const completeCreator: Creator = {
+      id: 'testcreator',
+      folderName: 'testcreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      youtubeChannelId: 'UC_test',
+      youtubeChannelUrl: 'https://youtube.com/channel/UC_test',
+      subscriberCount: 1234,
+      avatarUrl: 'https://yt3.googleusercontent.com/existing.jpg',
+      notes: null,
+      tags: [],
+      status: 'active',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(completeCreator)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    // Avoid the extra yt-dlp invocation when nothing would change.
+    expect(downloader.fetchChannelInfo).not.toHaveBeenCalled()
+  })
+
+  it('does not fetch channel info for a deleted creator', async () => {
+    // Deleted creators must be left alone end-to-end — including no
+    // surprise avatar fetches that could imply they're being recovered.
+    const deletedCreator: Creator = {
+      id: 'testcreator',
+      folderName: 'testcreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      youtubeChannelId: null,
+      youtubeChannelUrl: null,
+      subscriberCount: null,
+      avatarUrl: null,
+      notes: null,
+      tags: [],
+      status: 'deleted',
+      deletedAt: '2025-06-01T00:00:00.000Z',
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(deletedCreator)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(downloader.fetchChannelInfo).not.toHaveBeenCalled()
+    expect(creatorRepo.upsert).not.toHaveBeenCalled()
+  })
+
+  it('finds a manually-registered creator by folderName even when its id is a UUID', async () => {
+    // Regression: the previous `findById(folderName)` only matched
+    // creators where id === folderName (DownloadVideo's own auto-create
+    // convention). RegisterCreator assigns a UUID id with folderName
+    // as a separate field, so the lookup missed and the INSERT below
+    // hit the partial UNIQUE index on youtube_channel_id, surfacing as
+    //   SqliteError: UNIQUE constraint failed: creators.youtube_channel_id
+    // in production logs (see logs/klip-dev.log entry from the
+    // "register Creator → download video" flow).
+    const registeredCreator: Creator = {
+      id: 'b9e3a7fa-uuid-not-folder',
+      folderName: 'testcreator',
+      name: 'TestCreator',
+      profileImagePath: null,
+      youtubeChannelId: 'UC_test',
+      youtubeChannelUrl: 'https://youtube.com/channel/UC_test',
+      subscriberCount: 1234,
+      avatarUrl: 'https://yt3.googleusercontent.com/existing.jpg',
+      notes: null,
+      tags: [],
+      status: 'active',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+    vi.mocked(creatorRepo.findByFolderName).mockReturnValue(registeredCreator)
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    // No INSERT — the existing creator is fully populated (channel id,
+    // url, sub count, avatar) so the backfill branch finds nothing to
+    // write. Critically, no second creator row is created.
+    expect(creatorRepo.upsert).not.toHaveBeenCalled()
+    expect(downloader.download).toHaveBeenCalled()
+    expect(videoRepo.upsert).toHaveBeenCalled()
+  })
+
+  it('still completes the download when fetchChannelInfo fails', async () => {
+    // Avatar is non-critical metadata. A failure to fetch it must not
+    // abort the download — the creator is created with avatarUrl: null
+    // and the video continues through the pipeline.
+    vi.mocked(downloader.fetchChannelInfo).mockRejectedValue(new Error('yt-dlp blew up'))
+
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    expect(creatorRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'testcreator',
+        avatarUrl: null
+      })
+    )
+    expect(downloader.download).toHaveBeenCalled()
+    expect(videoRepo.upsert).toHaveBeenCalled()
   })
 })

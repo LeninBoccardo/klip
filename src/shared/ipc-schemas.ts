@@ -107,15 +107,23 @@ export const ipcSchemas = {
   'fetch-video-detail': z.tuple([z.string()]),
   'enrich-all-videos': z.tuple([]),
   'get-transcript': z.tuple([z.string()]),
+  'get-transcript-segments': z.tuple([z.string()]),
   // `maxComments` is optional in the contract; renderer always passes it
   // (default 500 in the hook), but accept either arity to stay forward-
-  // compatible with future call sites. The cap (5000) protects yt-dlp from
-  // an XSS-driven `Infinity` that would scrape millions of comments while
-  // holding the spawn timeout open.
+  // compatible with future call sites. The cap (50000) protects yt-dlp
+  // from an XSS-driven `Infinity` that would scrape millions of comments
+  // while holding the spawn timeout open. The renderer's "Fetch all"
+  // action targets the cap directly; yt-dlp's own scraping rate-limits
+  // (and the dynamic timeout in fetchComments) keep individual runs
+  // bounded even for the highest-volume videos.
   'fetch-video-comments': z.union([
     z.tuple([z.string()]),
-    z.tuple([z.string(), z.int().min(1).max(5000)])
+    z.tuple([z.string(), z.int().min(1).max(50_000)])
   ]),
+  // Cache-only sibling: returns the on-disk cached comments payload for a
+  // video (7-day TTL) or null. Does NOT call yt-dlp. Renderer hits this on
+  // tab open so previously-fetched comments survive route/tab changes.
+  'get-cached-video-comments': z.tuple([z.string()]),
   'move-videos-to-creator': z.tuple([
     z.object({
       // Same 5K cap as bulk-update-tags — protects the use case from XSS-driven

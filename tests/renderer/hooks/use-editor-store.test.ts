@@ -6,6 +6,8 @@ import { useEditorStore } from '@/hooks/use-editor-store'
 function resetStore(): void {
   useEditorStore.setState({
     sourceVideoId: null,
+    sourceTitle: null,
+    sourceCreatorName: null,
     timeline: null,
     renderMode: 'copy',
     activeJobId: null,
@@ -16,11 +18,18 @@ function resetStore(): void {
   })
 }
 
+const SEED = {
+  sourceVideoId: 'abc',
+  sourceTitle: 'Test source',
+  sourceCreatorName: 'Test creator',
+  durationSec: 30
+} as const
+
 describe('useEditorStore — initSourceVideo', () => {
   beforeEach(resetStore)
 
   it('seeds a graph-shaped timeline from a source id + duration', () => {
-    useEditorStore.getState().initSourceVideo({ sourceVideoId: 'abc', durationSec: 30 })
+    useEditorStore.getState().initSourceVideo(SEED)
     const s = useEditorStore.getState()
     expect(s.sourceVideoId).toBe('abc')
     expect(s.timeline?.tracks[0].clips[0].sourceVideoId).toBe('abc')
@@ -35,7 +44,7 @@ describe('useEditorStore — initSourceVideo', () => {
       activeJobPercent: 50,
       activeJobError: 'old error'
     })
-    useEditorStore.getState().initSourceVideo({ sourceVideoId: 'abc', durationSec: 30 })
+    useEditorStore.getState().initSourceVideo(SEED)
     const s = useEditorStore.getState()
     expect(s.activeJobId).toBeNull()
     expect(s.activeJobCutId).toBeNull()
@@ -48,7 +57,7 @@ describe('useEditorStore — initSourceVideo', () => {
 describe('useEditorStore — in/out point clamping', () => {
   beforeEach(() => {
     resetStore()
-    useEditorStore.getState().initSourceVideo({ sourceVideoId: 'abc', durationSec: 30 })
+    useEditorStore.getState().initSourceVideo(SEED)
   })
 
   it('clamps a below-zero in-point to 0', () => {

@@ -2,20 +2,24 @@ import type { IVideoRepository } from '@domain/repositories'
 import type { IVideoDownloader } from '@domain/ports'
 import type { VideoCommentsResult } from '@shared/types'
 import type { IFetchVideoComments } from './IFetchVideoComments'
+import type { ICommentsCache } from '@main/framework-drivers/comments-cache/CommentsCache'
 
 const DEFAULT_MAX_COMMENTS = 500
 
 /**
  * Fetch YouTube comments + replies for a single video on demand.
  *
- * Unlike FetchVideoDetail, this use case does not persist anything — comments
- * are returned directly to the renderer and held only in TanStack Query
- * mutation state until the user navigates away.
+ * Result is written to the on-disk CommentsCache (7-day TTL) after each
+ * successful fetch so re-opens of the Comments tab don't re-pay the
+ * yt-dlp round trip. The cache is *not* read here — callers that want a
+ * cache-first read use `GetCachedVideoComments` (cheap, no network). This
+ * use case always does the network fetch.
  */
 export class FetchVideoComments implements IFetchVideoComments {
   constructor(
     private videoRepo: IVideoRepository,
-    private downloader: IVideoDownloader
+    private downloader: IVideoDownloader,
+    private cache: ICommentsCache
   ) {}
 
   async execute(
@@ -32,11 +36,15 @@ export class FetchVideoComments implements IFetchVideoComments {
 
     const { comments, wasTruncated } = await this.downloader.fetchComments(video.url, maxComments)
 
-    return {
+    const result: VideoCommentsResult = {
       videoId: video.id,
       comments,
       totalFetched: comments.length,
-      wasTruncated
+      wasTruncated,
+      fetchedAt: new Date().toISOString(),
+      fromCache: false
     }
+    this.cache.write(result)
+    return result
   }
 }

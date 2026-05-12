@@ -13,7 +13,8 @@ import type {
   EnrichVideosResult,
   VideoCommentsResult,
   MoveVideosToCreatorRequest,
-  MoveVideosToCreatorResult
+  MoveVideosToCreatorResult,
+  TranscriptSegment
 } from '@shared/types'
 import type { VideoDto } from '@shared/dtos'
 
@@ -57,6 +58,7 @@ export function useFetchVideoDetail(): UseMutationResult<VideoDetailWithTranscri
     onSuccess: (_, videoId) => {
       qc.invalidateQueries({ queryKey: queryKeys.videos.detail(videoId) })
       qc.invalidateQueries({ queryKey: queryKeys.videos.transcript(videoId) })
+      qc.invalidateQueries({ queryKey: queryKeys.videos.transcriptSegments(videoId) })
     }
   })
 }
@@ -77,14 +79,55 @@ export function useTranscript(videoId: string | undefined): UseQueryResult<strin
   })
 }
 
+export function useTranscriptSegments(
+  videoId: string | undefined
+): UseQueryResult<TranscriptSegment[] | null, Error> {
+  return useQuery({
+    queryKey: queryKeys.videos.transcriptSegments(videoId!),
+    queryFn: () => window.api.getTranscriptSegments(videoId!),
+    enabled: !!videoId
+  })
+}
+
 export function useFetchVideoComments(): UseMutationResult<
   VideoCommentsResult,
   Error,
   { videoId: string; maxComments?: number }
 > {
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ videoId, maxComments = 500 }: { videoId: string; maxComments?: number }) =>
-      window.api.fetchVideoComments(videoId, maxComments)
+      window.api.fetchVideoComments(videoId, maxComments),
+    onSuccess: (data, { videoId }) => {
+      // Seed the cached-comments query so a tab toggle or remount picks
+      // up the fresh data without an extra round trip to main.
+      qc.setQueryData(queryKeys.videos.commentsCache(videoId), data)
+    }
+  })
+}
+
+/**
+ * Reads the on-disk cached comments for a video (7-day TTL, written by
+ * `useFetchVideoComments`). Resolves to null on cache miss. Auto-fires
+ * on mount so the Comments tab can show prior data instantly without
+ * the user re-clicking "Load comments" after every tab switch.
+ *
+ * Does NOT hit yt-dlp — that's `useFetchVideoComments`'s job. Renderer
+ * code shows the Load button when this query returns null.
+ */
+export function useCachedVideoComments(
+  videoId: string | undefined
+): UseQueryResult<VideoCommentsResult | null, Error> {
+  return useQuery({
+    queryKey: queryKeys.videos.commentsCache(videoId!),
+    queryFn: () => window.api.getCachedVideoComments(videoId!),
+    enabled: !!videoId,
+    // The cache file itself is the source of truth; don't refetch the
+    // disk read for staleness — the only thing that changes the cached
+    // payload is a successful `useFetchVideoComments`, which seeds this
+    // query directly via `setQueryData` on success.
+    staleTime: Infinity,
+    gcTime: Infinity
   })
 }
 

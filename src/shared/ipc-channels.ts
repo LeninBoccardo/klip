@@ -28,7 +28,9 @@ export const IpcChannels = {
   FetchVideoDetail: 'fetch-video-detail',
   EnrichAllVideos: 'enrich-all-videos',
   GetTranscript: 'get-transcript',
+  GetTranscriptSegments: 'get-transcript-segments',
   FetchVideoComments: 'fetch-video-comments',
+  GetCachedVideoComments: 'get-cached-video-comments',
   MoveVideosToCreator: 'move-videos-to-creator',
 
   // ── Cuts ──

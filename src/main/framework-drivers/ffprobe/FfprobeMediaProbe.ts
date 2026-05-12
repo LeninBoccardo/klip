@@ -44,8 +44,14 @@ export class FfprobeMediaProbe implements IMediaProbe {
   ): Promise<{ duration: number | null; resolution: string | null }> {
     return new Promise((resolve, reject) => {
       const args = [
+        // `error` surfaces ffprobe's actual error message on stderr (e.g.
+        // "Invalid data found when processing input" for a corrupted file,
+        // or "No such file or directory" for a bogus path). `quiet`
+        // suppressed everything and left the user with the unhelpful
+        //   ffprobe failed (code 1):
+        // with no payload — see logs/klip-dev.log.
         '-v',
-        'quiet',
+        'error',
         '-print_format',
         'json',
         '-show_format',

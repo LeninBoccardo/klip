@@ -14,6 +14,7 @@ import type {
   VideoQueryParams,
   CutQueryParams,
   VideoDetailWithTranscript,
+  TranscriptSegment,
   EnrichVideosResult,
   EnrichProgress,
   VideoCommentsResult,
@@ -79,7 +80,9 @@ interface KlipAPI {
   fetchVideoDetail(videoId: string): Promise<VideoDetailWithTranscript>
   enrichAllVideos(): Promise<EnrichVideosResult>
   getTranscript(videoId: string): Promise<string | null>
+  getTranscriptSegments(videoId: string): Promise<TranscriptSegment[] | null>
   fetchVideoComments(videoId: string, maxComments?: number): Promise<VideoCommentsResult>
+  getCachedVideoComments(videoId: string): Promise<VideoCommentsResult | null>
   moveVideosToCreator(request: MoveVideosToCreatorRequest): Promise<MoveVideosToCreatorResult>
 
   // ── Cuts ──

@@ -29,6 +29,11 @@ interface CutDataJson {
 interface CreatorJson {
   name?: string
   profileImagePath?: string
+  // Remote channel avatar URL (YouTube hosts these on yt3.ggpht.com /
+  // googleusercontent.com — CSP allows both). When present in the
+  // sidecar, reconciliation persists it so a DB wipe + library survival
+  // reconstructs the avatar without an extra yt-dlp call.
+  avatarUrl?: string
   youtubeChannelId?: string
   youtubeChannelUrl?: string
 }
@@ -109,7 +114,15 @@ export class ReconcileDirectory implements IReconcileDirectory {
     const dbCreators = this.creatorRepo.findAll()
     const diskCreatorNames = new Set(this.fs.listDirectories(rootPath))
 
-    const dbCreatorMap = new Map(dbCreators.map((c) => [c.id, c]))
+    // Map keyed by folderName, not id — disk folders are matched against
+    // folderName everywhere (step 2 already iterates by creator.folderName),
+    // and the previous id-keyed lookup misclassified any creator whose
+    // `id` differs from its `folderName` (e.g. RegisterCreator assigns a
+    // random UUID id with a separate folderName) as a brand-new
+    // discovery, triggering a UNIQUE constraint on creators.folder_name
+    // when the discover-new INSERT below ran for an already-present
+    // folder.
+    const dbCreatorMap = new Map(dbCreators.map((c) => [c.folderName, c]))
     const videosByCreator = this.groupByCreator(this.videoRepo.findAll())
     const cutsByCreator = this.groupByCreator(this.cutRepo.findAll())
 
@@ -158,7 +171,12 @@ export class ReconcileDirectory implements IReconcileDirectory {
         youtubeChannelId: creatorJson?.youtubeChannelId ?? null,
         youtubeChannelUrl: creatorJson?.youtubeChannelUrl ?? null,
         subscriberCount: null,
-        avatarUrl: null,
+        // Reconciliation runs inside a sync DB transaction, so we can't
+        // await an extra yt-dlp call here to fetch a fresh avatar. Honour
+        // whatever the on-disk sidecar carries; creators auto-created via
+        // DownloadVideo populate avatarUrl directly on the DB row, not
+        // through this path.
+        avatarUrl: creatorJson?.avatarUrl ?? null,
         notes: null,
         tags: [],
         status: 'active',
@@ -192,7 +210,13 @@ export class ReconcileDirectory implements IReconcileDirectory {
   private executeForCreatorInternal(rootPath: string, creatorName: string): ReconcileResult {
     const result = emptyResult()
 
-    const existing = this.creatorRepo.findById(creatorName)
+    // `creatorName` is a folderName — it's extracted from a file-event
+    // path's first segment by ProcessFileNotifications.processGranular.
+    // The previous `findById(creatorName)` only matched when id ===
+    // folderName, which is true for DownloadVideo-created creators but
+    // false for RegisterCreator-created ones (those carry a UUID id).
+    // Same bug class as the one fixed in executeInternal's map keying.
+    const existing = this.creatorRepo.findByFolderName(creatorName)
     const creatorDir = this.path.join(rootPath, creatorName)
     const folderExists = this.fs.directoryExists(creatorDir)
 
@@ -240,7 +264,10 @@ export class ReconcileDirectory implements IReconcileDirectory {
         youtubeChannelId: creatorJson?.youtubeChannelId ?? null,
         youtubeChannelUrl: creatorJson?.youtubeChannelUrl ?? null,
         subscriberCount: null,
-        avatarUrl: null,
+        // See note in executeInternal: reconciliation persists whatever
+        // avatarUrl the sidecar carries; live channel fetches happen in
+        // DownloadVideo, not here.
+        avatarUrl: creatorJson?.avatarUrl ?? null,
         notes: null,
         tags: [],
         status: 'active',
@@ -329,12 +356,30 @@ export class ReconcileDirectory implements IReconcileDirectory {
     const metaJson = this.fs.readJsonFile<MetaJson>(this.path.join(videoDir, 'meta.json'))
     const files = this.fs.listFiles(videoDir)
 
-    const mediaFile = files.find((f) => /\.(mp4|mkv|webm)$/i.test(f)) ?? null
+    // Match every container that YtDlpDownloader.resolveMediaFilePath accepts.
+    // The previous narrower regex (`mp4|mkv|webm` only) missed `.m4a`, `.mov`,
+    // `.flv`, etc., and silently set `filePath = videoDir`. EnrichMediaMetadata
+    // then ran ffprobe against the directory → "Permission denied" → the
+    // renderer surfaced it as "Browser can't play this codec". `.part` is
+    // excluded so a partial download isn't catalogued as the real file.
+    const MEDIA_EXT_RE =
+      /\.(mp4|mkv|webm|m4a|mp3|mov|avi|flv|m4v|ts|opus|ogg|ogv|wmv|3gp|aac|wav)$/i
+    const mediaFile =
+      files.find((f) => MEDIA_EXT_RE.test(f) && !f.endsWith('.part')) ?? null
     // Accept either the literal `thumbnail.<ext>` (manual sideload convention) or
     // any image alongside the media file as long as it isn't yt-dlp's `.info.json`
     // sidecar (e.g. `<videoId>.jpg` written by `--write-thumbnail --convert-thumbnails jpg`).
     const thumbFile =
       files.find((f) => /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.includes('.info.')) ?? null
+
+    // No media file yet — almost always a mid-download race (yt-dlp wrote the
+    // `.info.json` / `.part` first, the file watcher fired before the final
+    // `.mp4` landed). Refuse to catalogue the directory itself as a video:
+    // that's the bug class that produced the "codec can't play" symptom.
+    // DownloadVideo.execute will write the correct row when yt-dlp finishes;
+    // a later watcher event will trigger reconcile again with the real media
+    // file present.
+    if (!mediaFile) return
 
     const now = new Date().toISOString()
     const newVideo: Video = {
@@ -345,7 +390,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       duration: metaJson?.duration ?? null,
       resolution: null,
       fileSize: null,
-      filePath: mediaFile ? this.path.join(videoDir, mediaFile) : videoDir,
+      filePath: this.path.join(videoDir, mediaFile),
       thumbnailPath: thumbFile ? this.path.join(videoDir, thumbFile) : null,
       downloadDate: metaJson?.downloadDate ?? null,
       probeStatus: 'pending',

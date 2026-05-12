@@ -1,17 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { UseMutationResult } from '@tanstack/react-query'
+import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import { CommentsTab } from '@/components/features/videos/CommentsTab'
-import { useFetchVideoComments } from '@/hooks/use-videos'
+import { useCachedVideoComments, useFetchVideoComments } from '@/hooks/use-videos'
 import type { VideoComment, VideoCommentsResult } from '@shared/types'
 
 vi.mock('@/hooks/use-videos', () => ({
-  useFetchVideoComments: vi.fn()
+  useFetchVideoComments: vi.fn(),
+  useCachedVideoComments: vi.fn()
 }))
 
 type FetchCommentsArgs = { videoId: string; maxComments?: number }
 type FetchCommentsState = UseMutationResult<VideoCommentsResult, Error, FetchCommentsArgs>
+type CachedCommentsState = UseQueryResult<VideoCommentsResult | null, Error>
+
+function makeCacheState(
+  overrides: Partial<CachedCommentsState> = {}
+): CachedCommentsState {
+  return {
+    data: null,
+    error: null,
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+    status: 'success',
+    fetchStatus: 'idle',
+    refetch: vi.fn(),
+    ...overrides
+  } as unknown as CachedCommentsState
+}
 
 function makeComment(overrides: Partial<VideoComment> = {}): VideoComment {
   return {
@@ -51,6 +70,10 @@ function makeMutationState(overrides: Partial<FetchCommentsState>): FetchComment
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Cache lookup defaults to "no cached payload" so every existing test
+  // continues to exercise the mutation-only flow it was written for.
+  // Cases that want a cache hit override this per-test.
+  vi.mocked(useCachedVideoComments).mockReturnValue(makeCacheState())
 })
 
 describe('CommentsTab — idle state', () => {
@@ -73,7 +96,7 @@ describe('CommentsTab — idle state', () => {
     expect(screen.getByText(/1\.2K comments/i)).toBeInTheDocument()
   })
 
-  it('calls mutate with the videoId when the load button is clicked', async () => {
+  it('calls mutate with the videoId and initial cap when the load button is clicked', async () => {
     const mutate = vi.fn()
     vi.mocked(useFetchVideoComments).mockReturnValue(makeMutationState({ mutate }))
 
@@ -81,7 +104,7 @@ describe('CommentsTab — idle state', () => {
     render(<CommentsTab videoId="v1" knownCount={null} />)
 
     await user.click(screen.getByRole('button', { name: /load comments/i }))
-    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1' })
+    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1', maxComments: 500 })
   })
 })
 
@@ -122,7 +145,7 @@ describe('CommentsTab — error state', () => {
     expect(screen.getByText('yt-dlp failed: timed out')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /retry/i }))
-    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1' })
+    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1', maxComments: 500 })
   })
 })
 
@@ -132,7 +155,9 @@ describe('CommentsTab — loaded states', () => {
       videoId: 'v1',
       comments,
       totalFetched: comments.length,
-      wasTruncated
+      wasTruncated,
+      fetchedAt: '2026-05-12T00:00:00.000Z',
+      fromCache: false
     }
     return makeMutationState({
       data,
@@ -184,14 +209,49 @@ describe('CommentsTab — loaded states', () => {
     expect(screen.getByRole('button', { name: /hide 1 replies/i })).toBeInTheDocument()
   })
 
-  it('shows the "First 500 only" badge when wasTruncated is true', () => {
+  it('shows the "First N only" badge with the actual fetched count when wasTruncated is true', () => {
     vi.mocked(useFetchVideoComments).mockReturnValue(
       loadedState([makeComment({ id: 'top1', text: 'A' })], true)
     )
 
     render(<CommentsTab videoId="v1" knownCount={null} />)
 
-    expect(screen.getByText('First 500 only')).toBeInTheDocument()
+    // The badge now interpolates `totalFetched` (1 in this fixture) so the
+    // label reflects how much was actually scraped, not a hardcoded 500.
+    expect(screen.getByText('First 1 only')).toBeInTheDocument()
+  })
+
+  it('renders Load more + Fetch all when wasTruncated is true', async () => {
+    const mutate = vi.fn()
+    const data: VideoCommentsResult = {
+      videoId: 'v1',
+      comments: [makeComment({ id: 'top1', text: 'A' })],
+      totalFetched: 500,
+      wasTruncated: true,
+      fetchedAt: '2026-05-12T00:00:00.000Z',
+      fromCache: false
+    }
+    vi.mocked(useFetchVideoComments).mockReturnValue(
+      makeMutationState({
+        data,
+        isIdle: false,
+        isSuccess: true,
+        status: 'success',
+        mutate
+      })
+    )
+
+    const user = userEvent.setup()
+    render(<CommentsTab videoId="v1" knownCount={null} />)
+
+    const loadMore = screen.getByRole('button', { name: /load more/i })
+    const fetchAll = screen.getByRole('button', { name: /fetch all/i })
+
+    await user.click(loadMore)
+    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1', maxComments: 1000 })
+
+    await user.click(fetchAll)
+    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1', maxComments: 50_000 })
   })
 
   it('renders the empty-state when totalFetched is 0', () => {
@@ -222,13 +282,39 @@ describe('CommentsTab — loaded states', () => {
     expect(screen.getByText('Pinned')).toBeInTheDocument()
   })
 
+  it('renders cached comments without triggering a fetch when the cache query resolves with data', async () => {
+    // Regression for the "comments lost on tab/page change" UX: on
+    // mount, useCachedVideoComments returns the prior payload from disk
+    // and the tab pops the comments in instantly. The mutation is NOT
+    // fired automatically — that would re-pay the yt-dlp round trip we
+    // just cached out of.
+    const mutate = vi.fn()
+    const cached: VideoCommentsResult = {
+      videoId: 'v1',
+      comments: [makeComment({ id: 'top1', text: 'From cache' })],
+      totalFetched: 1,
+      wasTruncated: false,
+      fetchedAt: '2026-05-12T00:00:00.000Z',
+      fromCache: true
+    }
+    vi.mocked(useCachedVideoComments).mockReturnValue(makeCacheState({ data: cached }))
+    vi.mocked(useFetchVideoComments).mockReturnValue(makeMutationState({ mutate }))
+
+    render(<CommentsTab videoId="v1" knownCount={null} />)
+
+    expect(screen.getByText('From cache')).toBeInTheDocument()
+    expect(mutate).not.toHaveBeenCalled()
+  })
+
   it('re-fires mutate when Reload is clicked', async () => {
     const mutate = vi.fn()
     const data: VideoCommentsResult = {
       videoId: 'v1',
       comments: [makeComment({ id: 'top1', text: 'A' })],
       totalFetched: 1,
-      wasTruncated: false
+      wasTruncated: false,
+      fetchedAt: '2026-05-12T00:00:00.000Z',
+      fromCache: false
     }
     vi.mocked(useFetchVideoComments).mockReturnValue(
       makeMutationState({
@@ -244,6 +330,9 @@ describe('CommentsTab — loaded states', () => {
     render(<CommentsTab videoId="v1" knownCount={null} />)
 
     await user.click(screen.getByRole('button', { name: /reload/i }))
-    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1' })
+    // Reload now passes the initial cap explicitly so a load-more session
+    // resets back to the first batch instead of inheriting the elevated
+    // count from a previous Fetch all click.
+    expect(mutate).toHaveBeenCalledWith({ videoId: 'v1', maxComments: 500 })
   })
 })

@@ -140,7 +140,8 @@ function useSourceVideoBootstrap(sourceVideoId: string): void {
 
   useEffect(() => {
     let cancelled = false
-    void window.api.getVideoById(sourceVideoId).then((video) => {
+    ;(async () => {
+      const video = await window.api.getVideoById(sourceVideoId)
       if (cancelled) return
       if (!video) {
         // The editor window was opened against an id that no longer
@@ -155,7 +156,21 @@ function useSourceVideoBootstrap(sourceVideoId: string): void {
         // here too so an externally-opened editor URL surfaces the cause.
         console.warn(`[klip:editor] source video duration unknown: ${sourceVideoId}`)
       }
-      initSourceVideo({ sourceVideoId, durationSec: duration })
+
+      // Creator lookup is a sub-millisecond DB hit and only used for the
+      // header chrome; fall back to an empty name if the row is missing
+      // rather than refusing to bootstrap the editor.
+      const creator = await window.api.getCreatorById(video.creatorId)
+      if (cancelled) return
+
+      initSourceVideo({
+        sourceVideoId,
+        sourceTitle: video.title,
+        sourceCreatorName: creator?.name ?? '',
+        durationSec: duration
+      })
+    })().catch((err) => {
+      console.error('[klip:editor] source video bootstrap failed:', err)
     })
     return () => {
       cancelled = true

@@ -4,9 +4,17 @@
     <meta charset="UTF-8" />
     <title>Klip</title>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!--
+      `media-src 'self' klip-media:` is required so <video> / <audio>
+      elements can load from the custom `klip-media://…` protocol used
+      to serve local library files. Without it the CSP falls back to
+      `default-src 'self'`, the media element rejects the URI, and the
+      player surfaces it to the user as "Browser can't play this codec"
+      (the load failure is opaque to the element).
+    -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: klip-media: https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com; object-src 'none'; base-uri 'self'; form-action 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: klip-media: https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com; media-src 'self' klip-media:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
   </head>
 

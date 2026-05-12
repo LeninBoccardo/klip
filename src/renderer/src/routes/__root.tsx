@@ -292,7 +292,16 @@ const RootLayout = (): React.ReactElement => (
         <ResponsiveSidebarProvider>
           <AppSidebar />
           <SidebarInset className="overflow-hidden">
-            <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+            {/*
+              `relative z-60 bg-background` makes this header opaque AND
+              stacked above the PersistentPlayer (z-50, portaled to
+              document.body). Without it, the detail-mode player — whose
+              top tracks its slot in the scrolling content below — draws
+              ON TOP of the header as the slot's viewport rect rises into
+              the header band during scroll, producing the "video
+              overflows other UI" symptom users reported.
+            */}
+            <header className="relative z-60 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
               <AppBreadcrumb />

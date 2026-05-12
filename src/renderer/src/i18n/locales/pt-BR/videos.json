@@ -16,6 +16,9 @@
     "metadataRefreshed": "Metadados atualizados",
     "refreshFailed": "Falha ao atualizar: {{message}}",
     "transcriptCopied": "Transcrição copiada para a área de transferência",
+    "transcriptUnavailable": "Este vídeo não tem legendas disponíveis",
+    "transcriptRateLimited": "O YouTube limitou a taxa de requisições da transcrição. Tente atualizar novamente mais tarde.",
+    "transcriptFetchFailed": "Falha ao buscar transcrição: {{message}}",
     "playAria": "Reproduzir {{title}}",
     "notFound": "Vídeo não encontrado",
     "missing": {
@@ -54,7 +57,8 @@
       "notFetched": "Nenhuma transcrição buscada ainda.",
       "noneTitle": "Nenhuma transcrição disponível",
       "noneDescriptionEnriched": "Este vídeo não possui legendas geradas automaticamente.",
-      "noneDescriptionNotEnriched": "Clique em “Buscar metadados” para obter a transcrição automática."
+      "noneDescriptionNotEnriched": "Clique em “Buscar metadados” para obter a transcrição automática.",
+      "seekAria": "Ir para {{time}}"
     }
   },
   "comments": {
@@ -68,12 +72,18 @@
     "noneOnVideo": "Nenhum comentário neste vídeo",
     "summaryComments": "comentários",
     "summaryReplies": "respostas",
-    "truncatedBadge": "Apenas os primeiros 500",
+    "truncatedBadge": "Apenas os primeiros {{count}}",
     "pinnedBadge": "Fixado",
     "viewReplies": "Ver {{count}} respostas",
     "hideReplies": "Ocultar {{count}} respostas",
     "copySuccess": "Comentários copiados para a área de transferência",
-    "copyError": "Falha ao copiar comentários"
+    "copyError": "Falha ao copiar comentários",
+    "loadMore": "Carregar mais",
+    "loadMoreHint": "Busca o próximo lote no YouTube.",
+    "fetchAll": "Buscar todos",
+    "fetchAllHint": "Pode levar vários minutos em vídeos populares.",
+    "loadingMoreTitle": "Buscando mais comentários…",
+    "loadingMoreHint": "Refaz a busca no YouTube até o limite solicitado. Os comentários atuais permanecem visíveis até o novo lote chegar."
   },
   "tags": {
     "title": "Tags",

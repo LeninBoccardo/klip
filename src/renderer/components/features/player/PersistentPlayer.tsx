@@ -20,6 +20,7 @@ function seekToPercent(el: HTMLVideoElement, fraction: number): void {
   el.currentTime = el.duration * fraction
 }
 
+
 /**
  * The single, persistent `<video>` element shared across the app.
  *
@@ -45,6 +46,7 @@ export function PersistentPlayer(): React.ReactElement | null {
   const queue = usePlayerStore((s) => s.queue)
   const next = usePlayerStore((s) => s.next)
   const previous = usePlayerStore((s) => s.previous)
+  const seekRequest = usePlayerStore((s) => s.seekRequest)
 
   const slotEl = usePlayerSlot((s) => s.element)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -86,6 +88,28 @@ export function PersistentPlayer(): React.ReactElement | null {
     return () => el.removeEventListener('loadedmetadata', seekIfNeeded)
   }, [videoId, mounted])
 
+  // External seek requests (e.g. clicking a transcript line). Keyed off the
+  // request's `nonce` so consecutive seeks to the same timestamp still fire.
+  // Defers to `loadedmetadata` if the surface hasn't decoded enough to set
+  // `currentTime` yet — without that guard, a click immediately after the
+  // route mounts would be a no-op.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el || !mounted || !seekRequest) return
+    const target = Math.max(0, seekRequest.seconds)
+
+    const apply = (): void => {
+      el.currentTime = target
+      // Resume playback if the user was paused — clicking a line implies
+      // "start from here".
+      if (el.paused) void el.play().catch(() => {})
+    }
+
+    if (el.readyState >= 1) apply()
+    else el.addEventListener('loadedmetadata', apply, { once: true })
+    return () => el.removeEventListener('loadedmetadata', apply)
+  }, [seekRequest, mounted])
+
   // Position the container.
   // - detail: overlay the slot rect (tracked via ResizeObserver + scroll/resize)
   // - mini:   fixed bottom-right corner
@@ -109,23 +133,66 @@ export function PersistentPlayer(): React.ReactElement | null {
     }
 
     if (mode === 'detail' && slotEl) {
+      // Track only the values we've actually applied, so the rAF loop
+      // below can early-out when nothing changed. Without this, every
+      // animation frame would assign four style properties even when the
+      // slot is perfectly still — wasteful and triggers needless style
+      // recomputation.
+      let lastTop = NaN
+      let lastLeft = NaN
+      let lastWidth = NaN
+      let lastHeight = NaN
       const update = (): void => {
         const r = slotEl.getBoundingClientRect()
-        container.style.top = `${r.top}px`
-        container.style.left = `${r.left}px`
-        container.style.width = `${r.width}px`
-        container.style.height = `${r.height}px`
+        if (
+          r.top !== lastTop ||
+          r.left !== lastLeft ||
+          r.width !== lastWidth ||
+          r.height !== lastHeight
+        ) {
+          lastTop = r.top
+          lastLeft = r.left
+          lastWidth = r.width
+          lastHeight = r.height
+          container.style.top = `${r.top}px`
+          container.style.left = `${r.left}px`
+          container.style.width = `${r.width}px`
+          container.style.height = `${r.height}px`
+        }
       }
       update()
+
+      // Why a rAF loop instead of scroll/resize listeners:
+      //
+      // The page scrolls inside Radix ScrollArea's viewport. Earlier
+      // attempts to listen on `window` (capture phase) and to walk the
+      // ancestor chain and attach `scroll` listeners on every scrollable
+      // parent both still left the player visibly stationary while the
+      // content scrolled underneath. (Logs confirmed the listeners were
+      // installed; the actual scroll signal didn't reliably propagate to
+      // them — radix's viewport implementation has bitten us here before.)
+      //
+      // The rAF approach sidesteps the question entirely: we just read
+      // the slot's `getBoundingClientRect()` every frame and reposition
+      // when it changes. It's a few floating-point reads per frame and a
+      // string-template assignment only on actual change, so the perf
+      // cost is invisible compared to video decoding happening anyway.
+      // It naturally covers every motion source — scroll, resize, layout
+      // shift, sidebar toggle — without needing to enumerate them.
+      let rafId = requestAnimationFrame(function tick() {
+        update()
+        rafId = requestAnimationFrame(tick)
+      })
+
+      // ResizeObserver is still useful: it fires synchronously after a
+      // resize-driven layout, eliminating the up-to-one-frame lag the rAF
+      // loop would otherwise introduce on window-resize.
       const ro = new ResizeObserver(update)
       ro.observe(slotEl)
-      // Capture phase so scrolls inside nested ScrollAreas still update us.
-      window.addEventListener('scroll', update, true)
-      window.addEventListener('resize', update)
+
       return () => {
+        cancelAnimationFrame(rafId)
         ro.disconnect()
-        window.removeEventListener('scroll', update, true)
-        window.removeEventListener('resize', update)
       }
     }
 

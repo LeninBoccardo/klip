@@ -148,7 +148,7 @@ export class DownloadVideo implements IDownloadVideo {
       const folderName = slugify(creatorName)
 
       // 3. Ensure creator exists in DB
-      this.ensureCreator(folderName, creatorName, info)
+      await this.ensureCreator(folderName, creatorName, info, url)
 
       // 4. Prepare output directory
       const outputDir = this.pathResolver.join(
@@ -248,8 +248,45 @@ export class DownloadVideo implements IDownloadVideo {
     }
   }
 
-  private ensureCreator(folderName: string, displayName: string, info: VideoInfo): void {
-    const existing = this.creatorRepo.findById(folderName)
+  private async ensureCreator(
+    folderName: string,
+    displayName: string,
+    info: VideoInfo,
+    videoUrl: string
+  ): Promise<void> {
+    // Look up by folderName — the on-disk identifier we'll use for the
+    // download's output folder. The previous `findById(folderName)` was
+    // wrong in general: RegisterCreator assigns `id = idGenerator.generate()`
+    // (UUID) and `folderName` is a separate field. They only coincide
+    // for creators auto-created by this very method, so the old lookup
+    // silently passed for fresh installs but exploded the moment a
+    // registered-then-downloaded workflow was exercised (the new INSERT
+    // below would trip the partial UNIQUE index on `youtube_channel_id`).
+    //
+    // Edge case not handled here: user types a different display name
+    // for an already-registered channel. findByFolderName misses, this
+    // method falls through to INSERT, and the UNIQUE on
+    // `youtube_channel_id` still fires. The proper fix (redirect the
+    // download to the existing creator's folder and id) requires
+    // threading the resolved Creator back to the caller — out of scope
+    // for the immediate crash fix.
+    const existing = this.creatorRepo.findByFolderName(folderName)
+
+    // The per-video yt-dlp JSON doesn't carry the channel thumbnail — only
+    // the dedicated channel call (`--flat-playlist --dump-single-json
+    // --playlist-items 1`) does. So when we need an avatar, we make an
+    // extra yt-dlp invocation. We only do it on paths that actually need
+    // one (brand-new creator, or existing creator missing avatarUrl that
+    // we still have a fetch target for) to avoid paying the cost on
+    // every download of an already-complete creator.
+    const needsAvatarFetch =
+      !existing || (existing.avatarUrl === null && existing.status !== 'deleted')
+
+    let fetchedAvatarUrl: string | null = null
+    if (needsAvatarFetch) {
+      fetchedAvatarUrl = await this.fetchChannelAvatar(info, videoUrl, folderName)
+    }
+
     if (!existing) {
       const now = new Date().toISOString()
       const creator: Creator = {
@@ -260,7 +297,7 @@ export class DownloadVideo implements IDownloadVideo {
         youtubeChannelId: info.channelId ?? null,
         youtubeChannelUrl: info.channelUrl ?? null,
         subscriberCount: info.subscriberCount ?? null,
-        avatarUrl: null,
+        avatarUrl: fetchedAvatarUrl,
         notes: null,
         tags: [],
         status: 'active',
@@ -288,14 +325,16 @@ export class DownloadVideo implements IDownloadVideo {
     }
 
     // For an existing creator we may need to: (a) recover from `missing`,
-    // (b) backfill YouTube metadata, or both. A creator that disappeared and
-    // is now reappearing via a download should also pick up any newly-available
-    // metadata in the same upsert.
+    // (b) backfill YouTube metadata, (c) backfill avatarUrl, or any
+    // combination. A creator that disappeared and is now reappearing via
+    // a download should also pick up any newly-available metadata in the
+    // same upsert.
     const needsRecovery = existing.status === 'missing'
     const needsBackfill =
       (!existing.youtubeChannelId && !!info.channelId) ||
       (!existing.youtubeChannelUrl && !!info.channelUrl) ||
-      (existing.subscriberCount === null && info.subscriberCount != null)
+      (existing.subscriberCount === null && info.subscriberCount != null) ||
+      (existing.avatarUrl === null && fetchedAvatarUrl !== null)
 
     if (!needsRecovery && !needsBackfill) return
 
@@ -306,7 +345,33 @@ export class DownloadVideo implements IDownloadVideo {
       youtubeChannelId: existing.youtubeChannelId ?? info.channelId ?? null,
       youtubeChannelUrl: existing.youtubeChannelUrl ?? info.channelUrl ?? null,
       subscriberCount: existing.subscriberCount ?? info.subscriberCount ?? null,
+      avatarUrl: existing.avatarUrl ?? fetchedAvatarUrl,
       updatedAt: new Date().toISOString()
     })
+  }
+
+  /**
+   * Fetch the channel-level avatar URL via yt-dlp. Returns null on
+   * failure — avatars are non-critical metadata and must never block a
+   * download. Prefers the canonical `channelUrl` from the per-video
+   * JSON when available; falls back to the video URL itself, which
+   * yt-dlp's channel resolver still accepts (it walks up to the channel
+   * automatically).
+   */
+  private async fetchChannelAvatar(
+    info: VideoInfo,
+    videoUrl: string,
+    folderName: string
+  ): Promise<string | null> {
+    try {
+      const channelInfo = await this.downloader.fetchChannelInfo(info.channelUrl ?? videoUrl)
+      return channelInfo.avatarUrl ?? null
+    } catch (err) {
+      console.warn(
+        `[DownloadVideo.ensureCreator] Avatar fetch failed for "${folderName}":`,
+        err instanceof Error ? err.message : err
+      )
+      return null
+    }
   }
 }

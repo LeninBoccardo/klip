@@ -39,6 +39,13 @@
     "playerJumpPercent": "Pular para 0%–90%",
     "editorMarkIn": "Marcar início no playhead",
     "editorMarkOut": "Marcar fim no playhead",
-    "editorSave": "Abrir diálogo de salvar corte"
+    "editorFrameStepBack": "Retroceder um quadro",
+    "editorFrameStepForward": "Avançar um quadro",
+    "editorSeekBack1": "Voltar 1s",
+    "editorSeekForward1": "Avançar 1s",
+    "editorSeekBack5": "Voltar 5s",
+    "editorSeekForward5": "Avançar 5s",
+    "editorSave": "Abrir diálogo de salvar corte",
+    "editorClose": "Fechar janela do editor"
   }
 }

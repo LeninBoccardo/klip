@@ -2,6 +2,9 @@
   "header": {
     "title": "Editor"
   },
+  "preview": {
+    "aria": "Pré-visualização do vídeo de origem"
+  },
   "loading": "Carregando metadados do vídeo de origem…",
   "controls": {
     "markIn": "Marcar início",

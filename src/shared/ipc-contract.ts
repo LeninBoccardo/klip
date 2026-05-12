@@ -12,6 +12,7 @@ import type {
   VideoQueryParams,
   CutQueryParams,
   VideoDetailWithTranscript,
+  TranscriptSegment,
   EnrichVideosResult,
   EnrichProgress,
   VideoCommentsResult,
@@ -90,9 +91,17 @@ export interface IpcContract {
   'fetch-video-detail': { params: [videoId: string]; result: VideoDetailWithTranscript }
   'enrich-all-videos': { params: []; result: EnrichVideosResult }
   'get-transcript': { params: [videoId: string]; result: string | null }
+  'get-transcript-segments': {
+    params: [videoId: string]
+    result: TranscriptSegment[] | null
+  }
   'fetch-video-comments': {
     params: [videoId: string, maxComments?: number]
     result: VideoCommentsResult
+  }
+  'get-cached-video-comments': {
+    params: [videoId: string]
+    result: VideoCommentsResult | null
   }
   'move-videos-to-creator': {
     params: [request: MoveVideosToCreatorRequest]

@@ -17,12 +17,26 @@ export interface VideoComment {
 }
 
 /**
- * Result returned by `fetch-video-comments`. Comments are not persisted —
- * the renderer holds them in mutation state until navigation.
+ * Result returned by `fetch-video-comments` / `get-cached-video-comments`.
+ *
+ * Comments are cached to the OS temp directory after a fresh fetch (see
+ * `CommentsCache` in main) with a 7-day TTL, so re-opening the Comments
+ * tab on the same video surfaces them instantly without another yt-dlp
+ * round-trip.
+ *
+ *  - `fetchedAt`  : ISO timestamp when these comments were originally
+ *                   pulled from YouTube. Lets the UI label cached data
+ *                   ("loaded from cache · 2h ago") and lets us decide
+ *                   when to expire.
+ *  - `fromCache`  : true when this payload was returned from disk
+ *                   without a network round-trip. Renderer can use this
+ *                   to offer a "Refresh" affordance.
  */
 export interface VideoCommentsResult {
   videoId: string
   comments: VideoComment[]
   totalFetched: number
   wasTruncated: boolean
+  fetchedAt: string
+  fromCache: boolean
 }

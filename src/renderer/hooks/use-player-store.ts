@@ -53,6 +53,18 @@ export interface PlayerSlice {
   /** Active "Play all" queue, or null when the user is playing a single item. */
   queue: { items: QueueItem[]; index: number } | null
 
+  /**
+   * External seek request. The persistent player watches this object as a
+   * single value; whenever its identity changes, the player seeks to
+   * `seconds`. A monotonic `nonce` ensures consecutive seeks to the same
+   * timestamp still take effect.
+   *
+   * Null while no seek has been requested for the current item. Cleared
+   * automatically when `play()` / `playQueue()` / `stop()` swaps the
+   * loaded item, so a stale seek doesn't fire against the wrong video.
+   */
+  seekRequest: { seconds: number; nonce: number } | null
+
   /** Open a video or cut in the player. Replacing the current item resets resumeAt. */
   play(input: { videoId: string; title: string; mediaKind?: MediaKind; mode?: PlayerMode }): void
   /** The player surface reports its `currentTime` here on a low-frequency
@@ -78,6 +90,13 @@ export interface PlayerSlice {
   previous(): void
   /** Drop the queue but keep the currently-loaded item playing. */
   clearQueue(): void
+
+  /**
+   * Ask the player surface to seek to `seconds`. Safe to call before the
+   * `<video>` has loaded metadata — the player applies the request once
+   * `readyState >= 1`. No-op if the player is idle.
+   */
+  requestSeek(seconds: number): void
 }
 
 export const usePlayerStore = create<PlayerSlice>((set) => ({
@@ -88,6 +107,7 @@ export const usePlayerStore = create<PlayerSlice>((set) => ({
   navBehavior: DEFAULT_PLAYBACK_ON_NAVIGATE,
   resumeAt: 0,
   queue: null,
+  seekRequest: null,
 
   play: ({ videoId, title, mediaKind = 'video', mode = 'detail' }) =>
     set((state) => {
@@ -100,7 +120,8 @@ export const usePlayerStore = create<PlayerSlice>((set) => ({
         // Re-opening the same item keeps the resume point so the user can
         // navigate away and come back without losing position. A different
         // item resets to 0.
-        resumeAt: sameItem ? state.resumeAt : 0
+        resumeAt: sameItem ? state.resumeAt : 0,
+        seekRequest: sameItem ? state.seekRequest : null
       }
     }),
 
@@ -122,7 +143,8 @@ export const usePlayerStore = create<PlayerSlice>((set) => ({
       title: null,
       mode: 'idle',
       resumeAt: 0,
-      queue: null
+      queue: null,
+      seekRequest: null
     }),
 
   playQueue: (items, startIndex = 0) =>
@@ -136,7 +158,8 @@ export const usePlayerStore = create<PlayerSlice>((set) => ({
         mediaKind: item.kind,
         title: item.title,
         mode: 'detail',
-        resumeAt: 0
+        resumeAt: 0,
+        seekRequest: null
       }
     }),
 
@@ -153,7 +176,8 @@ export const usePlayerStore = create<PlayerSlice>((set) => ({
           mediaKind: 'video',
           title: null,
           mode: 'idle',
-          resumeAt: 0
+          resumeAt: 0,
+          seekRequest: null
         }
       }
       const item = state.queue.items[nextIndex]
@@ -164,7 +188,8 @@ export const usePlayerStore = create<PlayerSlice>((set) => ({
         title: item.title,
         // Preserve the user's current mode (detail / mini) so advancing in
         // the floating dock doesn't yank focus back to the page.
-        resumeAt: 0
+        resumeAt: 0,
+        seekRequest: null
       }
     }),
 
@@ -178,9 +203,17 @@ export const usePlayerStore = create<PlayerSlice>((set) => ({
         videoId: item.id,
         mediaKind: item.kind,
         title: item.title,
-        resumeAt: 0
+        resumeAt: 0,
+        seekRequest: null
       }
     }),
 
-  clearQueue: () => set({ queue: null })
+  clearQueue: () => set({ queue: null }),
+
+  requestSeek: (seconds) =>
+    set((state) => {
+      if (state.mode === 'idle') return state
+      const nonce = (state.seekRequest?.nonce ?? 0) + 1
+      return { seekRequest: { seconds, nonce } }
+    })
 }))

@@ -2,28 +2,61 @@ import type { App } from 'electron'
 import log from 'electron-log/main'
 import { join } from 'path'
 
+export interface LoggerOptions {
+  /**
+   * In dev mode the log file is written to `<cwd>/logs/klip-dev.log`
+   * (inside the project directory) so the file is trivial to tail or
+   * read with tooling that operates on the project tree. In production
+   * it falls back to `<userData>/logs/klip.log`.
+   */
+  isDev?: boolean
+}
+
 /**
  * Initialise persistent logging for the main process.
  *
- * Routes log entries to `<userData>/logs/klip.log` with 5MB rotation. Wires
- * crash/exception listeners so renderer + main + child-process failures
- * leave a record on disk instead of vanishing into the terminal.
+ * Behaviour:
+ *   - File transport rotates at 5MB.
+ *   - In dev, the file lives at `<cwd>/logs/klip-dev.log`; in prod, at
+ *     `<userData>/logs/klip.log`. Dev path is project-local so manual
+ *     test sessions leave an analysable trail next to the source.
+ *   - `console.*` in the main process is monkey-patched onto electron-log
+ *     so existing `console.log/error/warn` call sites land in the file
+ *     without rewriting them.
+ *   - Renderer-side `electron-log/renderer` forwards over IPC to this
+ *     same file once `log.initialize()` has been called here.
+ *   - Crash/exception listeners catch renderer + main + child-process
+ *     failures so they leave a record on disk instead of vanishing.
  *
  * Must be called BEFORE `app.whenReady()` so `uncaughtException` during
  * boot is also captured.
- *
- * @returns the configured electron-log instance, for callers that want
- *   to log alongside their existing console.error sites.
  */
-export function initLogger(app: App): typeof log {
-  // electron-log's main module installs a default file transport rooted at
-  // `app.getPath('logs')` once `initialize()` has been called. Setting the
-  // path explicitly removes ambiguity between dev / packaged runs.
+export function initLogger(app: App, options: LoggerOptions = {}): typeof log {
+  const { isDev = false } = options
+
+  // Registers the IPC bridge that `electron-log/renderer` talks to. Once
+  // this runs, renderer-side log calls land in the same file as main.
   log.initialize()
-  log.transports.file.resolvePathFn = (): string => join(app.getPath('logs'), 'klip.log')
+
+  const logFilePath = isDev
+    ? join(process.cwd(), 'logs', 'klip-dev.log')
+    : join(app.getPath('logs'), 'klip.log')
+
+  log.transports.file.resolvePathFn = (): string => logFilePath
   log.transports.file.maxSize = 5 * 1024 * 1024
-  log.transports.file.level = 'info'
-  log.transports.console.level = 'info'
+  log.transports.file.level = isDev ? 'debug' : 'info'
+  log.transports.console.level = isDev ? 'debug' : 'info'
+
+  // Tag main-process entries so the merged file shows origin per-line.
+  log.variables.processType = 'main'
+
+  // Route every console.* call in the main process through electron-log so
+  // pre-existing `console.log/error/warn` sites end up in the log file too.
+  // `Object.assign(console, undefined)` is a no-op when `log.functions` is
+  // absent (e.g. mocked in tests), so this is safe under test doubles.
+  if (log.functions) {
+    Object.assign(console, log.functions)
+  }
 
   // Render-process-gone fires on a crash, kill, or OOM in any renderer
   // window. Without this listener, a renderer crash silently leaves the

@@ -16,6 +16,9 @@
     "metadataRefreshed": "Metadata refreshed",
     "refreshFailed": "Refresh failed: {{message}}",
     "transcriptCopied": "Transcript copied to clipboard",
+    "transcriptUnavailable": "No subtitles available for this video",
+    "transcriptRateLimited": "YouTube rate-limited the transcript request. Try refreshing again later.",
+    "transcriptFetchFailed": "Transcript fetch failed: {{message}}",
     "playAria": "Play {{title}}",
     "notFound": "Video not found",
     "missing": {
@@ -54,7 +57,8 @@
       "notFetched": "No transcript fetched yet.",
       "noneTitle": "No transcript available",
       "noneDescriptionEnriched": "This video has no auto-generated captions.",
-      "noneDescriptionNotEnriched": "Click “Fetch metadata” to retrieve the auto-generated transcript."
+      "noneDescriptionNotEnriched": "Click “Fetch metadata” to retrieve the auto-generated transcript.",
+      "seekAria": "Seek to {{time}}"
     }
   },
   "comments": {
@@ -68,12 +72,18 @@
     "noneOnVideo": "No comments on this video",
     "summaryComments": "comments",
     "summaryReplies": "replies",
-    "truncatedBadge": "First 500 only",
+    "truncatedBadge": "First {{count}} only",
     "pinnedBadge": "Pinned",
     "viewReplies": "View {{count}} replies",
     "hideReplies": "Hide {{count}} replies",
     "copySuccess": "Comments copied to clipboard",
-    "copyError": "Failed to copy comments"
+    "copyError": "Failed to copy comments",
+    "loadMore": "Load more",
+    "loadMoreHint": "Fetches the next batch from YouTube.",
+    "fetchAll": "Fetch all",
+    "fetchAllHint": "May take several minutes for popular videos.",
+    "loadingMoreTitle": "Fetching more comments…",
+    "loadingMoreHint": "Re-scrapes from YouTube up to the requested cap. Existing comments stay on screen until the new batch lands."
   },
   "tags": {
     "title": "Tags",

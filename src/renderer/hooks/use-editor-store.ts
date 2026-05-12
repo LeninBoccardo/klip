@@ -27,6 +27,12 @@ interface EditorState {
   /** The source video id parsed from the editor window's URL hash. */
   sourceVideoId: string | null
 
+  /** Title of the source video, fetched alongside duration during bootstrap. */
+  sourceTitle: string | null
+
+  /** Display name of the creator that owns the source video. */
+  sourceCreatorName: string | null
+
   /** The graph-shaped timeline. Initialised once the source duration is known. */
   timeline: TimelineState | null
 
@@ -41,7 +47,12 @@ interface EditorState {
   activeJobError: string | null
 
   // ── Setup ──
-  initSourceVideo(input: { sourceVideoId: string; durationSec: number }): void
+  initSourceVideo(input: {
+    sourceVideoId: string
+    sourceTitle: string
+    sourceCreatorName: string
+    durationSec: number
+  }): void
 
   // ── Timeline mutations ──
   setCursor(sec: number): void
@@ -69,6 +80,8 @@ interface EditorState {
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   sourceVideoId: null,
+  sourceTitle: null,
+  sourceCreatorName: null,
   timeline: null,
   renderMode: 'copy',
   activeJobId: null,
@@ -77,10 +90,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeJobPercent: null,
   activeJobError: null,
 
-  initSourceVideo({ sourceVideoId, durationSec }) {
+  initSourceVideo({ sourceVideoId, sourceTitle, sourceCreatorName, durationSec }) {
     const timeline = timelineForSource({ sourceVideoId, durationSec })
     set({
       sourceVideoId,
+      sourceTitle,
+      sourceCreatorName,
       timeline,
       // A fresh source clears any stale job mirror — the previous render
       // (if any) is unrelated to the new working surface.

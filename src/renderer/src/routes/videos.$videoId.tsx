@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useVideoById, useFetchVideoDetail, useTranscript } from '@/hooks/use-videos'
+import { useVideoById, useFetchVideoDetail } from '@/hooks/use-videos'
 import { usePlayerStore } from '@/hooks/use-player-store'
 import { useShortcut } from '@/hooks/use-shortcut'
 import { PageContainer, PageHeader } from '@/components/shared'
@@ -9,8 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
 import { Badge } from '@ui/badge'
 import { Button } from '@ui/button'
 import { Skeleton } from '@ui/skeleton'
-import { ScrollArea } from '@ui/scroll-area'
-import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
+import { Empty, EmptyHeader, EmptyTitle } from '@ui/empty'
 import {
   Eye,
   ThumbsUp,
@@ -20,7 +19,6 @@ import {
   Loader2,
   Play,
   ExternalLink,
-  Copy,
   AlertTriangle,
   Scissors
 } from 'lucide-react'
@@ -28,6 +26,7 @@ import { toast } from 'sonner'
 import { formatDuration, formatFileSize, formatCount } from '@/lib/format'
 import { useEffect, useState } from 'react'
 import { CommentsTab } from '@components/features/videos/CommentsTab'
+import { TranscriptTab } from '@components/features/videos/TranscriptTab'
 import { EditableTagsCard } from '@components/features/videos/EditableTagsCard'
 import { DetailPlayerSlot } from '@components/features/player/DetailPlayerSlot'
 import { HistoryButton } from '@components/features/activity/HistoryButton'
@@ -42,7 +41,6 @@ function VideoDetailPage(): React.ReactElement {
   const router = useRouter()
   const { data: video, isLoading } = useVideoById(videoId)
   const fetchDetail = useFetchVideoDetail()
-  const transcriptQuery = useTranscript(videoId)
   const [tab, setTab] = useState('info')
   const play = usePlayerStore((s) => s.play)
   const setMode = usePlayerStore((s) => s.setMode)
@@ -63,15 +61,32 @@ function VideoDetailPage(): React.ReactElement {
 
   const handleRefresh = (): void => {
     fetchDetail.mutate(videoId, {
-      onSuccess: () => toast.success(t('detail.metadataRefreshed')),
+      onSuccess: (result) => {
+        // Metadata + view/like counts always update on a successful call.
+        // Transcript is a sub-step that can fail independently (YouTube
+        // rate-limits this endpoint aggressively). Surface the actual
+        // outcome so the user knows whether to retry vs accept-and-move-on.
+        toast.success(t('detail.metadataRefreshed'))
+        switch (result.transcriptStatus) {
+          case 'ok':
+            break
+          case 'unavailable':
+            toast.info(t('detail.transcriptUnavailable'))
+            break
+          case 'rate-limited':
+            toast.warning(t('detail.transcriptRateLimited'))
+            break
+          case 'error':
+            toast.error(
+              t('detail.transcriptFetchFailed', {
+                message: result.transcriptError ?? 'unknown error'
+              })
+            )
+            break
+        }
+      },
       onError: (err) => toast.error(t('detail.refreshFailed', { message: err.message }))
     })
-  }
-
-  const handleCopyTranscript = (): void => {
-    if (!transcriptQuery.data) return
-    navigator.clipboard.writeText(transcriptQuery.data)
-    toast.success(t('detail.transcriptCopied'))
   }
 
   if (isLoading) {
@@ -264,46 +279,12 @@ function VideoDetailPage(): React.ReactElement {
         </TabsContent>
 
         <TabsContent value="transcript" className="mt-4">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">{t('detail.transcript.title')}</CardTitle>
-                <CardDescription>
-                  {video.hasTranscript
-                    ? t('detail.transcript.fromCaptions')
-                    : t('detail.transcript.notFetched')}
-                </CardDescription>
-              </div>
-              {transcriptQuery.data && (
-                <Button size="sm" variant="outline" onClick={handleCopyTranscript}>
-                  <Copy className="mr-2 size-4" />
-                  {t('actions.copy', { ns: 'common' })}
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {transcriptQuery.isLoading ? (
-                <Skeleton className="h-48 w-full" />
-              ) : transcriptQuery.data ? (
-                <ScrollArea className="max-h-[500px] rounded border">
-                  <pre className="whitespace-pre-wrap p-4 font-mono text-xs leading-relaxed">
-                    {transcriptQuery.data}
-                  </pre>
-                </ScrollArea>
-              ) : (
-                <Empty className="min-h-[200px]">
-                  <EmptyHeader>
-                    <EmptyTitle>{t('detail.transcript.noneTitle')}</EmptyTitle>
-                    <EmptyDescription>
-                      {everEnriched
-                        ? t('detail.transcript.noneDescriptionEnriched')
-                        : t('detail.transcript.noneDescriptionNotEnriched')}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-            </CardContent>
-          </Card>
+          <TranscriptTab
+            videoId={videoId}
+            hasTranscript={video.hasTranscript}
+            everEnriched={everEnriched}
+            durationSeconds={video.duration}
+          />
         </TabsContent>
 
         <TabsContent value="comments" className="mt-4">

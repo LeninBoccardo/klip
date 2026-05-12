@@ -38,7 +38,9 @@ const api = {
   fetchVideoDetail: createTypedInvoker('fetch-video-detail'),
   enrichAllVideos: createTypedInvoker('enrich-all-videos'),
   getTranscript: createTypedInvoker('get-transcript'),
+  getTranscriptSegments: createTypedInvoker('get-transcript-segments'),
   fetchVideoComments: createTypedInvoker('fetch-video-comments'),
+  getCachedVideoComments: createTypedInvoker('get-cached-video-comments'),
   moveVideosToCreator: createTypedInvoker('move-videos-to-creator'),
 
   // ── Cuts ──

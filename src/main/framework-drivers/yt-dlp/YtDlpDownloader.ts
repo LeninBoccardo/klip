@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { isAbsolute, join } from 'path'
 import type { IBinaryResolver, IVideoDownloader, DownloadOptions } from '@domain/ports'
 import type { ChannelInfo, DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
 import type { VideoComment, VideoDetail } from '@shared/types'
@@ -23,7 +23,12 @@ export class YtDlpDownloader implements IVideoDownloader {
     const bin = this.binaryResolver.resolve('yt-dlp')
 
     return new Promise<VideoInfo>((resolve, reject) => {
-      const args = ['--dump-json', '--no-download', '--no-warnings', url]
+      // `--no-playlist` keeps yt-dlp focused on the single video even
+      // when the URL carries a `&list=…` query (very common — every
+      // "watch from playlist" link includes one). Without it, yt-dlp
+      // walks every entry in the playlist and fails the whole call if
+      // any item is region-blocked, members-only, etc.
+      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', url]
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
 
       let stdout = ''
@@ -134,7 +139,8 @@ export class YtDlpDownloader implements IVideoDownloader {
     const bin = this.binaryResolver.resolve('yt-dlp')
 
     return new Promise((resolve, reject) => {
-      const args = ['--dump-json', '--no-download', '--no-warnings', url]
+      // See fetchInfo for the `--no-playlist` rationale.
+      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', url]
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
 
       let stdout = ''
@@ -215,6 +221,8 @@ export class YtDlpDownloader implements IVideoDownloader {
         '--sub-format',
         'vtt',
         '--skip-download',
+        // See fetchInfo for the `--no-playlist` rationale.
+        '--no-playlist',
         '--no-warnings',
         '-o',
         outputTemplate,
@@ -274,6 +282,8 @@ export class YtDlpDownloader implements IVideoDownloader {
         '--extractor-args',
         `youtube:max_comments=${maxComments};comment_sort=top`,
         '--skip-download',
+        // See fetchInfo for the `--no-playlist` rationale.
+        '--no-playlist',
         '--no-warnings',
         url
       ]
@@ -283,13 +293,24 @@ export class YtDlpDownloader implements IVideoDownloader {
       let stderr = ''
       let settled = false
 
-      // Comment scraping can run long for popular videos. Cap at 90s.
+      // Comment scraping scales roughly linearly with the requested cap:
+      // ~60-90s for 500 (yt-dlp baseline) and several minutes for tens of
+      // thousands. The renderer exposes "Fetch all" up to 50K, so the
+      // hardcoded 90s would kill any large fetch before the first half
+      // arrived. Allow ~120ms per requested comment on top of a 60s
+      // baseline, capped at 15 minutes so a buggy / unresponsive yt-dlp
+      // can still be reaped.
+      const timeoutMs = Math.min(15 * 60_000, 60_000 + maxComments * 120)
       const timeout = setTimeout(() => {
         if (settled) return
         settled = true
         proc.kill('SIGTERM')
-        reject(new Error('yt-dlp fetchComments: timed out after 90s'))
-      }, 90_000)
+        reject(
+          new Error(
+            `yt-dlp fetchComments: timed out after ${Math.round(timeoutMs / 1000)}s (max ${maxComments})`
+          )
+        )
+      }, timeoutMs)
 
       proc.stdout.on('data', (chunk: Buffer) => {
         stdout += chunk.toString()
@@ -365,6 +386,24 @@ export class YtDlpDownloader implements IVideoDownloader {
       const args = [
         '--newline',
         '--no-warnings',
+        // See fetchInfo for the `--no-playlist` rationale — the same
+        // applies to a download invocation, otherwise yt-dlp would try
+        // to download every entry in the playlist.
+        '--no-playlist',
+        // Format-sort to prefer H.264 video + M4A audio inside MP4.
+        // Without this, yt-dlp's defaults pick the highest-quality
+        // stream which for YouTube is often VP9 (or AV1). The resulting
+        // MP4 carries codec_tag "vp09" and Chromium's HTML5 <video>
+        // refuses to play it (VP9-in-MP4 / ISO BMFF support is gated and
+        // unreliable across Chromium versions). The renderer surfaces
+        // that as "Browser can't play this codec".
+        //
+        // H.264 inside MP4 with AAC audio is the universally-playable
+        // combination, including on Chromium-based runtimes. `res` and
+        // `abr` keep the higher-resolution / higher-bitrate stream
+        // preferred among H.264 candidates.
+        '-S',
+        'vcodec:h264,res,acodec:m4a,abr',
         // `--continue` resumes from the .part file when a previous attempt
         // for this output template was interrupted. `--no-overwrites` keeps
         // already-fetched sidecars (thumbnail, info.json) from being
@@ -503,18 +542,19 @@ export class YtDlpDownloader implements IVideoDownloader {
     let channelUrl: string | null = null
     let subscriberCount: number | null = null
     let viewCount: number | null = null
+    let info: Record<string, unknown> | null = null
 
     if (existsSync(infoJsonPath)) {
       try {
         const raw = readFileSync(infoJsonPath, 'utf-8')
-        const info = JSON.parse(raw)
-        title = info.title ?? info.fulltitle ?? videoId
-        duration = info.duration ?? null
-        creatorName = info.channel ?? info.uploader ?? ''
-        channelId = info.channel_id ?? null
-        channelUrl = info.channel_url ?? null
-        subscriberCount = info.channel_follower_count ?? null
-        viewCount = info.view_count ?? null
+        info = JSON.parse(raw) as Record<string, unknown>
+        title = (info.title as string) ?? (info.fulltitle as string) ?? videoId
+        duration = (info.duration as number) ?? null
+        creatorName = (info.channel as string) ?? (info.uploader as string) ?? ''
+        channelId = (info.channel_id as string) ?? null
+        channelUrl = (info.channel_url as string) ?? null
+        subscriberCount = (info.channel_follower_count as number) ?? null
+        viewCount = (info.view_count as number) ?? null
 
         // Write meta.json for reconciliation compatibility
         const metaPath = join(outputDir, 'meta.json')
@@ -530,12 +570,20 @@ export class YtDlpDownloader implements IVideoDownloader {
       }
     }
 
-    // Find the downloaded media file (exclude .json and .part files)
-    const files = readdirSync(outputDir)
-    const mediaFile =
-      files.find((f: string) => /\.(mp4|mkv|webm|m4a|mp3)$/i.test(f) && !f.endsWith('.part')) ??
-      null
+    const filePath = this.resolveMediaFilePath(outputDir, videoId, info)
+    if (!filePath) {
+      // Hard failure rather than silently storing the directory as the
+      // video's filePath — that was the previous behaviour and it propagated
+      // into ffprobe-on-a-directory crashes and broken playback. A clear
+      // error here lets the caller mark the download as failed and the
+      // user retry / inspect the output folder.
+      throw new Error(
+        `yt-dlp produced no recognisable media file in "${outputDir}". ` +
+          `Check yt-dlp's output and your format selection.`
+      )
+    }
 
+    const files = readdirSync(outputDir)
     const thumbnailFile =
       files.find((f: string) => /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.includes('.info.')) ?? null
 
@@ -543,7 +591,7 @@ export class YtDlpDownloader implements IVideoDownloader {
       downloadId,
       videoId,
       creatorName,
-      filePath: mediaFile ? join(outputDir, mediaFile) : outputDir,
+      filePath,
       title,
       duration,
       thumbnailPath: thumbnailFile ? join(outputDir, thumbnailFile) : null,
@@ -552,5 +600,57 @@ export class YtDlpDownloader implements IVideoDownloader {
       subscriberCount,
       viewCount
     }
+  }
+
+  /**
+   * Resolve the path to the downloaded media file, in priority order:
+   *
+   *   1. `info.requested_downloads[0].filepath` — yt-dlp's canonical
+   *      post-merge output path. Available in yt-dlp ≥ 2022.04 and is
+   *      the safest source because it accounts for format-merge target
+   *      rewrites (e.g. mp4 → mkv when codec containers conflict).
+   *   2. `info._filename` — legacy field on older yt-dlp builds.
+   *   3. `info.filename` — used by some yt-dlp forks.
+   *   4. Directory scan, restricted to media extensions and `<videoId>.`
+   *      prefix first (matching the `-o` template), then any media file.
+   *      The extension list is wider than before to cover formats that
+   *      occasionally show up for YouTube (e.g. `.mov`, `.flv`, `.opus`,
+   *      `.m4v`) and that the old regex silently dropped, leading to
+   *      `filePath: <outputDir>` and downstream ffprobe failures.
+   *
+   * Each candidate is path-resolved against `outputDir` if relative, and
+   * existence-checked. Returns null when nothing resolves — callers
+   * surface that as a hard error.
+   */
+  private resolveMediaFilePath(
+    outputDir: string,
+    videoId: string,
+    info: Record<string, unknown> | null
+  ): string | null {
+    const candidates: string[] = []
+    if (info) {
+      const requested = info.requested_downloads as Array<{ filepath?: unknown }> | undefined
+      if (Array.isArray(requested) && typeof requested[0]?.filepath === 'string') {
+        candidates.push(requested[0].filepath as string)
+      }
+      if (typeof info._filename === 'string') candidates.push(info._filename)
+      if (typeof info.filename === 'string') candidates.push(info.filename as string)
+    }
+    for (const c of candidates) {
+      const resolved = isAbsolute(c) ? c : join(outputDir, c)
+      if (existsSync(resolved)) return resolved
+    }
+
+    // Broader extension list than the old check — see method JSDoc. The
+    // `.part` exclusion stays so a half-finished download doesn't get
+    // mistaken for a complete file.
+    const MEDIA_EXT_RE =
+      /\.(mp4|mkv|webm|m4a|mp3|mov|avi|flv|m4v|ts|opus|ogg|ogv|wmv|3gp|aac|wav)$/i
+    const files = readdirSync(outputDir).filter((f) => !f.endsWith('.part'))
+    // Prefer a file whose name matches the `-o ${videoId}.%(ext)s` template.
+    const prefixHit = files.find((f) => f.startsWith(`${videoId}.`) && MEDIA_EXT_RE.test(f))
+    if (prefixHit) return join(outputDir, prefixHit)
+    const anyHit = files.find((f) => MEDIA_EXT_RE.test(f))
+    return anyHit ? join(outputDir, anyHit) : null
   }
 }

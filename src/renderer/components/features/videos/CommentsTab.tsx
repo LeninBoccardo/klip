@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useFetchVideoComments } from '@/hooks/use-videos'
+import { useCachedVideoComments, useFetchVideoComments } from '@/hooks/use-videos'
 import { Button } from '@ui/button'
 import { Badge } from '@ui/badge'
 import { ScrollArea } from '@ui/scroll-area'
@@ -8,7 +8,17 @@ import { Avatar, AvatarFallback } from '@ui/avatar'
 import { Item, ItemMedia, ItemContent } from '@ui/item'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@ui/collapsible'
-import { ChevronRight, Copy, Loader2, MessageSquare, Pin, RefreshCw, ThumbsUp } from 'lucide-react'
+import {
+  ChevronRight,
+  Copy,
+  Loader2,
+  MessageSquare,
+  Pin,
+  Plus,
+  RefreshCw,
+  ThumbsUp,
+  Zap
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import type { Locale } from 'date-fns/locale'
@@ -73,18 +83,54 @@ function formatRelative(timestamp: number | null, locale: Locale): string {
   }
 }
 
+/** Default number of comments yt-dlp is asked to scrape on first load. */
+const INITIAL_MAX = 500
+/** Step size for "Load more": each click bumps the cap by this many. */
+const LOAD_MORE_STEP = 500
+/**
+ * Hard cap for "Fetch all". Matches the IPC schema's upper bound. yt-dlp's
+ * own scraping pace (paired with the dynamic timeout in
+ * YtDlpDownloader.fetchComments) keeps individual runs bounded.
+ */
+const FETCH_ALL_MAX = 50_000
+
 export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.ReactElement | null {
   const { t } = useTranslation('videos')
   const { t: tc } = useTranslation('common')
   const dateLocale = useDateLocale()
+  // Cache query auto-fires on mount. A hit pops cached comments in
+  // instantly; useFetchVideoComments is reserved for the user's explicit
+  // Load / Reload — and seeds this query on success.
+  const cachedComments = useCachedVideoComments(videoId)
   const fetchComments = useFetchVideoComments()
-  const data: VideoCommentsResult | undefined = fetchComments.data
+  // Prefer fresh mutation data when present (just-fetched results take
+  // precedence over the cache snapshot), otherwise the disk-cached payload.
+  const data: VideoCommentsResult | null | undefined =
+    fetchComments.data ?? cachedComments.data
 
   const threads = useMemo(() => (data ? groupThreads(data.comments) : []), [data])
   const replyCount = useMemo(() => threads.reduce((sum, t) => sum + t.replies.length, 0), [threads])
 
+  // Track the cap that produced the currently-shown payload, so "Load more"
+  // can ask for the *next* batch instead of repeatedly re-requesting the
+  // same first 500. Falls back to the initial constant for cache hits where
+  // we don't know the original request size.
+  const [requestedMax, setRequestedMax] = useState<number>(INITIAL_MAX)
+
   const handleLoad = (): void => {
-    fetchComments.mutate({ videoId })
+    setRequestedMax(INITIAL_MAX)
+    fetchComments.mutate({ videoId, maxComments: INITIAL_MAX })
+  }
+
+  const handleLoadMore = (): void => {
+    const next = Math.min(FETCH_ALL_MAX, requestedMax + LOAD_MORE_STEP)
+    setRequestedMax(next)
+    fetchComments.mutate({ videoId, maxComments: next })
+  }
+
+  const handleFetchAll = (): void => {
+    setRequestedMax(FETCH_ALL_MAX)
+    fetchComments.mutate({ videoId, maxComments: FETCH_ALL_MAX })
   }
 
   const handleCopyAll = async (): Promise<void> => {
@@ -97,10 +143,26 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
     }
   }
 
+  // ── Cache lookup in progress ──
+  // Hide the idle CTA until we know whether there's a cached payload —
+  // otherwise the user briefly sees "Load comments" before the cache
+  // hit pops in, which feels like the cache didn't work.
+  if (cachedComments.isLoading) {
+    return (
+      <Empty className="min-h-75">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Loader2 className="size-6 animate-spin" />
+          </EmptyMedia>
+        </EmptyHeader>
+      </Empty>
+    )
+  }
+
   // ── Idle ──
   if (!fetchComments.isPending && !data && !fetchComments.isError) {
     return (
-      <Empty className="min-h-[300px]">
+      <Empty className="min-h-75">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <MessageSquare className="size-6" />
@@ -120,10 +182,14 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
     )
   }
 
-  // ── Loading ──
-  if (fetchComments.isPending) {
+  // ── Loading (no existing data) ──
+  // Only swap the whole panel to the loader when there's nothing to show
+  // yet. When the user has clicked Load more / Fetch all / Reload, we keep
+  // the existing comments visible and surface a small inline indicator
+  // further down so they don't lose their scroll position.
+  if (fetchComments.isPending && !data) {
     return (
-      <Empty className="min-h-[300px]">
+      <Empty className="min-h-75">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <Loader2 className="size-6 animate-spin" />
@@ -138,7 +204,7 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   // ── Error ──
   if (fetchComments.isError) {
     return (
-      <Empty className="min-h-[300px]">
+      <Empty className="min-h-75">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <MessageSquare className="size-6 text-destructive" />
@@ -157,34 +223,44 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   // ── Loaded ──
   if (!data) return null
 
+  // `wasTruncated` is yt-dlp's heuristic: comments.length >= maxComments.
+  // It's an upper-bound signal — "there might be more" — not a guarantee
+  // that more exist on YouTube. The user can keep clicking Load more until
+  // a non-truncated batch returns or the FETCH_ALL_MAX cap is reached.
+  const canLoadMore =
+    data.wasTruncated && requestedMax < FETCH_ALL_MAX && !fetchComments.isPending
+  const canFetchAll =
+    data.wasTruncated && requestedMax < FETCH_ALL_MAX && !fetchComments.isPending
+  const loadingMore = fetchComments.isPending
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <MessageSquare className="size-4" />
           <span>
-            <span className="font-medium text-foreground">{formatCount(data.totalFetched)}</span>{' '}
+            <span className="text-foreground font-medium">{formatCount(data.totalFetched)}</span>{' '}
             {t('comments.summaryComments')}
             {replyCount > 0 && (
               <>
                 {' · '}
-                <span className="font-medium text-foreground">{formatCount(replyCount)}</span>{' '}
+                <span className="text-foreground font-medium">{formatCount(replyCount)}</span>{' '}
                 {t('comments.summaryReplies')}
               </>
             )}
           </span>
           {data.wasTruncated && (
             <Badge variant="secondary" className="ml-1">
-              {t('comments.truncatedBadge')}
+              {t('comments.truncatedBadge', { count: data.totalFetched })}
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleCopyAll}>
+          <Button variant="outline" size="sm" onClick={handleCopyAll} disabled={loadingMore}>
             <Copy className="mr-2 size-4" />
             {tc('actions.copyAll')}
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleLoad}>
+          <Button variant="ghost" size="sm" onClick={handleLoad} disabled={loadingMore}>
             <RefreshCw className="mr-2 size-4" />
             {tc('actions.reload')}
           </Button>
@@ -192,19 +268,55 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
       </div>
 
       {threads.length === 0 ? (
-        <Empty className="min-h-[200px]">
+        <Empty className="min-h-50">
           <EmptyHeader>
             <EmptyTitle>{t('comments.noneOnVideo')}</EmptyTitle>
           </EmptyHeader>
         </Empty>
       ) : (
-        <ScrollArea className="max-h-[600px] rounded border">
+        // Fixed height (matches TranscriptTab): radix ScrollArea's viewport
+        // only scrolls when the root has a concrete height — `max-h` lets
+        // the content push past the rounded border instead of constraining
+        // it, which produced the "comments overflow the dark box" symptom.
+        <ScrollArea className="h-150 rounded border">
           <div className="divide-y">
             {threads.map((thread) => (
               <CommentRow key={thread.top.id} thread={thread} dateLocale={dateLocale} />
             ))}
           </div>
         </ScrollArea>
+      )}
+
+      {(canLoadMore || canFetchAll || loadingMore) && (
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          {loadingMore ? (
+            <div className="text-muted-foreground inline-flex items-center gap-2 text-sm">
+              <Loader2 className="size-4 animate-spin" />
+              <span>{t('comments.loadingMoreTitle')}</span>
+            </div>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadMore}
+                title={t('comments.loadMoreHint')}
+              >
+                <Plus className="mr-2 size-4" />
+                {t('comments.loadMore')}
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleFetchAll}
+                title={t('comments.fetchAllHint')}
+              >
+                <Zap className="mr-2 size-4" />
+                {t('comments.fetchAll')}
+              </Button>
+            </>
+          )}
+        </div>
       )}
     </div>
   )
@@ -231,7 +343,13 @@ function CommentRow({
             <AvatarFallback>{authorInitials(top.author)}</AvatarFallback>
           </Avatar>
         </ItemMedia>
-        <ItemContent>
+        {/* min-w-0: required for flex-1 children. Without it, the default
+            `min-width: auto` keeps the column at its intrinsic min-content
+            width, which is set by the LONGEST content inside — including
+            replies. A reply card or single unbreakable token then pushes
+            ItemContent wider than its flex allotment and the whole row
+            overflows past the parent. */}
+        <ItemContent className="min-w-0">
           <div className="flex items-center gap-2 text-sm flex-wrap">
             <span className="font-medium">{top.author}</span>
             {top.isPinned && (
@@ -250,7 +368,7 @@ function CommentRow({
               {formatCount(top.likeCount)}
             </span>
           </div>
-          <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap break-words">{top.text}</p>
+          <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">{top.text}</p>
 
           {replies.length > 0 && (
             <Collapsible open={open} onOpenChange={setOpen} className="mt-2">
@@ -269,7 +387,19 @@ function CommentRow({
                     : t('comments.viewReplies', { count: replies.length })}
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 ml-2 border-l border-border pl-4 space-y-3">
+              {/*
+                Replies live inside a distinctly-styled rail:
+                  - `border-l-2 border-muted-foreground/30` — visibly
+                    thicker tree-branch indicator (the 1px `border-border`
+                    used here previously was nearly invisible in dark
+                    mode, so users couldn't tell a reply from a top-level
+                    comment).
+                  - `bg-muted/30 rounded-md py-2 pr-2` — subtle background
+                    + corner rounding so the reply group reads as a
+                    grouped affordance rather than an undifferentiated
+                    inline continuation of the parent.
+              */}
+              <CollapsibleContent className="mt-2 ml-2 space-y-2 rounded-md border-l-2 border-muted-foreground/30 bg-muted/30 py-2 pl-4 pr-2">
                 {replies.map((reply) => (
                   <ReplyRow key={reply.id} comment={reply} dateLocale={dateLocale} />
                 ))}
@@ -298,7 +428,8 @@ function ReplyRow({
           <AvatarFallback>{authorInitials(comment.author)}</AvatarFallback>
         </Avatar>
       </ItemMedia>
-      <ItemContent>
+      {/* See CommentRow's ItemContent for the min-w-0 rationale. */}
+      <ItemContent className="min-w-0">
         <div className="flex items-center gap-2 text-sm flex-wrap">
           <span className="font-medium">{comment.author}</span>
           {comment.timestamp && (
@@ -311,7 +442,7 @@ function ReplyRow({
             {formatCount(comment.likeCount)}
           </span>
         </div>
-        <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap break-words">
+        <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
           {comment.text}
         </p>
       </ItemContent>

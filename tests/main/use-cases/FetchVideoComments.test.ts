@@ -54,6 +54,7 @@ function makeComment(overrides: Partial<VideoComment> = {}): VideoComment {
 function makeMocks(): {
   videoRepo: IVideoRepository
   downloader: IVideoDownloader
+  cache: { read: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn>; invalidate: ReturnType<typeof vi.fn> }
 } {
   const videoRepo: IVideoRepository = {
     findAll: vi.fn(),
@@ -79,7 +80,8 @@ function makeMocks(): {
     download: vi.fn(),
     cancel: vi.fn()
   } as unknown as IVideoDownloader
-  return { videoRepo, downloader }
+  const cache = { read: vi.fn(), write: vi.fn(), invalidate: vi.fn() }
+  return { videoRepo, downloader, cache }
 }
 
 describe('FetchVideoComments', () => {
@@ -88,7 +90,7 @@ describe('FetchVideoComments', () => {
 
   beforeEach(() => {
     mocks = makeMocks()
-    useCase = new FetchVideoComments(mocks.videoRepo, mocks.downloader)
+    useCase = new FetchVideoComments(mocks.videoRepo, mocks.downloader, mocks.cache)
   })
 
   it('throws when the video id does not exist', async () => {
@@ -164,6 +166,37 @@ describe('FetchVideoComments', () => {
     expect(mocks.videoRepo.upsert).not.toHaveBeenCalled()
     expect(mocks.videoRepo.updateStatus).not.toHaveBeenCalled()
     expect(mocks.videoRepo.updateProbeStatus).not.toHaveBeenCalled()
+  })
+
+  it('writes the result to the comments cache after a successful fetch', async () => {
+    // Persistence to disk is what fixes the "comments lost on tab/page
+    // change" UX — re-opens of the Comments tab read from the cache
+    // (see GetCachedVideoComments) instead of paying another yt-dlp
+    // round trip. Asserting the write here keeps that contract honest.
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.downloader.fetchComments).mockResolvedValue({
+      comments: [makeComment()],
+      wasTruncated: false
+    })
+
+    const result = await useCase.execute('video-1')
+
+    expect(mocks.cache.write).toHaveBeenCalledTimes(1)
+    expect(mocks.cache.write).toHaveBeenCalledWith(result)
+    // The result advertises a fresh-fetch (not a cache read) so
+    // downstream code can distinguish.
+    expect(result.fromCache).toBe(false)
+    expect(typeof result.fetchedAt).toBe('string')
+  })
+
+  it('does not write to the cache when the downloader throws', async () => {
+    // Avoids persisting a partial / error state — a future cache read
+    // would otherwise serve garbage.
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.downloader.fetchComments).mockRejectedValue(new Error('boom'))
+
+    await expect(useCase.execute('video-1')).rejects.toThrow('boom')
+    expect(mocks.cache.write).not.toHaveBeenCalled()
   })
 
   it('propagates downloader errors (timeout, network) to the caller', async () => {

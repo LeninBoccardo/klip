@@ -106,11 +106,48 @@ export const SHORTCUTS: readonly ShortcutEntry[] = [
   { id: 'editor.markIn', group: 'editor', keys: 'i', descriptionKey: 'entries.editorMarkIn' },
   { id: 'editor.markOut', group: 'editor', keys: 'o', descriptionKey: 'entries.editorMarkOut' },
   {
+    id: 'editor.frameStepBack',
+    group: 'editor',
+    keys: ',',
+    descriptionKey: 'entries.editorFrameStepBack'
+  },
+  {
+    id: 'editor.frameStepForward',
+    group: 'editor',
+    keys: '.',
+    descriptionKey: 'entries.editorFrameStepForward'
+  },
+  {
+    id: 'editor.seekBack1',
+    group: 'editor',
+    keys: 'arrowleft',
+    descriptionKey: 'entries.editorSeekBack1'
+  },
+  {
+    id: 'editor.seekForward1',
+    group: 'editor',
+    keys: 'arrowright',
+    descriptionKey: 'entries.editorSeekForward1'
+  },
+  {
+    id: 'editor.seekBack5',
+    group: 'editor',
+    keys: 'shift+arrowleft',
+    descriptionKey: 'entries.editorSeekBack5'
+  },
+  {
+    id: 'editor.seekForward5',
+    group: 'editor',
+    keys: 'shift+arrowright',
+    descriptionKey: 'entries.editorSeekForward5'
+  },
+  {
     id: 'editor.save',
     group: 'editor',
     keys: 'mod+enter',
     descriptionKey: 'entries.editorSave'
-  }
+  },
+  { id: 'editor.close', group: 'editor', keys: 'escape', descriptionKey: 'entries.editorClose' }
 ] as const
 
 export const GROUPS: readonly ShortcutGroup[] = [

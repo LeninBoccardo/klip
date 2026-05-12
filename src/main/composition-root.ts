@@ -41,6 +41,7 @@ import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
+import type { IGetCachedVideoComments } from '@use-cases/GetCachedVideoComments'
 import type { IMoveVideosToCreator } from '@use-cases/IMoveVideosToCreator'
 import type { ISearchTranscripts } from '@use-cases/ISearchTranscripts'
 import type { IBackfillTranscriptIndex } from '@use-cases/IBackfillTranscriptIndex'
@@ -107,6 +108,8 @@ import { MarkVideoMissing } from '@use-cases/MarkVideoMissing'
 import { MarkVideoActive } from '@use-cases/MarkVideoActive'
 import { EnrichAllVideos } from '@use-cases/EnrichAllVideos'
 import { FetchVideoComments } from '@use-cases/FetchVideoComments'
+import { GetCachedVideoComments } from '@use-cases/GetCachedVideoComments'
+import { CommentsCache } from '@main/framework-drivers/comments-cache/CommentsCache'
 import { ResolveMediaUrl } from '@use-cases/ResolveMediaUrl'
 import { GetAllDistinctTags } from '@use-cases/GetAllDistinctTags'
 import { BulkUpdateTags } from '@use-cases/BulkUpdateTags'
@@ -185,6 +188,7 @@ export interface AppContainer {
     fetchVideoDetail: IFetchVideoDetail
     enrichAllVideos: IEnrichAllVideos
     fetchVideoComments: IFetchVideoComments
+    getCachedVideoComments: IGetCachedVideoComments
     moveVideosToCreator: IMoveVideosToCreator
     searchTranscripts: ISearchTranscripts
     backfillTranscriptIndex: IBackfillTranscriptIndex
@@ -390,7 +394,9 @@ export function createAppContainer(config: AppConfig): AppContainer {
     notifier
   )
 
-  const fetchVideoComments = new FetchVideoComments(videoRepo, videoDownloader)
+  const commentsCache = new CommentsCache()
+  const fetchVideoComments = new FetchVideoComments(videoRepo, videoDownloader, commentsCache)
+  const getCachedVideoComments = new GetCachedVideoComments(commentsCache)
   const moveVideosToCreator = new MoveVideosToCreator(
     videoRepo,
     creatorRepo,
@@ -539,6 +545,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
       fetchVideoDetail,
       enrichAllVideos,
       fetchVideoComments,
+      getCachedVideoComments,
       moveVideosToCreator,
       searchTranscripts,
       backfillTranscriptIndex,

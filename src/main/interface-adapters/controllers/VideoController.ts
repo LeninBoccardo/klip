@@ -3,8 +3,9 @@ import type { IFileSystemReader } from '@domain/ports'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
 import type { IFetchVideoComments } from '@use-cases/IFetchVideoComments'
+import type { IGetCachedVideoComments } from '@use-cases/GetCachedVideoComments'
 import type { IMoveVideosToCreator } from '@use-cases/IMoveVideosToCreator'
-import { parseVtt } from '@domain/types'
+import { parseVtt, parseVttSegments } from '@domain/types'
 import { createTypedHandler } from './create-typed-handler'
 import { toVideoDto, mapPaginated } from './dto-mappers'
 
@@ -19,13 +20,17 @@ import { toVideoDto, mapPaginated } from './dto-mappers'
  *   - `fetch-video-detail`    → fetch + persist extended metadata + transcript
  *   - `enrich-all-videos`     → batch enrich active videos with no detail yet
  *   - `get-transcript`        → read parsed transcript text from disk
- *   - `fetch-video-comments`  → fetch comments + replies on demand (no DB writes)
+ *   - `get-transcript-segments` → read timed transcript segments (for the
+ *                                  player-clickable transcript view)
+ *   - `fetch-video-comments`  → fetch comments + replies on demand (writes to cache)
+ *   - `get-cached-video-comments` → read cached comments (no network)
  */
 export function registerVideoController(
   videoRepo: IVideoRepository,
   fetchVideoDetail: IFetchVideoDetail,
   enrichAllVideos: IEnrichAllVideos,
   fetchVideoComments: IFetchVideoComments,
+  getCachedVideoComments: IGetCachedVideoComments,
   fsReader: IFileSystemReader,
   moveVideosToCreator: IMoveVideosToCreator
 ): void {
@@ -61,8 +66,19 @@ export function registerVideoController(
     return raw ? parseVtt(raw) : null
   })
 
+  createTypedHandler('get-transcript-segments', async (_event, videoId) => {
+    const video = videoRepo.findById(videoId)
+    if (!video || !video.transcriptPath) return null
+    const raw = fsReader.readTextFile(video.transcriptPath)
+    return raw ? parseVttSegments(raw) : null
+  })
+
   createTypedHandler('fetch-video-comments', async (_event, videoId, maxComments) => {
     return fetchVideoComments.execute(videoId, maxComments)
+  })
+
+  createTypedHandler('get-cached-video-comments', async (_event, videoId) => {
+    return getCachedVideoComments.execute(videoId)
   })
 
   createTypedHandler('move-videos-to-creator', async (_event, request) => {
