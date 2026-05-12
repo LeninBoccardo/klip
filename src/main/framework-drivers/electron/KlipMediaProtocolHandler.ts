@@ -73,10 +73,19 @@ export class KlipMediaProtocolHandler {
   }
 
   private async handle(request: Request): Promise<Response> {
+    const rangeHeader = request.headers.get('range')
+    console.log(
+      `[klip-media] ← ${request.method} ${request.url}${rangeHeader ? ` range=${rangeHeader}` : ''}`
+    )
+
     const parsed = parseKlipMediaUrl(request.url)
     if (!parsed.ok) {
+      console.warn(`[klip-media] reject ${parsed.status} parseKlipMediaUrl: ${request.url}`)
       return new Response(null, { status: parsed.status })
     }
+    console.log(
+      `[klip-media] parsed: kind=${parsed.kind} id=${parsed.id} asset=${parsed.asset}`
+    )
 
     const path = this.resolveMedia.resolve({
       kind: parsed.kind,
@@ -84,44 +93,53 @@ export class KlipMediaProtocolHandler {
       asset: parsed.asset
     })
     if (path === null) {
+      console.warn(
+        `[klip-media] reject 404 resolveMedia returned null (kind=${parsed.kind} id=${parsed.id} asset=${parsed.asset})`
+      )
       return new Response(null, { status: 404 })
     }
+    console.log(
+      `[klip-media] resolved path: ${redactPath(path, this.rootPathRef.value)}`
+    )
 
     const checked = checkPathInsideRoot(path, this.rootPathRef.value)
     if (!checked.ok) {
+      console.warn(
+        `[klip-media] reject ${checked.status} checkPathInsideRoot: ${redactPath(path, this.rootPathRef.value)} (root: ${redactPath(this.rootPathRef.value, this.rootPathRef.value)})`
+      )
       return new Response(null, { status: checked.status })
     }
 
     // Explicit stat-then-classify so failures here produce a real
     // diagnostic in the log, instead of a silent `net.fetch` that the
     // renderer's <video> reports as "Browser can't play this codec".
-    //
-    // The directory case in particular is how the previous DownloadVideo
-    // bug surfaced: when buildResult couldn't match the media file's
-    // extension it stored the output directory as the video's filePath,
-    // and net.fetch on a directory file:// URL went through but yielded
-    // an unplayable response. We now log that explicitly so the next
-    // occurrence is identifiable from logs/klip-dev.log alone.
     let stat
     try {
       stat = statSync(checked.absolutePath)
     } catch (err) {
       console.warn(
-        `[klip-media] file not on disk for ${request.url}: ${redactPath(checked.absolutePath, this.rootPathRef.value)} — ${err instanceof Error ? err.message : err}`
+        `[klip-media] reject 404 stat threw for ${redactPath(checked.absolutePath, this.rootPathRef.value)}: ${err instanceof Error ? err.message : err}`
       )
       return new Response(null, { status: 404 })
     }
     if (!stat.isFile()) {
       console.warn(
-        `[klip-media] resolved path is not a regular file (kind=${parsed.kind}, id=${parsed.id}, asset=${parsed.asset}): ${redactPath(checked.absolutePath, this.rootPathRef.value)}. ` +
-          `This usually means the entity's filePath in the DB points at a directory — re-download or run reconciliation to repair.`
+        `[klip-media] reject 404 resolved path is not a regular file (kind=${parsed.kind}, id=${parsed.id}, asset=${parsed.asset}): ${redactPath(checked.absolutePath, this.rootPathRef.value)}`
       )
       return new Response(null, { status: 404 })
     }
+    console.log(
+      `[klip-media] stat OK: size=${stat.size} mtime=${stat.mtime.toISOString()}`
+    )
 
     const upstream = await net.fetch(pathToFileURL(checked.absolutePath).href)
     const ext = extname(checked.absolutePath).toLowerCase()
+    const upstreamCT = upstream.headers.get('content-type')
     const override = EXT_TO_MIME[ext]
+    const finalCT = override ?? upstreamCT ?? '(none)'
+    console.log(
+      `[klip-media] → status=${upstream.status} ext=${ext} upstream-CT=${upstreamCT ?? '(none)'} final-CT=${finalCT}${override ? ' (overridden)' : ''}`
+    )
     if (!override) return upstream
 
     // Rewrap with the corrected Content-Type. We keep the upstream body

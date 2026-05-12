@@ -404,7 +404,42 @@ export function PersistentPlayer(): React.ReactElement | null {
           autoPlay
           playsInline
           className="h-full w-full bg-black"
-          onError={() => setErroredId(videoId)}
+          onError={(e) => {
+            // Capture and log the full MediaError state. Without this the
+            // generic UnsupportedFallback masks four very different
+            // failure modes (network, decode, src-not-supported, abort)
+            // behind one "Browser can't play this codec" message.
+            const el = e.currentTarget
+            const err = el.error
+            const codeName = err
+              ? ['UNKNOWN', 'ABORTED', 'NETWORK', 'DECODE', 'SRC_NOT_SUPPORTED'][err.code] ??
+                `code${err.code}`
+              : 'no-error-object'
+            console.error('[PersistentPlayer] <video> error', {
+              videoId,
+              mediaKind,
+              code: err?.code,
+              codeName,
+              message: err?.message ?? '(empty)',
+              networkState: el.networkState,
+              readyState: el.readyState,
+              currentSrc: el.currentSrc,
+              src
+            })
+            setErroredId(videoId)
+          }}
+          onLoadStart={() => {
+            console.log('[PersistentPlayer] <video> loadstart', { videoId, mediaKind, src })
+          }}
+          onLoadedMetadata={(e) => {
+            const el = e.currentTarget
+            console.log('[PersistentPlayer] <video> loadedmetadata', {
+              videoId,
+              duration: el.duration,
+              videoWidth: el.videoWidth,
+              videoHeight: el.videoHeight
+            })
+          }}
           onEnded={handleEnded}
         />
       )}
