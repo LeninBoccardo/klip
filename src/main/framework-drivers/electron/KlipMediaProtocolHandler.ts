@@ -10,21 +10,26 @@ import { parseKlipMediaUrl, checkPathInsideRoot } from './klip-media-protocol'
 /**
  * Mime-type override table for the protocol's responses. Chromium's
  * built-in file MIME guesser is inconsistent across platforms — on
- * Windows, `.mkv` often comes back as `application/octet-stream` (or
- * `video/x-matroska` if the registry has it), and HTML5 `<video>`
- * refuses to play either. Specifically, `canPlayType('video/x-matroska')`
- * returns `''` even though Chromium's Matroska/WebM demuxer is built
- * in and would happily decode the file. Forcing `video/webm` for `.mkv`
- * routes the response through the same demuxer with a MIME `<video>`
- * recognises — playback works without any container/transcode change.
+ * Windows, `.mp4` can come back as `application/octet-stream` if the
+ * registry mapping is missing, and HTML5 `<video>` refuses any source
+ * with an unrecognised MIME. Pinning these defensively makes the
+ * protocol response self-describing regardless of OS state.
  *
- * `.mp4` we also pin explicitly: defends against a misconfigured
- * Windows MIME registry returning something unexpected. Image MIMEs
- * are pinned so the renderer's `<img>` tags work for thumbnails /
- * avatars even when Chromium's sniffer is uncertain.
+ * `.mkv` is deliberately NOT in this table. Earlier we tried mapping
+ * it to `video/webm` to coax Chromium into using its shared
+ * Matroska/WebM demuxer. The demuxer reads the file's EBML DocType
+ * header at parse time: WebM declares `DocType=webm`, plain Matroska
+ * declares `DocType=matroska`. yt-dlp produces matroska-DocType files
+ * even when we forced `--merge-output-format mkv`, so the demuxer
+ * rejects the cross-claim with `MEDIA_ERR_SRC_NOT_SUPPORTED`. There
+ * is no MIME we can serve that makes Chromium accept a matroska-
+ * DocType file in `<video>`. The fix lives upstream in
+ * `YtDlpDownloader`'s container choice (`mp4/webm` — picks the
+ * matching container per codec). `.mkv` falling through this table
+ * means the protocol returns whatever Chromium guesses; that won't
+ * play, but at least the failure is honest and we don't pretend.
  */
 const EXT_TO_MIME: Record<string, string> = {
-  '.mkv': 'video/webm',
   '.webm': 'video/webm',
   '.mp4': 'video/mp4',
   '.m4v': 'video/mp4',

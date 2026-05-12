@@ -825,14 +825,15 @@ describe('ReconcileDirectory', () => {
     })
 
     it('skips yt-dlp intermediate format files (regression: HLS race)', () => {
-      // With `--merge-output-format mkv`, yt-dlp downloads HLS / DASH streams
-      // as `<videoId>.fNNN.<ext>` intermediates, then merges into the final
-      // `<videoId>.mkv` and deletes the intermediates. If the file watcher
-      // fires mid-merge, an earlier prefix-only match would have catalogued
-      // the `.f234.mp4` intermediate — and once yt-dlp deletes it post-merge,
-      // the DB row points at a vanished path, surfacing as "Browser can't
-      // play this codec" in the renderer. The exact `<videoId>.<ext>` anchor
-      // makes the intermediate ineligible by construction.
+      // With `--merge-output-format mp4/webm`, yt-dlp downloads HLS / DASH
+      // streams as `<videoId>.fNNN.<ext>` intermediates, then merges into the
+      // final `<videoId>.mp4` or `<videoId>.webm` (per codec) and deletes
+      // the intermediates. If the file watcher fires mid-merge, an earlier
+      // prefix-only match would have catalogued the `.f234.mp4` intermediate
+      // — and once yt-dlp deletes it post-merge, the DB row points at a
+      // vanished path, surfacing as "Browser can't play this codec" in the
+      // renderer. The exact `<videoId>.<ext>` anchor makes the intermediate
+      // ineligible by construction.
       creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
       fs.listDirectories = vi.fn().mockImplementation((p: string) => {
         if (p === ROOT) return ['creator-1']

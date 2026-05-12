@@ -401,26 +401,36 @@ export class YtDlpDownloader implements IVideoDownloader {
         // renderer can still play.
         '-S',
         'vcodec:h264,res,acodec:m4a,abr',
-        // Merge into Matroska (.mkv) rather than MP4. Reasons:
-        //   1. MKV is codec-agnostic — it accepts H.264/AAC, VP9/Opus,
-        //      AV1/Opus, and anything else yt-dlp might pick. MP4 is
-        //      strictly a subset; the renderer's "Browser can't play
-        //      this codec" bug came from VP9 muxed into MP4 (codec_tag
-        //      "vp09") which Chromium's MP4 demuxer refuses, even
-        //      though the VP9 decoder itself works fine.
-        //   2. Electron's Chromium (≥ Chrome 122) ships the Matroska
-        //      demuxer enabled by default, so VP9+Opus / AV1+Opus / H.264
-        //      +AAC inside MKV all play through plain HTML5 <video>.
-        //   3. Zero runtime cost: this is a container choice at merge
-        //      time, not a re-encode. The elementary streams are bit-
-        //      identical to what MP4 would have stored.
-        //   4. ffmpeg (and therefore the editor pipeline) handles MKV
-        //      the same as MP4. No downstream impact.
-        // Trade-off: some older external tools (legacy iMovie, pre-2019
-        // Windows Movies & TV) don't open .mkv — accepted because klip's
-        // audience is power-users and the editor stays in-house.
+        // Container selection: prefer MP4, fall back to WebM. yt-dlp
+        // picks the leftmost container whose codec constraints are
+        // satisfied by the streams being merged:
+        //   • H.264 (or H.265) + AAC → MP4
+        //   • VP9 (or AV1) + Opus    → WebM
+        //
+        // Why not Matroska (.mkv): empirically — and against the earlier
+        // research's claim — Chromium's HTML5 <video> rejects
+        // `DocType=matroska` files outright with MEDIA_ERR_SRC_NOT_SUPPORTED
+        // regardless of the MIME we serve. WebM is technically a
+        // *constrained subset* of Matroska, so .mkv files that declare
+        // `DocType=matroska` (which yt-dlp produces for all merged
+        // outputs) cannot be passed off as `video/webm` either — the
+        // demuxer reads the EBML DocType and rejects the cross-claim.
+        // The only containers Chromium accepts in <video> are MP4 and
+        // WebM proper. Picking per-codec means we never produce one
+        // Chromium refuses.
+        //
+        // Why not just MP4: when YouTube only ships VP9/AV1 (4K, HDR,
+        // some channels), merging into MP4 produces `codec_tag=vp09`
+        // (or `av01`) which Chromium's MP4 demuxer rejects. WebM is
+        // VP9/AV1's reference home; the demuxer never refuses VP9/AV1
+        // in WebM.
+        //
+        // The `-S` format-sort above still biases toward H.264+AAC
+        // where available, so most downloads land in MP4. WebM is only
+        // chosen when YouTube genuinely doesn't offer the H.264 ladder
+        // at the desired resolution.
         '--merge-output-format',
-        'mkv',
+        'mp4/webm',
         // `--continue` resumes from the .part file when a previous attempt
         // for this output template was interrupted. `--no-overwrites` keeps
         // already-fetched sidecars (thumbnail, info.json) from being
