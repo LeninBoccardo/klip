@@ -390,20 +390,37 @@ export class YtDlpDownloader implements IVideoDownloader {
         // applies to a download invocation, otherwise yt-dlp would try
         // to download every entry in the playlist.
         '--no-playlist',
-        // Format-sort to prefer H.264 video + M4A audio inside MP4.
-        // Without this, yt-dlp's defaults pick the highest-quality
-        // stream which for YouTube is often VP9 (or AV1). The resulting
-        // MP4 carries codec_tag "vp09" and Chromium's HTML5 <video>
-        // refuses to play it (VP9-in-MP4 / ISO BMFF support is gated and
-        // unreliable across Chromium versions). The renderer surfaces
-        // that as "Browser can't play this codec".
-        //
-        // H.264 inside MP4 with AAC audio is the universally-playable
-        // combination, including on Chromium-based runtimes. `res` and
-        // `abr` keep the higher-resolution / higher-bitrate stream
-        // preferred among H.264 candidates.
+        // Format-sort to prefer H.264 video + M4A audio when available.
+        // We still bias toward H.264 because (a) it has the broadest
+        // editor / external-tool compatibility and (b) it ships at lower
+        // bitrates than VP9/AV1 for the same visual quality. But the cap
+        // is no longer "playable in Chromium" — see `--merge-output-format`
+        // below — so when YouTube only offers VP9 / AV1 (4K, HDR, AV1-
+        // experiment channels, audio-only Topic re-uploads, etc.) we
+        // accept them and the merge step puts them in a container the
+        // renderer can still play.
         '-S',
         'vcodec:h264,res,acodec:m4a,abr',
+        // Merge into Matroska (.mkv) rather than MP4. Reasons:
+        //   1. MKV is codec-agnostic — it accepts H.264/AAC, VP9/Opus,
+        //      AV1/Opus, and anything else yt-dlp might pick. MP4 is
+        //      strictly a subset; the renderer's "Browser can't play
+        //      this codec" bug came from VP9 muxed into MP4 (codec_tag
+        //      "vp09") which Chromium's MP4 demuxer refuses, even
+        //      though the VP9 decoder itself works fine.
+        //   2. Electron's Chromium (≥ Chrome 122) ships the Matroska
+        //      demuxer enabled by default, so VP9+Opus / AV1+Opus / H.264
+        //      +AAC inside MKV all play through plain HTML5 <video>.
+        //   3. Zero runtime cost: this is a container choice at merge
+        //      time, not a re-encode. The elementary streams are bit-
+        //      identical to what MP4 would have stored.
+        //   4. ffmpeg (and therefore the editor pipeline) handles MKV
+        //      the same as MP4. No downstream impact.
+        // Trade-off: some older external tools (legacy iMovie, pre-2019
+        // Windows Movies & TV) don't open .mkv — accepted because klip's
+        // audience is power-users and the editor stays in-house.
+        '--merge-output-format',
+        'mkv',
         // `--continue` resumes from the .part file when a previous attempt
         // for this output template was interrupted. `--no-overwrites` keeps
         // already-fetched sidecars (thumbnail, info.json) from being
