@@ -34,7 +34,8 @@ export const SETTING_KEYS = {
   playbackOnNavigate: 'playbackOnNavigate',
   theme: 'theme',
   language: 'language',
-  hasCompletedOnboarding: 'hasCompletedOnboarding'
+  hasCompletedOnboarding: 'hasCompletedOnboarding',
+  miniPlayerCorner: 'miniPlayerCorner'
 } as const
 
 /** Validator for `hasCompletedOnboarding` (string-encoded boolean). */

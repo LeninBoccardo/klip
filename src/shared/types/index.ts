@@ -84,6 +84,12 @@ export type {
 } from './render-job'
 export { renderCutRequestSchema } from './render-job'
 export type { Theme, Language } from './preferences'
+export type { MiniPlayerCorner } from './mini-player'
+export {
+  MINI_PLAYER_CORNER_VALUES,
+  DEFAULT_MINI_PLAYER_CORNER,
+  isMiniPlayerCorner
+} from './mini-player'
 export {
   THEME_VALUES,
   LANGUAGE_VALUES,

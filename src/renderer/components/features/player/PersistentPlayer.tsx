@@ -2,18 +2,71 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { useSetting, useSetSetting } from '@/hooks/use-settings'
 import { usePlayerStore } from '@/hooks/use-player-store'
 import { usePlayerSlot } from './player-slot-ref'
 import { mediaUrl } from '@/lib/format'
 import { useShortcut } from '@/hooks/use-shortcut'
 import { Button } from '@ui/button'
-import { Maximize2, X, ExternalLink, SkipBack, SkipForward } from 'lucide-react'
+import {
+  GripHorizontal,
+  Maximize2,
+  X,
+  ExternalLink,
+  SkipBack,
+  SkipForward
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import {
+  DEFAULT_MINI_PLAYER_CORNER,
+  SETTING_KEYS,
+  isMiniPlayerCorner,
+  type MiniPlayerCorner
+} from '@shared/types'
 
 const MINI_WIDTH = 360
 const MINI_HEIGHT = 202 // 16:9 from 360px width
 const MINI_OFFSET = 24
+
+/**
+ * Convert a corner anchor + window dimensions into absolute pixel offsets
+ * for the mini player container. Keeps the math in one place so the
+ * initial mount, the resize listener, and the post-drop animation all
+ * agree on the same numbers.
+ */
+function cornerToPosition(corner: MiniPlayerCorner): { top: number; left: number } {
+  const w = window.innerWidth
+  const h = window.innerHeight
+  const right = w - MINI_WIDTH - MINI_OFFSET
+  const bottom = h - MINI_HEIGHT - MINI_OFFSET
+  switch (corner) {
+    case 'TL':
+      return { top: MINI_OFFSET, left: MINI_OFFSET }
+    case 'TR':
+      return { top: MINI_OFFSET, left: right }
+    case 'BL':
+      return { top: bottom, left: MINI_OFFSET }
+    case 'BR':
+      return { top: bottom, left: right }
+  }
+}
+
+/**
+ * Pick the nearest corner for a given on-screen center point. Used after a
+ * drag-and-drop release so the player snaps deterministically — the user
+ * doesn't have to land in an exact zone, just somewhere closer to the
+ * intended corner than to any other.
+ */
+function nearestCorner(centerX: number, centerY: number): MiniPlayerCorner {
+  const left = centerX < window.innerWidth / 2
+  const top = centerY < window.innerHeight / 2
+  if (top && left) return 'TL'
+  if (top && !left) return 'TR'
+  if (!top && left) return 'BL'
+  return 'BR'
+}
 
 function seekToPercent(el: HTMLVideoElement, fraction: number): void {
   if (!Number.isFinite(el.duration) || el.duration <= 0) return
@@ -110,24 +163,33 @@ export function PersistentPlayer(): React.ReactElement | null {
     return () => el.removeEventListener('loadedmetadata', apply)
   }, [seekRequest, mounted])
 
+  // Persisted corner anchor for the mini player. Reads from settings; falls
+  // back to the previous hardcoded bottom-right when nothing is stored yet.
+  const cornerSetting = useSetting(SETTING_KEYS.miniPlayerCorner)
+  const persistCorner = useSetSetting()
+  const corner: MiniPlayerCorner = isMiniPlayerCorner(cornerSetting.data)
+    ? cornerSetting.data
+    : DEFAULT_MINI_PLAYER_CORNER
+
   // Position the container.
   // - detail: overlay the slot rect (tracked via ResizeObserver + scroll/resize)
-  // - mini:   fixed bottom-right corner
+  // - mini:   snap to one of four corners; the choice is persisted across sessions.
   const containerRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const container = containerRef.current
     if (!container || !mounted) return
 
     if (mode === 'mini') {
-      container.style.top = `${window.innerHeight - MINI_HEIGHT - MINI_OFFSET}px`
-      container.style.left = `${window.innerWidth - MINI_WIDTH - MINI_OFFSET}px`
-      container.style.width = `${MINI_WIDTH}px`
-      container.style.height = `${MINI_HEIGHT}px`
-
-      const onResize = (): void => {
-        container.style.top = `${window.innerHeight - MINI_HEIGHT - MINI_OFFSET}px`
-        container.style.left = `${window.innerWidth - MINI_WIDTH - MINI_OFFSET}px`
+      const apply = (): void => {
+        const { top, left } = cornerToPosition(corner)
+        container.style.top = `${top}px`
+        container.style.left = `${left}px`
+        container.style.width = `${MINI_WIDTH}px`
+        container.style.height = `${MINI_HEIGHT}px`
       }
+      apply()
+
+      const onResize = (): void => apply()
       window.addEventListener('resize', onResize)
       return () => window.removeEventListener('resize', onResize)
     }
@@ -200,7 +262,67 @@ export function PersistentPlayer(): React.ReactElement | null {
     container.style.width = '0px'
     container.style.height = '0px'
     return undefined
-  }, [mode, slotEl, mounted])
+  }, [mode, slotEl, mounted, corner])
+
+  // ── Drag-to-snap in mini mode ──────────────────────────────────────────
+  //
+  // pragmatic-drag-and-drop's element adapter gives us a single `draggable()`
+  // wire-up that handles dragstart/drag/drop with HTML5 DnD semantics behind
+  // a clean API. During the drag we override the container's top/left
+  // imperatively for smooth follow; on drop we compute the nearest corner
+  // and persist it (the layout effect above then re-applies the snapped
+  // position via cornerToPosition).
+  //
+  // The drag is wired to a dedicated handle (rendered inside MiniOverlay)
+  // rather than the whole container so clicking the player to pause it
+  // doesn't accidentally initiate a drag. The handle marks itself with
+  // `data-mini-drag-handle="true"` and we restrict draggable to that node
+  // via the `dragHandle` option (falling back to the container if missing).
+  const dragHandleRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const container = containerRef.current
+    const handle = dragHandleRef.current
+    if (!container || mode !== 'mini') return
+
+    // pragmatic-drag-and-drop tracks the pointer offset internally, so we
+    // just store the rect at drag start and translate by the delta we read
+    // out of `location.current.input` on each drag event.
+    let startRect: DOMRect | null = null
+    return draggable({
+      element: handle ?? container,
+      onDragStart: () => {
+        // Disable the snap-back transition during drag.
+        container.style.transition = 'none'
+        startRect = container.getBoundingClientRect()
+      },
+      onDrag: ({ location }) => {
+        if (!startRect) return
+        const dx = location.current.input.clientX - location.initial.input.clientX
+        const dy = location.current.input.clientY - location.initial.input.clientY
+        container.style.left = `${startRect.left + dx}px`
+        container.style.top = `${startRect.top + dy}px`
+      },
+      onDrop: () => {
+        if (!startRect) return
+        const rect = container.getBoundingClientRect()
+        const centerX = rect.left + rect.width / 2
+        const centerY = rect.top + rect.height / 2
+        const snapped = nearestCorner(centerX, centerY)
+        // Smooth slide to the chosen corner.
+        container.style.transition = 'top 200ms ease-out, left 200ms ease-out'
+        const { top, left } = cornerToPosition(snapped)
+        container.style.top = `${top}px`
+        container.style.left = `${left}px`
+        startRect = null
+        // Persist; the next mount (or any subsequent setting read) picks up
+        // the new corner via `corner` above. We don't await — UI continues
+        // animating regardless of the IPC round-trip.
+        if (snapped !== corner) {
+          persistCorner.mutate({ key: SETTING_KEYS.miniPlayerCorner, value: snapped })
+        }
+      }
+    })
+  }, [mode, mounted, corner, persistCorner])
 
   // ── Player keyboard shortcuts (active only in detail mode) ──────────────
   const shortcutsEnabled = mode === 'detail' && Boolean(videoId)
@@ -455,6 +577,7 @@ export function PersistentPlayer(): React.ReactElement | null {
           onExpand={handleExpand}
           onClose={stop}
           onOpenExternally={handleOpenExternally}
+          dragHandleRef={dragHandleRef}
         />
       )}
     </div>,
@@ -471,7 +594,8 @@ function MiniOverlay({
   onNext,
   onExpand,
   onClose,
-  onOpenExternally
+  onOpenExternally,
+  dragHandleRef
 }: {
   title: string | null
   showQueueControls: boolean
@@ -482,10 +606,25 @@ function MiniOverlay({
   onExpand: () => void
   onClose: () => void
   onOpenExternally: () => void
+  dragHandleRef: React.RefObject<HTMLDivElement | null>
 }): React.ReactElement {
   const { t } = useTranslation('player')
   return (
     <>
+      {/*
+        Drag affordance — sits at the top centre of the mini player, fades in
+        on hover so it doesn't fight with the video for visual attention.
+        pragmatic-drag-and-drop attaches its listeners to this element via
+        dragHandleRef so a click *anywhere else* on the player (e.g. on the
+        video to pause) doesn't accidentally initiate a drag.
+      */}
+      <div
+        ref={dragHandleRef}
+        aria-label={t('dragHandleAria')}
+        className="absolute inset-x-0 top-0 flex h-6 cursor-grab items-center justify-center bg-linear-to-b from-black/60 to-transparent text-white/60 opacity-0 transition-opacity hover:opacity-100 active:cursor-grabbing"
+      >
+        <GripHorizontal className="size-3" />
+      </div>
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-gradient-to-t from-black/80 to-transparent px-2 pb-1 pt-6">
         {showQueueControls && (
           <>

@@ -5,6 +5,7 @@
   "openExternalAria": "Open in external player",
   "expandAria": "Expand to detail",
   "closeAria": "Close player",
+  "dragHandleAria": "Drag to reposition the mini player",
   "openExternal": "Open in external player",
   "openFailed": "Failed to open file.",
   "unsupported": "Browser can’t play this codec."

@@ -6,6 +6,7 @@ import {
   isTheme,
   isLanguage,
   isBooleanString,
+  isMiniPlayerCorner,
   SETTING_KEYS
 } from '@shared/types'
 import { createTypedHandler } from './create-typed-handler'
@@ -25,7 +26,8 @@ const SETTABLE_KEYS = new Set<string>([
   SETTING_KEYS.playbackOnNavigate,
   SETTING_KEYS.theme,
   SETTING_KEYS.language,
-  SETTING_KEYS.hasCompletedOnboarding
+  SETTING_KEYS.hasCompletedOnboarding,
+  SETTING_KEYS.miniPlayerCorner
 ])
 
 /**
@@ -38,7 +40,8 @@ const VALUE_VALIDATORS: Record<string, (value: string) => boolean> = {
   [SETTING_KEYS.playbackOnNavigate]: isPlaybackOnNavigate,
   [SETTING_KEYS.theme]: isTheme,
   [SETTING_KEYS.language]: isLanguage,
-  [SETTING_KEYS.hasCompletedOnboarding]: isBooleanString
+  [SETTING_KEYS.hasCompletedOnboarding]: isBooleanString,
+  [SETTING_KEYS.miniPlayerCorner]: isMiniPlayerCorner
 }
 
 /**

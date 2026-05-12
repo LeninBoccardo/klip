@@ -5,6 +5,7 @@
   "openExternalAria": "Abrir en reproductor externo",
   "expandAria": "Expandir a detalle",
   "closeAria": "Cerrar reproductor",
+  "dragHandleAria": "Arrastra para reposicionar el mini reproductor",
   "openExternal": "Abrir en reproductor externo",
   "openFailed": "Error al abrir el archivo.",
   "unsupported": "El navegador no puede reproducir este códec."

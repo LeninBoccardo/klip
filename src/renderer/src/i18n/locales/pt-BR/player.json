@@ -5,6 +5,7 @@
   "openExternalAria": "Abrir em reprodutor externo",
   "expandAria": "Expandir para detalhes",
   "closeAria": "Fechar reprodutor",
+  "dragHandleAria": "Arraste para reposicionar o mini player",
   "openExternal": "Abrir em reprodutor externo",
   "openFailed": "Falha ao abrir o arquivo.",
   "unsupported": "O navegador não consegue reproduzir este codec."
