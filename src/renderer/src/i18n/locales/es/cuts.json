@@ -6,6 +6,7 @@
   "filters": {
     "searchPlaceholder": "Buscar títulos de cortes...",
     "creatorAll": "Todos los creadores",
+    "tagsLabel": "Etiquetas",
     "tagsPlaceholder": "Filtrar por etiquetas...",
     "tagsClear": "Limpiar",
     "sortLabel": "Ordenar por",

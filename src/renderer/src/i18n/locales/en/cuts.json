@@ -6,6 +6,7 @@
   "filters": {
     "searchPlaceholder": "Search cut titles...",
     "creatorAll": "All creators",
+    "tagsLabel": "Tags",
     "tagsPlaceholder": "Filter by tags...",
     "tagsClear": "Clear",
     "sortLabel": "Sort by",

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import {
   Command,
   CommandEmpty,
@@ -121,7 +121,17 @@ export function TagInput({
       ))}
 
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+        {/*
+          PopoverAnchor (not PopoverTrigger) — Trigger has a built-in
+          click-to-toggle that races our explicit `setOpen(true)` in
+          onFocus. The race produced an alternating open/close flicker
+          on every other click: trigger's toggle flips it closed right
+          after onFocus opens it, then the next click reopens, ad
+          infinitum. Anchor only provides the positioning reference,
+          no click handling, so open/close is fully driven by our
+          onFocus / onChange / outside-click logic.
+        */}
+        <PopoverAnchor asChild>
           <Input
             ref={inputRef}
             value={draft}
@@ -135,7 +145,7 @@ export function TagInput({
             disabled={disabled}
             className="h-7 min-w-[8ch] flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
           />
-        </PopoverTrigger>
+        </PopoverAnchor>
         <PopoverContent
           align="start"
           className="w-(--radix-popover-trigger-width) min-w-60 p-0"

@@ -149,12 +149,22 @@ export function CutsFilters({
         </Select>
       </div>
 
-      <TagInput
-        value={tags}
-        onChange={onTagsChange}
-        suggestions={distinctTags?.map((d) => d.tag) ?? []}
-        placeholder={t('filters.tagsPlaceholder')}
-      />
+      {/*
+        Tag filter — explicit label so the input doesn't look like dead
+        UI when no tags are selected. The empty chip-row of a bare
+        TagInput was reported as confusing without context.
+      */}
+      <div className="space-y-1.5">
+        <label className="text-muted-foreground text-xs font-medium">
+          {t('filters.tagsLabel')}
+        </label>
+        <TagInput
+          value={tags}
+          onChange={onTagsChange}
+          suggestions={distinctTags?.map((d) => d.tag) ?? []}
+          placeholder={t('filters.tagsPlaceholder')}
+        />
+      </div>
     </div>
   )
 }
