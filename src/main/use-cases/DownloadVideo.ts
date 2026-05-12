@@ -111,7 +111,21 @@ export class DownloadVideo implements IDownloadVideo {
     creatorName: string
   ): Promise<void> {
     try {
-      // 1. Pre-flight: fetch video info to get canonical ID
+      // 1. Pre-flight: fetch video info to get canonical ID. yt-dlp's cold
+      //    start + network round-trip costs ~3-5s here. Emit `fetching-info`
+      //    so the UI doesn't sit on `queued` opaquely — users perceive the
+      //    delay as a hang otherwise. This is unavoidable critical path:
+      //    we need `videoId` for both the output filename template and the
+      //    duplicate check below.
+      this.notifier.notify('download-progress', {
+        downloadId,
+        url,
+        percent: 0,
+        speed: null,
+        eta: null,
+        status: 'fetching-info',
+        creatorName
+      })
       const info = await this.fetchInfo.execute(url)
       const videoId = info.videoId
 
@@ -274,22 +288,20 @@ export class DownloadVideo implements IDownloadVideo {
 
     // The per-video yt-dlp JSON doesn't carry the channel thumbnail — only
     // the dedicated channel call (`--flat-playlist --dump-single-json
-    // --playlist-items 1`) does. So when we need an avatar, we make an
-    // extra yt-dlp invocation. We only do it on paths that actually need
-    // one (brand-new creator, or existing creator missing avatarUrl that
-    // we still have a fetch target for) to avoid paying the cost on
-    // every download of an already-complete creator.
+    // --playlist-items 1`) does, which spawns yt-dlp a second time and
+    // costs ~3-5s. We DO NOT await it on the critical path: avatars are
+    // purely cosmetic and blocking the download start on a cosmetic
+    // metadata fetch is what produced the ~10s "queued" stall users see.
+    // Instead, the row is upserted now with `avatarUrl = null`, the
+    // download proceeds, and `scheduleAvatarFetch` fires the second
+    // yt-dlp call in the background and patches the row when it returns.
     const needsAvatarFetch =
       !existing || (existing.avatarUrl === null && existing.status !== 'deleted')
 
-    let fetchedAvatarUrl: string | null = null
-    if (needsAvatarFetch) {
-      fetchedAvatarUrl = await this.fetchChannelAvatar(info, videoUrl, folderName)
-    }
-
+    let touched: Creator
     if (!existing) {
       const now = new Date().toISOString()
-      const creator: Creator = {
+      touched = {
         id: folderName,
         folderName,
         name: displayName,
@@ -297,7 +309,7 @@ export class DownloadVideo implements IDownloadVideo {
         youtubeChannelId: info.channelId ?? null,
         youtubeChannelUrl: info.channelUrl ?? null,
         subscriberCount: info.subscriberCount ?? null,
-        avatarUrl: fetchedAvatarUrl,
+        avatarUrl: null,
         notes: null,
         tags: [],
         status: 'active',
@@ -305,13 +317,7 @@ export class DownloadVideo implements IDownloadVideo {
         createdAt: now,
         updatedAt: now
       }
-      this.creatorRepo.upsert(creator)
-      // Best-effort folder creation, mirroring RegisterCreator: a new creator
-      // auto-discovered through a download should have its top-level folder
-      // on disk too. The downstream `ensureDirectory(outputDir)` would
-      // create the tree anyway, but this keeps reconciliation symmetric for
-      // creators that fail mid-download (they'd otherwise reappear without
-      // any disk presence).
+      this.creatorRepo.upsert(touched)
       try {
         const dir = this.pathResolver.join(this.rootPath.value, folderName)
         this.fsWriter.ensureDirectory(dir)
@@ -321,33 +327,61 @@ export class DownloadVideo implements IDownloadVideo {
           err instanceof Error ? err.message : err
         )
       }
-      return
+    } else {
+      // For an existing creator we may need to: (a) recover from `missing`,
+      // or (b) backfill YouTube metadata. avatarUrl backfill is handled by
+      // scheduleAvatarFetch out-of-band.
+      const needsRecovery = existing.status === 'missing'
+      const needsBackfill =
+        (!existing.youtubeChannelId && !!info.channelId) ||
+        (!existing.youtubeChannelUrl && !!info.channelUrl) ||
+        (existing.subscriberCount === null && info.subscriberCount != null)
+
+      if (needsRecovery || needsBackfill) {
+        touched = {
+          ...existing,
+          status: needsRecovery ? 'active' : existing.status,
+          deletedAt: needsRecovery ? null : existing.deletedAt,
+          youtubeChannelId: existing.youtubeChannelId ?? info.channelId ?? null,
+          youtubeChannelUrl: existing.youtubeChannelUrl ?? info.channelUrl ?? null,
+          subscriberCount: existing.subscriberCount ?? info.subscriberCount ?? null,
+          avatarUrl: existing.avatarUrl,
+          updatedAt: new Date().toISOString()
+        }
+        this.creatorRepo.upsert(touched)
+      } else {
+        touched = existing
+      }
     }
 
-    // For an existing creator we may need to: (a) recover from `missing`,
-    // (b) backfill YouTube metadata, (c) backfill avatarUrl, or any
-    // combination. A creator that disappeared and is now reappearing via
-    // a download should also pick up any newly-available metadata in the
-    // same upsert.
-    const needsRecovery = existing.status === 'missing'
-    const needsBackfill =
-      (!existing.youtubeChannelId && !!info.channelId) ||
-      (!existing.youtubeChannelUrl && !!info.channelUrl) ||
-      (existing.subscriberCount === null && info.subscriberCount != null) ||
-      (existing.avatarUrl === null && fetchedAvatarUrl !== null)
+    if (needsAvatarFetch) this.scheduleAvatarFetch(touched, info, videoUrl)
+  }
 
-    if (!needsRecovery && !needsBackfill) return
-
-    this.creatorRepo.upsert({
-      ...existing,
-      status: needsRecovery ? 'active' : existing.status,
-      deletedAt: needsRecovery ? null : existing.deletedAt,
-      youtubeChannelId: existing.youtubeChannelId ?? info.channelId ?? null,
-      youtubeChannelUrl: existing.youtubeChannelUrl ?? info.channelUrl ?? null,
-      subscriberCount: existing.subscriberCount ?? info.subscriberCount ?? null,
-      avatarUrl: existing.avatarUrl ?? fetchedAvatarUrl,
-      updatedAt: new Date().toISOString()
-    })
+  /**
+   * Fire-and-forget channel-avatar fetch. Runs in parallel with the actual
+   * download so the user perceives no stall; patches the creator row when
+   * the URL resolves. Takes the freshly-touched creator directly rather
+   * than re-reading — avoids a race window against the very upsert we just
+   * did, and keeps test mocks simple (no need to make findByFolderName
+   * track prior upserts). Never throws — avatars are cosmetic.
+   */
+  private scheduleAvatarFetch(creator: Creator, info: VideoInfo, videoUrl: string): void {
+    void this.fetchChannelAvatar(info, videoUrl, creator.folderName)
+      .then((avatarUrl) => {
+        if (avatarUrl === null) return
+        this.creatorRepo.upsert({
+          ...creator,
+          avatarUrl,
+          updatedAt: new Date().toISOString()
+        })
+        this.notifier.notify('db-updated', { scope: ['creators'] })
+      })
+      .catch((err) => {
+        console.warn(
+          `[DownloadVideo.scheduleAvatarFetch] Background avatar fetch failed for "${creator.folderName}":`,
+          err instanceof Error ? err.message : err
+        )
+      })
   }
 
   /**

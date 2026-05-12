@@ -1,6 +1,15 @@
 /** Status of a video download lifecycle */
 export type DownloadStatus =
   | 'queued'
+  /**
+   * Pre-flight `yt-dlp --dump-json` is in flight to resolve the videoId
+   * (needed for the output filename template + duplicate check). Emitted
+   * before `downloading` so the UI doesn't sit on `queued` for the 3-5s
+   * that yt-dlp's cold start + network round-trip take. This phase is
+   * unavoidable — yt-dlp's actual download invocation can't start without
+   * knowing the canonical videoId.
+   */
+  | 'fetching-info'
   | 'downloading'
   | 'processing'
   | 'complete'

@@ -190,9 +190,16 @@ describe('DownloadVideo', () => {
 
   const ROOT = '/root'
 
-  /** Await the fire-and-forget task captured by the mock queue */
+  /**
+   * Await the fire-and-forget task captured by the mock queue, then drain
+   * the microtask queue so any side-effect promises kicked off inside the
+   * task (e.g. `scheduleAvatarFetch`) settle before the test asserts.
+   * Without the drain, an orphan `.then` chain queued after `lastTask`
+   * resolved would run AFTER the assertion and tests would race.
+   */
   async function awaitEnqueuedTask(): Promise<void> {
     if (downloadQueue.lastTask) await downloadQueue.lastTask
+    await new Promise<void>((resolve) => setImmediate(resolve))
   }
 
   beforeEach(() => {
@@ -293,6 +300,28 @@ describe('DownloadVideo', () => {
         percent: 0
       })
     )
+  })
+
+  it("emits 'fetching-info' before awaiting yt-dlp --dump-json", async () => {
+    // The pre-flight yt-dlp call costs ~3-5s (cold start + network).
+    // Without this event, the UI would sit on 'queued' opaquely and look
+    // hung. Verify the status change fires AFTER 'queued' and BEFORE
+    // 'downloading' so the renderer can label the phase.
+    await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
+    await awaitEnqueuedTask()
+
+    const calls = vi
+      .mocked(notifier.notify)
+      .mock.calls.filter(([ch]) => ch === 'download-progress')
+      .map(([, payload]) => (payload as DownloadProgress).status)
+    const queuedIdx = calls.indexOf('queued')
+    const fetchingIdx = calls.indexOf('fetching-info')
+    const downloadingIdx = calls.indexOf('downloading')
+    expect(queuedIdx).toBeGreaterThanOrEqual(0)
+    expect(fetchingIdx).toBeGreaterThan(queuedIdx)
+    // 'downloading' is emitted by the yt-dlp driver mock — present after the
+    // info phase, never before.
+    if (downloadingIdx !== -1) expect(downloadingIdx).toBeGreaterThan(fetchingIdx)
   })
 
   it('should enqueue the download task into the queue', async () => {
