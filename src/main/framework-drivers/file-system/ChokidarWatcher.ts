@@ -107,7 +107,15 @@ export class ChokidarWatcher implements IFileWatcher {
       ignored: [
         /(^|[/\\])\../, // dotfiles
         /node_modules/,
-        /\.DS_Store/
+        /\.DS_Store/,
+        // yt-dlp transient files. Watching them is pointless (they're
+        // intermediates, deleted post-merge) and on Windows it triggers
+        // EPERM noise because yt-dlp holds them open exclusively for
+        // writing while chokidar tries to attach a per-file watcher.
+        /\.part$/i, // partial download
+        /\.part-Frag\d+$/i, // HLS fragment in-flight
+        /\.f\d+\.(mp4|m4a|webm|opus|aac)$/i, // intermediate format file
+        /\.ytdl$/i // yt-dlp lockfile
       ]
     })
 
