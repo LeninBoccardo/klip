@@ -58,7 +58,12 @@
       "noneTitle": "No hay transcripción disponible",
       "noneDescriptionEnriched": "Este video no tiene subtítulos generados automáticamente.",
       "noneDescriptionNotEnriched": "Haz clic en “Obtener metadatos” para recuperar la transcripción automática.",
-      "seekAria": "Saltar a {{time}}"
+      "seekAria": "Saltar a {{time}}",
+      "searchPlaceholder": "Buscar en la transcripción…",
+      "searchPrev": "Resultado anterior",
+      "searchNext": "Siguiente resultado",
+      "searchNoMatches": "Sin resultados",
+      "searchMatchCount": "{{current}}/{{total}}"
     }
   },
   "comments": {

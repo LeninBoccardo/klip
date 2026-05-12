@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy } from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Button } from '@ui/button'
+import { Input } from '@ui/input'
 import { Skeleton } from '@ui/skeleton'
 import { ScrollArea } from '@ui/scroll-area'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@ui/empty'
@@ -21,6 +22,12 @@ interface TranscriptTabProps {
    * inferring per-row from the largest segment endMs.
    */
   durationSeconds: number | null
+}
+
+interface SearchMatch {
+  segmentIndex: number
+  start: number
+  end: number
 }
 
 /**
@@ -56,6 +63,10 @@ export function TranscriptTab({
 
   const isLoading = transcriptText.isLoading || transcriptSegments.isLoading
 
+  const [query, setQuery] = useState('')
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const segmentRefs = useRef<Map<number, HTMLLIElement>>(new Map())
+
   // Use HH:MM:SS once the underlying video is ≥ 1h, so the first row
   // (which starts at 00:00) lines up with later rows that pass the hour
   // mark. If `durationSeconds` is unavailable, fall back to inspecting the
@@ -75,6 +86,66 @@ export function TranscriptTab({
     return plainText ?? ''
   }, [segments, plainText, includeHours])
 
+  const matches = useMemo<SearchMatch[]>(() => {
+    if (!query || !segments) return []
+    const needle = query.toLowerCase()
+    const result: SearchMatch[] = []
+    segments.forEach((seg, segIdx) => {
+      const hay = seg.text.toLowerCase()
+      let from = 0
+      while (true) {
+        const found = hay.indexOf(needle, from)
+        if (found === -1) break
+        result.push({ segmentIndex: segIdx, start: found, end: found + needle.length })
+        from = found + needle.length
+      }
+    })
+    return result
+  }, [query, segments])
+
+  const matchesBySegment = useMemo(() => {
+    const grouped = new Map<number, SearchMatch[]>()
+    for (const m of matches) {
+      const arr = grouped.get(m.segmentIndex)
+      if (arr) arr.push(m)
+      else grouped.set(m.segmentIndex, [m])
+    }
+    return grouped
+  }, [matches])
+
+  useEffect(() => {
+    setCurrentMatchIndex(0)
+  }, [matches])
+
+  useEffect(() => {
+    if (matches.length === 0) return
+    const target = matches[currentMatchIndex]
+    if (!target) return
+    const node = segmentRefs.current.get(target.segmentIndex)
+    node?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [currentMatchIndex, matches])
+
+  const goToNext = (): void => {
+    if (matches.length === 0) return
+    setCurrentMatchIndex((i) => (i + 1) % matches.length)
+  }
+
+  const goToPrev = (): void => {
+    if (matches.length === 0) return
+    setCurrentMatchIndex((i) => (i - 1 + matches.length) % matches.length)
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (e.shiftKey) goToPrev()
+      else goToNext()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setQuery('')
+    }
+  }
+
   const handleCopy = (): void => {
     if (!copyText) return
     navigator.clipboard.writeText(copyText)
@@ -86,6 +157,33 @@ export function TranscriptTab({
   }
 
   const hasContent = (segments && segments.length > 0) || (plainText !== null && plainText !== '')
+  const currentMatch = matches[currentMatchIndex]
+
+  const renderSegmentText = (text: string, segIdx: number): React.ReactNode => {
+    const segMatches = matchesBySegment.get(segIdx)
+    if (!segMatches || segMatches.length === 0) return text
+    const nodes: React.ReactNode[] = []
+    let pos = 0
+    segMatches.forEach((m, i) => {
+      if (pos < m.start) nodes.push(text.substring(pos, m.start))
+      const isCurrent = m === currentMatch
+      nodes.push(
+        <mark
+          key={`${m.start}-${m.end}-${i}`}
+          className={
+            isCurrent
+              ? 'rounded-sm bg-yellow-400/80 px-0.5 text-foreground dark:bg-yellow-500/80'
+              : 'rounded-sm bg-yellow-300/40 px-0.5 text-foreground dark:bg-yellow-500/30'
+          }
+        >
+          {text.substring(m.start, m.end)}
+        </mark>
+      )
+      pos = m.end
+    })
+    if (pos < text.length) nodes.push(text.substring(pos))
+    return nodes
+  }
 
   return (
     <Card>
@@ -105,37 +203,89 @@ export function TranscriptTab({
           </Button>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-2">
         {isLoading ? (
           <Skeleton className="h-48 w-full" />
         ) : segments && segments.length > 0 ? (
-          <ScrollArea className="h-125 rounded border">
-            <ul className="divide-border divide-y p-1">
-              {segments.map((seg) => (
-                <li key={`${seg.startMs}-${seg.endMs}`} className="min-w-0">
-                  <button
+          <>
+            <div className="flex items-center gap-2">
+              <Input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={t('detail.transcript.searchPlaceholder')}
+                aria-label={t('detail.transcript.searchPlaceholder')}
+                className="flex-1"
+              />
+              {query.length > 0 && (
+                <>
+                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                    {matches.length === 0
+                      ? t('detail.transcript.searchNoMatches')
+                      : t('detail.transcript.searchMatchCount', {
+                          current: currentMatchIndex + 1,
+                          total: matches.length
+                        })}
+                  </span>
+                  <Button
                     type="button"
-                    onClick={() => handleSeek(seg.startMs)}
-                    aria-label={t('detail.transcript.seekAria', {
-                      time: formatTimestamp(seg.startMs, includeHours)
-                    })}
-                    className="hover:bg-muted/40 focus-visible:bg-muted/60 flex w-full items-start gap-3 rounded px-3 py-2 text-left transition-colors focus-visible:outline-none"
+                    size="icon"
+                    variant="ghost"
+                    disabled={matches.length === 0}
+                    onClick={goToPrev}
+                    aria-label={t('detail.transcript.searchPrev')}
                   >
-                    <span
-                      className={`text-muted-foreground shrink-0 pt-0.5 font-mono text-xs tabular-nums ${
-                        includeHours ? 'w-18' : 'w-14'
-                      }`}
+                    <ChevronUp className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    disabled={matches.length === 0}
+                    onClick={goToNext}
+                    aria-label={t('detail.transcript.searchNext')}
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+            <ScrollArea className="h-125 rounded border">
+              <ul className="divide-border divide-y p-1">
+                {segments.map((seg, segIdx) => (
+                  <li
+                    key={`${seg.startMs}-${seg.endMs}`}
+                    ref={(node) => {
+                      if (node) segmentRefs.current.set(segIdx, node)
+                      else segmentRefs.current.delete(segIdx)
+                    }}
+                    className="min-w-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleSeek(seg.startMs)}
+                      aria-label={t('detail.transcript.seekAria', {
+                        time: formatTimestamp(seg.startMs, includeHours)
+                      })}
+                      className="hover:bg-muted/40 focus-visible:bg-muted/60 flex w-full items-start gap-3 rounded px-3 py-2 text-left transition-colors focus-visible:outline-none"
                     >
-                      {formatTimestamp(seg.startMs, includeHours)}
-                    </span>
-                    <span className="wrap-break-word min-w-0 text-sm leading-relaxed">
-                      {seg.text}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </ScrollArea>
+                      <span
+                        className={`text-muted-foreground shrink-0 pt-0.5 font-mono text-xs tabular-nums ${
+                          includeHours ? 'w-18' : 'w-14'
+                        }`}
+                      >
+                        {formatTimestamp(seg.startMs, includeHours)}
+                      </span>
+                      <span className="wrap-break-word min-w-0 text-sm leading-relaxed">
+                        {renderSegmentText(seg.text, segIdx)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          </>
         ) : plainText ? (
           // Fallback for transcripts that exist as plain text in the DB but
           // whose VTT file is missing (older library entries pre-segment-IPC).

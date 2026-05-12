@@ -58,7 +58,12 @@
       "noneTitle": "No transcript available",
       "noneDescriptionEnriched": "This video has no auto-generated captions.",
       "noneDescriptionNotEnriched": "Click “Fetch metadata” to retrieve the auto-generated transcript.",
-      "seekAria": "Seek to {{time}}"
+      "seekAria": "Seek to {{time}}",
+      "searchPlaceholder": "Search transcript…",
+      "searchPrev": "Previous match",
+      "searchNext": "Next match",
+      "searchNoMatches": "No matches",
+      "searchMatchCount": "{{current}}/{{total}}"
     }
   },
   "comments": {

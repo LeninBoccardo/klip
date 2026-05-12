@@ -58,7 +58,12 @@
       "noneTitle": "Nenhuma transcrição disponível",
       "noneDescriptionEnriched": "Este vídeo não possui legendas geradas automaticamente.",
       "noneDescriptionNotEnriched": "Clique em “Buscar metadados” para obter a transcrição automática.",
-      "seekAria": "Ir para {{time}}"
+      "seekAria": "Ir para {{time}}",
+      "searchPlaceholder": "Buscar na transcrição…",
+      "searchPrev": "Resultado anterior",
+      "searchNext": "Próximo resultado",
+      "searchNoMatches": "Sem resultados",
+      "searchMatchCount": "{{current}}/{{total}}"
     }
   },
   "comments": {
