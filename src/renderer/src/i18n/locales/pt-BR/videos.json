@@ -88,7 +88,13 @@
     "fetchAll": "Buscar todos",
     "fetchAllHint": "Pode levar vários minutos em vídeos populares.",
     "loadingMoreTitle": "Buscando mais comentários…",
-    "loadingMoreHint": "Refaz a busca no YouTube até o limite solicitado. Os comentários atuais permanecem visíveis até o novo lote chegar."
+    "loadingMoreHint": "Refaz a busca no YouTube até o limite solicitado. Os comentários atuais permanecem visíveis até o novo lote chegar.",
+    "filterUsernamePlaceholder": "Filtrar por usuário",
+    "filterTextPlaceholder": "Filtrar pelo texto",
+    "filterPinnedOnly": "Apenas fixados",
+    "filterClear": "Limpar filtros",
+    "filterMatchCount": "Mostrando {{shown}} de {{total}}",
+    "filterNoMatches": "Nenhum comentário corresponde aos filtros atuais"
   },
   "tags": {
     "title": "Tags",

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useCachedVideoComments, useFetchVideoComments } from '@/hooks/use-videos'
 import { Button } from '@ui/button'
 import { Badge } from '@ui/badge'
+import { Input } from '@ui/input'
+import { Checkbox } from '@ui/checkbox'
 import { ScrollArea } from '@ui/scroll-area'
 import { Avatar, AvatarFallback } from '@ui/avatar'
 import { Item, ItemMedia, ItemContent } from '@ui/item'
@@ -116,6 +118,38 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   // same first 500. Falls back to the initial constant for cache hits where
   // we don't know the original request size.
   const [requestedMax, setRequestedMax] = useState<number>(INITIAL_MAX)
+
+  const [usernameFilter, setUsernameFilter] = useState('')
+  const [textFilter, setTextFilter] = useState('')
+  const [pinnedOnly, setPinnedOnly] = useState(false)
+
+  const anyFilterActive = usernameFilter !== '' || textFilter !== '' || pinnedOnly
+
+  const filteredThreads = useMemo(() => {
+    if (!anyFilterActive) return threads
+    const u = usernameFilter.toLowerCase()
+    const tx = textFilter.toLowerCase()
+    return threads.filter((thread) => {
+      if (pinnedOnly && !thread.top.isPinned) return false
+      if (u !== '') {
+        const inTop = thread.top.author.toLowerCase().includes(u)
+        const inReply = thread.replies.some((r) => r.author.toLowerCase().includes(u))
+        if (!inTop && !inReply) return false
+      }
+      if (tx !== '') {
+        const inTop = thread.top.text.toLowerCase().includes(tx)
+        const inReply = thread.replies.some((r) => r.text.toLowerCase().includes(tx))
+        if (!inTop && !inReply) return false
+      }
+      return true
+    })
+  }, [threads, anyFilterActive, usernameFilter, textFilter, pinnedOnly])
+
+  const clearFilters = (): void => {
+    setUsernameFilter('')
+    setTextFilter('')
+    setPinnedOnly(false)
+  }
 
   const handleLoad = (): void => {
     setRequestedMax(INITIAL_MAX)
@@ -274,17 +308,65 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
           </EmptyHeader>
         </Empty>
       ) : (
-        // Fixed height (matches TranscriptTab): radix ScrollArea's viewport
-        // only scrolls when the root has a concrete height — `max-h` lets
-        // the content push past the rounded border instead of constraining
-        // it, which produced the "comments overflow the dark box" symptom.
-        <ScrollArea className="h-150 rounded border">
-          <div className="divide-y">
-            {threads.map((thread) => (
-              <CommentRow key={thread.top.id} thread={thread} dateLocale={dateLocale} />
-            ))}
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              value={usernameFilter}
+              onChange={(e) => setUsernameFilter(e.target.value)}
+              placeholder={t('comments.filterUsernamePlaceholder')}
+              aria-label={t('comments.filterUsernamePlaceholder')}
+              className="w-44"
+            />
+            <Input
+              type="search"
+              value={textFilter}
+              onChange={(e) => setTextFilter(e.target.value)}
+              placeholder={t('comments.filterTextPlaceholder')}
+              aria-label={t('comments.filterTextPlaceholder')}
+              className="w-52"
+            />
+            <label className="flex cursor-pointer select-none items-center gap-2 text-sm">
+              <Checkbox
+                checked={pinnedOnly}
+                onCheckedChange={(v) => setPinnedOnly(v === true)}
+              />
+              <span>{t('comments.filterPinnedOnly')}</span>
+            </label>
+            {anyFilterActive && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                {t('comments.filterClear')}
+              </Button>
+            )}
+            {anyFilterActive && (
+              <span className="text-muted-foreground ml-auto text-xs">
+                {t('comments.filterMatchCount', {
+                  shown: filteredThreads.length,
+                  total: threads.length
+                })}
+              </span>
+            )}
           </div>
-        </ScrollArea>
+          {filteredThreads.length === 0 ? (
+            <Empty className="min-h-50">
+              <EmptyHeader>
+                <EmptyTitle>{t('comments.filterNoMatches')}</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            // Fixed height (matches TranscriptTab): radix ScrollArea's viewport
+            // only scrolls when the root has a concrete height — `max-h` lets
+            // the content push past the rounded border instead of constraining
+            // it, which produced the "comments overflow the dark box" symptom.
+            <ScrollArea className="h-150 rounded border">
+              <div className="divide-y">
+                {filteredThreads.map((thread) => (
+                  <CommentRow key={thread.top.id} thread={thread} dateLocale={dateLocale} />
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </>
       )}
 
       {(canLoadMore || canFetchAll || loadingMore) && (

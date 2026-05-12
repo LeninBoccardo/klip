@@ -88,7 +88,13 @@
     "fetchAll": "Obtener todos",
     "fetchAllHint": "Puede tardar varios minutos en videos populares.",
     "loadingMoreTitle": "Obteniendo más comentarios…",
-    "loadingMoreHint": "Vuelve a obtener desde YouTube hasta el límite solicitado. Los comentarios actuales se mantienen visibles hasta que llega el nuevo lote."
+    "loadingMoreHint": "Vuelve a obtener desde YouTube hasta el límite solicitado. Los comentarios actuales se mantienen visibles hasta que llega el nuevo lote.",
+    "filterUsernamePlaceholder": "Filtrar por usuario",
+    "filterTextPlaceholder": "Filtrar por texto",
+    "filterPinnedOnly": "Solo fijados",
+    "filterClear": "Limpiar filtros",
+    "filterMatchCount": "Mostrando {{shown}} de {{total}}",
+    "filterNoMatches": "Ningún comentario coincide con los filtros actuales"
   },
   "tags": {
     "title": "Etiquetas",

@@ -88,7 +88,13 @@
     "fetchAll": "Fetch all",
     "fetchAllHint": "May take several minutes for popular videos.",
     "loadingMoreTitle": "Fetching more comments…",
-    "loadingMoreHint": "Re-scrapes from YouTube up to the requested cap. Existing comments stay on screen until the new batch lands."
+    "loadingMoreHint": "Re-scrapes from YouTube up to the requested cap. Existing comments stay on screen until the new batch lands.",
+    "filterUsernamePlaceholder": "Filter by username",
+    "filterTextPlaceholder": "Filter by comment text",
+    "filterPinnedOnly": "Pinned only",
+    "filterClear": "Clear filters",
+    "filterMatchCount": "Showing {{shown}} of {{total}}",
+    "filterNoMatches": "No comments match the current filters"
   },
   "tags": {
     "title": "Tags",
