@@ -1,4 +1,8 @@
-import type { ICreatorRepository, IVideoRepository } from '@domain/repositories'
+import type {
+  ICreatorRepository,
+  IVideoRepository,
+  IDownloadHistoryRepository
+} from '@domain/repositories'
 import type {
   IVideoDownloader,
   IDownloadQueue,
@@ -41,8 +45,39 @@ export class DownloadVideo implements IDownloadVideo {
     private fsWriter: IFileSystemWriter,
     private notifier: INotifier,
     private idGenerator: IIdGenerator,
-    private rootPath: RootPathRef
+    private rootPath: RootPathRef,
+    private downloadHistoryRepo: IDownloadHistoryRepository
   ) {}
+
+  /**
+   * Convenience for appending one history row. Swallows DB errors and logs —
+   * the history ledger is informational; an error writing to it must NEVER
+   * derail the actual download flow that just succeeded (or just failed).
+   */
+  private appendHistory(entry: {
+    youtubeUrl: string
+    videoId: string | null
+    videoTitle: string | null
+    thumbnailUrl: string | null
+    creatorFolderName: string | null
+    status: 'success' | 'error'
+    errorMessage: string | null
+    errorRetryable: boolean
+  }): void {
+    try {
+      this.downloadHistoryRepo.append({
+        id: this.idGenerator.generate(),
+        finishedAt: new Date().toISOString(),
+        ...entry
+      })
+      this.notifier.notify('db-updated', { scope: ['downloadHistory'] })
+    } catch (err) {
+      console.warn(
+        '[DownloadVideo] failed to append download_history row:',
+        err instanceof Error ? err.message : err
+      )
+    }
+  }
 
   async execute(request: DownloadRequest): Promise<DownloadVideoResult> {
     const { url, creatorName } = request
@@ -155,6 +190,20 @@ export class DownloadVideo implements IDownloadVideo {
           existingVideoId: existing.id,
           title: existing.title
         })
+        // Surface the duplicate detection in history so users see that the
+        // attempt was acknowledged — but mark it non-retryable so the Retry
+        // button stays disabled (clicking it would just produce another
+        // duplicate row).
+        this.appendHistory({
+          youtubeUrl: url,
+          videoId: existing.id,
+          videoTitle: existing.title,
+          thumbnailUrl: existing.thumbnailPath,
+          creatorFolderName: existing.creatorId,
+          status: 'error',
+          errorMessage: 'Already in your library.',
+          errorRetryable: false
+        })
         return
       }
 
@@ -236,14 +285,41 @@ export class DownloadVideo implements IDownloadVideo {
       // 7. Notify UI to refresh — both creators (a new creator may have been
       //    auto-created in step 2) and videos.
       this.notifier.notify('db-updated', { scope: ['creators', 'videos'] })
+
+      // 8. Append a `'success'` row to download_history so the Downloads page
+      //    can show it under "Finished downloads" with an "Open video" CTA.
+      this.appendHistory({
+        youtubeUrl: url,
+        videoId: video.id,
+        videoTitle: video.title,
+        thumbnailUrl: video.thumbnailPath,
+        creatorFolderName: video.creatorId,
+        status: 'success',
+        errorMessage: null,
+        errorRetryable: false
+      })
     } catch (error) {
       // If it's a cancellation, the progress event was already sent by the driver
       if (error instanceof Error && error.message === 'Download cancelled') {
+        // Still record the cancellation in history — the user wants to know
+        // they cancelled (vs. "did the download just disappear?"). Mark
+        // non-retryable so the row doesn't grow a meaningless Retry button.
+        this.appendHistory({
+          youtubeUrl: url,
+          videoId: null,
+          videoTitle: null,
+          thumbnailUrl: null,
+          creatorFolderName: slugify(creatorName),
+          status: 'error',
+          errorMessage: 'Download cancelled.',
+          errorRetryable: false
+        })
         return
       }
 
       // Notify error with retriable classification so the UI can decide
       // whether to show a Retry button.
+      const retriable = classifyDownloadError(error) === 'retriable'
       this.notifier.notify('download-progress', {
         downloadId,
         url,
@@ -252,13 +328,28 @@ export class DownloadVideo implements IDownloadVideo {
         eta: null,
         status: 'error',
         creatorName,
-        retriable: classifyDownloadError(error) === 'retriable'
+        retriable
       })
 
       console.error(
         `[klip] Download failed (${downloadId}):`,
         redactError(error, this.rootPath.value)
       )
+
+      // Persist the failure so the Downloads page can surface a Retry button
+      // for transient errors and a permanent record for everything else. The
+      // raw error message is kept verbatim — users can self-diagnose
+      // "missing yt-dlp" vs "HTTP 429" without opening the log file.
+      this.appendHistory({
+        youtubeUrl: url,
+        videoId: null,
+        videoTitle: null,
+        thumbnailUrl: null,
+        creatorFolderName: slugify(creatorName),
+        status: 'error',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorRetryable: retriable
+      })
     }
   }
 

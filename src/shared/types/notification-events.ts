@@ -9,11 +9,19 @@
  * - `'cuts'`       — only the cuts tree.
  * - `'collections'` — only the collections tree (collection-level edits +
  *                    add/remove/reorder of items).
+ * - `'downloadHistory'` — the persistent finished-downloads ledger; fires
+ *                    whenever DownloadVideo appends a success/error row.
  *
  * Multiple scopes are expressed as an array. `'all'` is treated as a superset
  * by the renderer — when present, every scoped tree is invalidated.
  */
-export type DbUpdateScope = 'all' | 'creators' | 'videos' | 'cuts' | 'collections'
+export type DbUpdateScope =
+  | 'all'
+  | 'creators'
+  | 'videos'
+  | 'cuts'
+  | 'collections'
+  | 'downloadHistory'
 
 /** Payload of a `db-updated` push. */
 export interface DbUpdatedPayload {

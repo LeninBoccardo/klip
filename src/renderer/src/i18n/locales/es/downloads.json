@@ -17,6 +17,16 @@
     "emptyDescription": "Las descargas aparecerán aquí en tiempo real.",
     "emptyCta": "Pega una URL arriba"
   },
+  "finished": {
+    "cardTitle": "Descargas Finalizadas",
+    "emptyTitle": "Aún no hay nada aquí",
+    "emptyDescription": "Las descargas exitosas o con error aparecerán aquí para reabrirlas o reintentarlas.",
+    "openVideo": "Abrir video",
+    "retry": "Reintentar",
+    "errorBadge": "Error",
+    "retryQueued": "Reintento en cola",
+    "retryFailed": "Reintento fallido: {{message}}"
+  },
   "creator": {
     "label": "Nombre del creador",
     "placeholder": "p. ej. MrBeast"

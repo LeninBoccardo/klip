@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DownloadVideo } from '@use-cases/DownloadVideo'
-import type { ICreatorRepository, IVideoRepository } from '@domain/repositories'
+import type {
+  ICreatorRepository,
+  IVideoRepository,
+  IDownloadHistoryRepository
+} from '@domain/repositories'
 import type {
   IVideoDownloader,
   IDownloadQueue,
@@ -128,6 +132,15 @@ function mockIdGenerator(): IIdGenerator {
   }
 }
 
+function mockDownloadHistoryRepo(): IDownloadHistoryRepository {
+  return {
+    append: vi.fn(),
+    findRecent: vi.fn().mockReturnValue([]),
+    findById: vi.fn().mockReturnValue(null),
+    deleteOlderThan: vi.fn().mockReturnValue(0)
+  }
+}
+
 // ── Test data ──
 
 const videoInfo: VideoInfo = {
@@ -186,6 +199,7 @@ describe('DownloadVideo', () => {
   let fsWriter: IFileSystemWriter
   let notifier: INotifier
   let idGenerator: IIdGenerator
+  let downloadHistoryRepo: IDownloadHistoryRepository
   let useCase: DownloadVideo
 
   const ROOT = '/root'
@@ -213,6 +227,7 @@ describe('DownloadVideo', () => {
     fsWriter = mockFsWriter()
     notifier = mockNotifier()
     idGenerator = mockIdGenerator()
+    downloadHistoryRepo = mockDownloadHistoryRepo()
 
     vi.mocked(fetchInfo.execute).mockResolvedValue(videoInfo)
     // Default channel-info resolver returns a populated avatar so the
@@ -242,7 +257,8 @@ describe('DownloadVideo', () => {
       fsWriter,
       notifier,
       idGenerator,
-      { value: ROOT }
+      { value: ROOT },
+      downloadHistoryRepo
     )
   })
 
@@ -503,7 +519,8 @@ describe('DownloadVideo', () => {
       fsWriter,
       notifier,
       idGenerator,
-      { value: ROOT }
+      { value: ROOT },
+      downloadHistoryRepo
     )
 
     const result = await useCase.execute({

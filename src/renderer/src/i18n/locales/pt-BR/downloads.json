@@ -17,6 +17,16 @@
     "emptyDescription": "Os downloads aparecerão aqui em tempo real.",
     "emptyCta": "Cole uma URL acima"
   },
+  "finished": {
+    "cardTitle": "Downloads Finalizados",
+    "emptyTitle": "Nada por aqui ainda",
+    "emptyDescription": "Downloads concluídos ou com erro aparecerão aqui para você reabrir ou tentar novamente.",
+    "openVideo": "Abrir vídeo",
+    "retry": "Tentar novamente",
+    "errorBadge": "Erro",
+    "retryQueued": "Nova tentativa enfileirada",
+    "retryFailed": "Falha ao tentar novamente: {{message}}"
+  },
   "creator": {
     "label": "Nome do criador",
     "placeholder": "ex.: MrBeast"

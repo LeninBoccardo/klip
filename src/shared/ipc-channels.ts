@@ -89,6 +89,10 @@ export const IpcChannels = {
   GetOperationById: 'get-operation-by-id',
   GetOperationsByStatus: 'get-operations-by-status',
 
+  // ── Download history ──
+  ListDownloadHistory: 'list-download-history',
+  RetryDownload: 'retry-download',
+
   // ── Updater ──
   CheckForUpdates: 'check-for-updates',
   InstallUpdate: 'install-update',

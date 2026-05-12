@@ -266,3 +266,39 @@ export const auditLog = sqliteTable(
     index('idx_audit_log_created').on(table.createdAt)
   ]
 )
+
+// ── Finished downloads ledger ──
+//
+// Persistent record of every completed download attempt — both successes (a
+// new Video row was upserted) and errors (yt-dlp failed, network blip, the
+// URL was a duplicate, etc.). Survives app restart so the Downloads page
+// can show a long-running history with retry buttons on the failures.
+//
+// We don't piggyback on audit_log because it only models entity mutations
+// — an error never produces a Video row to audit. Keeping a dedicated
+// ledger also lets us index `finished_at DESC` for the always-most-recent
+// query the UI runs.
+export const downloadHistory = sqliteTable(
+  'download_history',
+  {
+    id: text('id').primaryKey(),
+    youtubeUrl: text('youtube_url').notNull(),
+    // Soft FK to videos.id (no `references()` because we want history rows to
+    // survive when the user deletes the video; ListDownloadHistory filters
+    // out rows whose video no longer exists on read instead).
+    videoId: text('video_id'),
+    videoTitle: text('video_title'),
+    thumbnailUrl: text('thumbnail_url'),
+    creatorFolderName: text('creator_folder_name'),
+    // 'success' | 'error' — narrow union enforced at the use-case layer.
+    status: text('status').notNull(),
+    errorMessage: text('error_message'),
+    errorRetryable: integer('error_retryable', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+    finishedAt: text('finished_at')
+      .notNull()
+      .default(sql`(datetime('now'))`)
+  },
+  (table) => [index('idx_download_history_finished_at').on(table.finishedAt)]
+)

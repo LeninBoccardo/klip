@@ -250,6 +250,12 @@ export const ipcSchemas = {
   'get-operation-by-id': z.tuple([z.string()]),
   'get-operations-by-status': z.tuple([z.string()]),
 
+  // ── Download history ──
+  // limit caps the renderer's payload size; 500 is well above the realistic
+  // visible page and matches the existing pagination ceiling.
+  'list-download-history': z.tuple([z.int().min(1).max(500)]),
+  'retry-download': z.tuple([z.string().min(1)]),
+
   // ── Updater ──
   'check-for-updates': z.tuple([]),
   'install-update': z.tuple([]),

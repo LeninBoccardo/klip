@@ -52,7 +52,8 @@ import type {
   AuditEntryDto,
   OperationDto,
   CollectionDto,
-  CollectionItemDto
+  CollectionItemDto,
+  DownloadHistoryEntryDto
 } from '@shared/dtos'
 
 interface KlipAPI {
@@ -73,6 +74,10 @@ interface KlipAPI {
   restoreCreator(id: string): Promise<void>
   registerCreator(request: RegisterCreatorRequest): Promise<RegisterCreatorResult>
   refreshCreatorAvatar(creatorId: string): Promise<RefreshCreatorAvatarResult>
+
+  // ── Download history ──
+  listDownloadHistory(limit: number): Promise<DownloadHistoryEntryDto[]>
+  retryDownload(historyId: string): Promise<{ downloadId: string }>
 
   // ── Videos ──
   getVideosPaginated(params: VideoQueryParams): Promise<PaginatedResult<VideoDto>>

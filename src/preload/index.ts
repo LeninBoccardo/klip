@@ -31,6 +31,10 @@ const api = {
   registerCreator: createTypedInvoker('register-creator'),
   refreshCreatorAvatar: createTypedInvoker('refresh-creator-avatar'),
 
+  // ── Download history ──
+  listDownloadHistory: createTypedInvoker('list-download-history'),
+  retryDownload: createTypedInvoker('retry-download'),
+
   // ── Videos ──
   getVideosPaginated: createTypedInvoker('get-videos-paginated'),
   getVideoById: createTypedInvoker('get-video-by-id'),

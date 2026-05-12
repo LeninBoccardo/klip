@@ -18,6 +18,7 @@ import { registerOperationController } from './interface-adapters/controllers/Op
 import { registerUpdaterController } from './interface-adapters/controllers/UpdaterController'
 import { registerStatsController } from './interface-adapters/controllers/StatsController'
 import { registerEditorController } from './interface-adapters/controllers/EditorController'
+import { registerDownloadHistoryController } from './interface-adapters/controllers/DownloadHistoryController'
 import { initLogger } from './framework-drivers/electron/logger'
 import { applySecurityHardening } from './framework-drivers/electron/security-hardening'
 import { join } from 'path'
@@ -159,6 +160,10 @@ app.whenReady().then(() => {
     cancelRender: container.useCases.cancelRender,
     sessions: container.ports.editorSessions
   })
+  registerDownloadHistoryController(
+    container.useCases.listDownloadHistory,
+    container.useCases.retryDownload
+  )
   registerCollectionController({
     create: container.useCases.createCollection,
     rename: container.useCases.renameCollection,

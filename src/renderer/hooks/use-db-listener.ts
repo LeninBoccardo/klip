@@ -63,6 +63,13 @@ export function useDbListener(): void {
         queryClient.invalidateQueries({ queryKey: queryKeys.stats.all })
       }
 
+      // The finished-downloads ledger has its own scope; videos+history both
+      // refresh on a successful download so the renderer's history pane
+      // shows the fresh row without waiting for a manual reload.
+      if (includes('downloadHistory') || includes('videos')) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.downloadHistory.all })
+      }
+
       // Audit log + operations + settings are cross-cutting — refresh on any
       // `'all'` push. Targeted entity scopes don't touch them (the audit log
       // append happens in the same transaction and is rendered by an

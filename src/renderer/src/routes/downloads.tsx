@@ -7,6 +7,7 @@ import { UrlInput } from '@components/features/downloads/UrlInput'
 import { VideoInfoPreview } from '@components/features/downloads/VideoInfoPreview'
 import { CreatorSelector } from '@components/features/downloads/CreatorSelector'
 import { ActiveDownloadsList } from '@components/features/downloads/ActiveDownloadsList'
+import { FinishedDownloadsList } from '@components/features/downloads/FinishedDownloadsList'
 import { BulkImportDialog } from '@components/features/downloads/BulkImportDialog'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Button } from '@ui/button'
@@ -116,6 +117,15 @@ function DownloadsPage(): React.ReactElement {
         </CardHeader>
         <CardContent>
           <ActiveDownloadsList />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('finished.cardTitle')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FinishedDownloadsList />
         </CardContent>
       </Card>
 

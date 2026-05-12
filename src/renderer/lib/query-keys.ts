@@ -59,5 +59,9 @@ export const queryKeys = {
     all: ['stats'] as const,
     storage: ['stats', 'storage'] as const,
     library: ['stats', 'library'] as const
+  },
+  downloadHistory: {
+    all: ['downloadHistory'] as const,
+    recent: (limit: number) => ['downloadHistory', 'recent', limit] as const
   }
 } as const

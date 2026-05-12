@@ -17,6 +17,16 @@
     "emptyDescription": "Downloads will appear here in real time.",
     "emptyCta": "Paste a URL above"
   },
+  "finished": {
+    "cardTitle": "Finished Downloads",
+    "emptyTitle": "Nothing here yet",
+    "emptyDescription": "Successful and failed downloads will be listed here so you can re-open them or retry.",
+    "openVideo": "Open video",
+    "retry": "Retry",
+    "errorBadge": "Error",
+    "retryQueued": "Retry queued",
+    "retryFailed": "Retry failed: {{message}}"
+  },
   "creator": {
     "label": "Creator name",
     "placeholder": "e.g. MrBeast"

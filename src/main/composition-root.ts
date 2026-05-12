@@ -7,7 +7,8 @@ import type {
 import type {
   IOperationRepository,
   IAuditLogRepository,
-  ISettingsRepository
+  ISettingsRepository,
+  IDownloadHistoryRepository
 } from '@domain/repositories'
 import type {
   IFileWatcher,
@@ -38,6 +39,8 @@ import type { IEnrichMediaMetadata } from '@use-cases/IEnrichMediaMetadata'
 import type { IFetchChannelInfo } from '@use-cases/IFetchChannelInfo'
 import type { IRegisterCreator } from '@use-cases/IRegisterCreator'
 import type { IRefreshCreatorAvatar } from '@use-cases/IRefreshCreatorAvatar'
+import type { IListDownloadHistory } from '@use-cases/IListDownloadHistory'
+import type { IRetryDownload } from '@use-cases/IRetryDownload'
 import type { IMigrateRootFolder } from '@use-cases/IMigrateRootFolder'
 import type { IFetchVideoDetail } from '@use-cases/IFetchVideoDetail'
 import type { IEnrichAllVideos } from '@use-cases/IEnrichAllVideos'
@@ -104,6 +107,9 @@ import { EnrichMediaMetadata } from '@use-cases/EnrichMediaMetadata'
 import { FetchChannelInfo } from '@use-cases/FetchChannelInfo'
 import { RegisterCreator } from '@use-cases/RegisterCreator'
 import { RefreshCreatorAvatar } from '@use-cases/RefreshCreatorAvatar'
+import { ListDownloadHistory } from '@use-cases/ListDownloadHistory'
+import { RetryDownload } from '@use-cases/RetryDownload'
+import { SqliteDownloadHistoryRepository } from './interface-adapters/repositories/SqliteDownloadHistoryRepository'
 import { MigrateRootFolder } from '@use-cases/MigrateRootFolder'
 import { FetchVideoDetail } from '@use-cases/FetchVideoDetail'
 import { MarkVideoMissing } from '@use-cases/MarkVideoMissing'
@@ -157,6 +163,7 @@ export interface AppContainer {
     settings: ISettingsRepository
     operation: IOperationRepository
     auditLog: IAuditLogRepository
+    downloadHistory: IDownloadHistoryRepository
   }
   ports: {
     fsReader: IFileSystemReader
@@ -187,6 +194,8 @@ export interface AppContainer {
     fetchChannelInfo: IFetchChannelInfo
     registerCreator: IRegisterCreator
     refreshCreatorAvatar: IRefreshCreatorAvatar
+    listDownloadHistory: IListDownloadHistory
+    retryDownload: IRetryDownload
     migrateRootFolder: IMigrateRootFolder
     fetchVideoDetail: IFetchVideoDetail
     enrichAllVideos: IEnrichAllVideos
@@ -291,6 +300,7 @@ export function createAppContainer(config: AppConfig): AppContainer {
   const sqliteCollectionRepo = new SqliteCollectionRepository(database.db)
   const operationRepo = new SqliteOperationRepository(database.db)
   const auditLogRepo = new SqliteAuditLogRepository(database.db)
+  const downloadHistoryRepo = new SqliteDownloadHistoryRepository(database.db)
 
   // ── Audited repository decorators ──
   // Video and cut audited repos must be built first because the audited
@@ -356,8 +366,12 @@ export function createAppContainer(config: AppConfig): AppContainer {
     fsWriter,
     notifier,
     idGenerator,
-    rootPathRef
+    rootPathRef,
+    downloadHistoryRepo
   )
+
+  const listDownloadHistory = new ListDownloadHistory(downloadHistoryRepo, videoRepo)
+  const retryDownload = new RetryDownload(downloadHistoryRepo, creatorRepo, downloadVideo)
 
   const probeMediaFile = new ProbeMediaFile(mediaProbe)
 
@@ -516,7 +530,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       collection: collectionRepo,
       settings: settingsRepo,
       operation: operationRepo,
-      auditLog: auditLogRepo
+      auditLog: auditLogRepo,
+      downloadHistory: downloadHistoryRepo
     },
     ports: {
       fsReader,
@@ -547,6 +562,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
       fetchChannelInfo,
       registerCreator,
       refreshCreatorAvatar,
+      listDownloadHistory,
+      retryDownload,
       migrateRootFolder,
       fetchVideoDetail,
       enrichAllVideos,

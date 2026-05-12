@@ -51,7 +51,8 @@ import type {
   AuditEntryDto,
   OperationDto,
   CollectionDto,
-  CollectionItemDto
+  CollectionItemDto,
+  DownloadHistoryEntryDto
 } from './dtos'
 
 /**
@@ -247,6 +248,16 @@ export interface IpcContract {
   'get-operations-by-status': {
     params: [status: string]
     result: OperationDto[]
+  }
+
+  // ── Download history ──
+  'list-download-history': {
+    params: [limit: number]
+    result: DownloadHistoryEntryDto[]
+  }
+  'retry-download': {
+    params: [historyId: string]
+    result: { downloadId: string }
   }
 
   // ── Updater ──
