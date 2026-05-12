@@ -6,6 +6,31 @@ import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
 import { diffObjects } from './diff-objects'
 
 /**
+ * Fields written by `EnrichMediaMetadata` after ffprobe completes. When the
+ * diff between two videos consists ENTIRELY of these keys, the update is
+ * pure enrichment (no user-meaningful change) and we skip the audit entry
+ * so the activity feed isn't peppered with "Atualizado" lines that just
+ * mean "ffprobe finished". `updatedAt` is already filtered in diffObjects.
+ */
+const ENRICHMENT_ONLY_FIELDS = new Set([
+  'probeStatus',
+  'duration',
+  'resolution',
+  'fileSize'
+])
+
+function isEnrichmentOnly(changesJson: string): boolean {
+  try {
+    const changes = JSON.parse(changesJson) as Record<string, unknown>
+    const keys = Object.keys(changes)
+    if (keys.length === 0) return false
+    return keys.every((k) => ENRICHMENT_ONLY_FIELDS.has(k))
+  } catch {
+    return false
+  }
+}
+
+/**
  * Decorator that wraps an IVideoRepository and writes audit log entries
  * for every mutation. Reads are delegated directly.
  *
@@ -90,7 +115,15 @@ export class AuditedVideoRepository implements IVideoRepository {
           previous as unknown as Record<string, unknown>,
           video as unknown as Record<string, unknown>
         )
-        if (changes) {
+        // Skip audit entries that ONLY contain ffprobe-enrichment fields.
+        // These fire ~1s after every download (EnrichMediaMetadata runs the
+        // probe, writes back duration/resolution/fileSize/probeStatus) and
+        // are implementation detail — the user sees the enriched values in
+        // the row itself, so a separate "Atualizado" line in the activity
+        // feed adds noise without information. Genuine updates that
+        // happen to TOUCH a probe field plus anything else still audit
+        // normally.
+        if (changes && !isEnrichmentOnly(changes)) {
           this.auditLog.append({
             entityType: 'video',
             entityId: video.id,
