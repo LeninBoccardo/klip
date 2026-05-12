@@ -24,6 +24,12 @@
     },
     "selectAria": "Seleccionar idioma"
   },
+  "dateFormat": {
+    "title": "Formato de fecha",
+    "description": "Cómo se muestran las fechas absolutas (publicación, descargas terminadas, etc.) en la app. \"Automático\" sigue la convención regional del idioma actual.",
+    "auto": "Automático (sigue el idioma)",
+    "selectAria": "Seleccionar formato de fecha"
+  },
   "storage": {
     "title": "Almacenamiento",
     "description": "Dónde Klip almacena tus archivos multimedia en disco.",

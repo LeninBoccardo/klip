@@ -24,6 +24,12 @@
     },
     "selectAria": "Selecionar idioma"
   },
+  "dateFormat": {
+    "title": "Formato de data",
+    "description": "Como datas absolutas (publicação, downloads concluídos, etc.) são exibidas no app. \"Automático\" segue a convenção regional do idioma atual.",
+    "auto": "Automático (segue o idioma)",
+    "selectAria": "Selecionar formato de data"
+  },
   "storage": {
     "title": "Armazenamento",
     "description": "Onde o Klip armazena seus arquivos de mídia em disco.",

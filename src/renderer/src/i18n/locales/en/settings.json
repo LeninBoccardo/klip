@@ -24,6 +24,12 @@
     },
     "selectAria": "Select language"
   },
+  "dateFormat": {
+    "title": "Date format",
+    "description": "How absolute dates (upload date, finished downloads, etc.) are shown across the app. \"Auto\" follows the current language's regional convention.",
+    "auto": "Auto (matches language)",
+    "selectAria": "Select date format"
+  },
   "storage": {
     "title": "Storage",
     "description": "Where Klip stores your media files on disk.",

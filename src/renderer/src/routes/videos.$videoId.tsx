@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDuration, formatFileSize, formatCount } from '@/lib/format'
+import { useDateFormat } from '@/hooks/use-date-format'
 import { useEffect, useState } from 'react'
 import { CommentsTab } from '@components/features/videos/CommentsTab'
 import { TranscriptTab } from '@components/features/videos/TranscriptTab'
@@ -41,6 +42,7 @@ function VideoDetailPage(): React.ReactElement {
   const router = useRouter()
   const { data: video, isLoading } = useVideoById(videoId)
   const fetchDetail = useFetchVideoDetail()
+  const { formatDate } = useDateFormat()
   const [tab, setTab] = useState('info')
   const play = usePlayerStore((s) => s.play)
   const setMode = usePlayerStore((s) => s.setMode)
@@ -140,7 +142,9 @@ function VideoDetailPage(): React.ReactElement {
       <PageHeader
         title={video.title}
         description={
-          video.uploadDate ? t('detail.uploaded', { date: video.uploadDate }) : undefined
+          video.uploadDate
+            ? t('detail.uploaded', { date: formatDate(video.uploadDate) })
+            : undefined
         }
         actions={
           <div className="flex items-center gap-2">

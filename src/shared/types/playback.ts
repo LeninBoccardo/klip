@@ -35,7 +35,8 @@ export const SETTING_KEYS = {
   theme: 'theme',
   language: 'language',
   hasCompletedOnboarding: 'hasCompletedOnboarding',
-  miniPlayerCorner: 'miniPlayerCorner'
+  miniPlayerCorner: 'miniPlayerCorner',
+  dateFormat: 'dateFormat'
 } as const
 
 /** Validator for `hasCompletedOnboarding` (string-encoded boolean). */

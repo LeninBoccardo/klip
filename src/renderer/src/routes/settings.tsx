@@ -12,6 +12,7 @@ import { UpdatesCard } from '@components/features/settings/UpdatesCard'
 import { PlaybackSettings } from '@components/features/settings/PlaybackSettings'
 import { AppearanceSettings } from '@components/features/settings/AppearanceSettings'
 import { LanguageSettings } from '@components/features/settings/LanguageSettings'
+import { DateFormatSettings } from '@components/features/settings/DateFormatSettings'
 import { PageContainer, PageHeader } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/table'
@@ -52,6 +53,16 @@ function SettingsPage(): React.ReactElement {
         </CardHeader>
         <CardContent>
           <LanguageSettings />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('dateFormat.title')}</CardTitle>
+          <CardDescription>{t('dateFormat.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DateFormatSettings />
         </CardContent>
       </Card>
 

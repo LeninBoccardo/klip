@@ -90,6 +90,12 @@ export {
   DEFAULT_MINI_PLAYER_CORNER,
   isMiniPlayerCorner
 } from './mini-player'
+export type { DateFormatPreset } from './date-format'
+export {
+  DATE_FORMAT_PRESETS,
+  DEFAULT_DATE_FORMAT,
+  isDateFormatPreset
+} from './date-format'
 export {
   THEME_VALUES,
   LANGUAGE_VALUES,
