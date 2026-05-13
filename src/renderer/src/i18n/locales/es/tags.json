@@ -2,6 +2,7 @@
   "input": {
     "placeholder": "Añadir etiqueta…",
     "noMatches": "Sin etiquetas coincidentes.",
+    "emptyHint": "Aún sin etiquetas — empieza a escribir para crear una.",
     "existingHeading": "Etiquetas existentes",
     "createHeading": "Crear nueva",
     "createOption": "Crear “{{name}}”",

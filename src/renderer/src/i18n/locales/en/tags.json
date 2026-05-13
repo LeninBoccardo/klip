@@ -2,6 +2,7 @@
   "input": {
     "placeholder": "Add tag…",
     "noMatches": "No matching tags.",
+    "emptyHint": "No tags yet — start typing to create one.",
     "existingHeading": "Existing tags",
     "createHeading": "Create new",
     "createOption": "Create “{{name}}”",

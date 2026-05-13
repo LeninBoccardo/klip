@@ -154,7 +154,21 @@ export function TagInput({
         >
           <Command shouldFilter>
             <CommandList>
-              {candidates.length === 0 && !showCreateOption && (
+              {/*
+                CommandEmpty only renders when the user has typed AND
+                cmdk's filter returns nothing. With an empty draft and no
+                candidates (a fresh app with no tags yet) the popover
+                opens with zero content and collapses to 0px — the user
+                sees nothing happen and reports it as "the dropdown
+                doesn't open". Render an explicit hint for that case so
+                clicking the input always produces a visible affordance.
+              */}
+              {candidates.length === 0 && trimmedDraft.length === 0 && (
+                <div className="text-muted-foreground px-2 py-1.5 text-xs">
+                  {t('input.emptyHint')}
+                </div>
+              )}
+              {candidates.length === 0 && trimmedDraft.length > 0 && !showCreateOption && (
                 <CommandEmpty>{t('input.noMatches')}</CommandEmpty>
               )}
               {candidates.length > 0 && (

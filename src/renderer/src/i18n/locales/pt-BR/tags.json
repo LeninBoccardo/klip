@@ -2,6 +2,7 @@
   "input": {
     "placeholder": "Adicionar tag…",
     "noMatches": "Nenhuma tag correspondente.",
+    "emptyHint": "Ainda sem tags — comece a digitar para criar uma.",
     "existingHeading": "Tags existentes",
     "createHeading": "Criar nova",
     "createOption": "Criar “{{name}}”",
