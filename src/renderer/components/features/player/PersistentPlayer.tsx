@@ -264,6 +264,49 @@ export function PersistentPlayer(): React.ReactElement | null {
     return undefined
   }, [mode, slotEl, mounted, corner])
 
+  // ── Wheel forwarding ──────────────────────────────────────────────────
+  //
+  // The player container is portaled to `document.body` and floats above
+  // everything with `position: fixed z-70`. Wheel events that fire on the
+  // video element bubble up to body — they NEVER reach the page's Radix
+  // ScrollArea viewport (which is inside the React tree under the route
+  // outlet). Result: hovering the player paralyses page scrolling.
+  //
+  // Fix: intercept wheel on the container, briefly disable its own
+  // `pointer-events` so `document.elementFromPoint` returns whatever sits
+  // underneath in the actual page DOM, then walk that ancestry to find
+  // the first vertically-scrollable element and scroll it directly. This
+  // handles both the page-level ScrollArea (PageContainer) and any
+  // nested ScrollArea (e.g. the transcript list under the mini player).
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !mounted) return
+
+    const handleWheel = (e: WheelEvent): void => {
+      const prev = container.style.pointerEvents
+      container.style.pointerEvents = 'none'
+      const below = document.elementFromPoint(e.clientX, e.clientY)
+      container.style.pointerEvents = prev
+
+      let node = below as HTMLElement | null
+      while (node && node !== document.body) {
+        const style = getComputedStyle(node)
+        const canScroll =
+          (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+          node.scrollHeight > node.clientHeight
+        if (canScroll) {
+          e.preventDefault()
+          node.scrollBy({ top: e.deltaY, left: e.deltaX, behavior: 'auto' })
+          return
+        }
+        node = node.parentElement
+      }
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
+  }, [mounted])
+
   // ── Drag-to-snap in mini mode ──────────────────────────────────────────
   //
   // pragmatic-drag-and-drop's element adapter gives us a single `draggable()`
@@ -508,7 +551,12 @@ export function PersistentPlayer(): React.ReactElement | null {
       data-testid="persistent-player"
       data-player-mode={mode}
       className={cn(
-        'fixed z-50 overflow-hidden bg-black',
+        // z-70 places the player above the root header (z-60). The mini
+        // player and the detail-mode preview both need to float over the
+        // app's top chrome — without this the breadcrumb / search bar
+        // sits on top and clips the video. See the wheel-forward effect
+        // for why this doesn't trap page scrolling.
+        'fixed z-70 overflow-hidden bg-black',
         mode === 'mini' && 'rounded-lg border shadow-2xl ring-1 ring-black/10'
       )}
     >
