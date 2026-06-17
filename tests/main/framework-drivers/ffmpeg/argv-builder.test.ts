@@ -69,8 +69,8 @@ describe('buildFfmpegArgv — trim, copy mode', () => {
 })
 
 describe('buildFfmpegArgv — trim, re-encode mode', () => {
-  it('emits libx264 + AAC at the documented MVP defaults', () => {
-    const recipe = trimRecipe({ in: 10, out: 20, mode: 'reencode' })
+  it('emits libx264 + AAC at the documented MVP defaults (mp4 container)', () => {
+    const recipe = trimRecipe({ in: 10, out: 20, mode: 'reencode', container: 'mp4' })
     const argv = buildFfmpegArgv(recipe, SOURCE, STAGING)
 
     expect(argv).toContain('libx264')
@@ -92,6 +92,19 @@ describe('buildFfmpegArgv — trim, re-encode mode', () => {
     const ssIdx = argv.indexOf('-ss')
     const iIdx = argv.indexOf('-i')
     expect(ssIdx).toBeLessThan(iIdx)
+  })
+
+  it('picks WebM-compatible codecs for a webm container — never libx264/aac (F20)', () => {
+    const argv = buildFfmpegArgv(
+      trimRecipe({ in: 10, out: 20, mode: 'reencode', container: 'webm' }),
+      SOURCE,
+      '/library/.klip-render/cut-1.webm'
+    )
+    // libx264/aac in a .webm muxer fails the render — must use VP9/Opus.
+    expect(argv).toContain('libvpx-vp9')
+    expect(argv).toContain('libopus')
+    expect(argv).not.toContain('libx264')
+    expect(argv).not.toContain('aac')
   })
 })
 

@@ -50,12 +50,19 @@ export function buildFfmpegArgv(
     // muxes where the audio packets straddle the cut point.
     argv.push('-fflags', '+genpts')
   } else {
-    // `medium` preset + CRF 18 ≈ visually-lossless H.264 / AAC. CRF
-    // and preset are not user-tweakable in MVP — the only knob users
-    // see is "fast (copy)" vs "precise (re-encode)". v2 may surface
-    // them, but they don't belong in this layer.
-    argv.push('-c:v', 'libx264', '-crf', '18', '-preset', 'medium')
-    argv.push('-c:a', 'aac', '-b:a', '192k')
+    // Re-encode codecs MUST match the output container's muxer, otherwise
+    // ffmpeg fails the render: the WebM muxer rejects H.264/AAC. Pick per
+    // container — mp4 → H.264/AAC (visually-lossless at CRF 18 / medium),
+    // webm → VP9/Opus (CRF 32 is VP9's rough visual-parity point with x264
+    // CRF 18). CRF/preset aren't user-tweakable in MVP; the only knob is
+    // "fast (copy)" vs "precise (re-encode)".
+    if (recipe.output.container === 'webm') {
+      argv.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0')
+      argv.push('-c:a', 'libopus', '-b:a', '192k')
+    } else {
+      argv.push('-c:v', 'libx264', '-crf', '18', '-preset', 'medium')
+      argv.push('-c:a', 'aac', '-b:a', '192k')
+    }
   }
 
   // ── Progress to stdout in machine-readable form for the backend's
