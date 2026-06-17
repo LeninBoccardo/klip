@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="brand/banners/banner-github.png" alt="Klip — a warm, offline vault for your videos and the clips you keep" width="100%">
+</div>
+
 # Klip
 
 A local, offline-first desktop asset manager for organizing downloaded source videos and manually created video cuts. Built with Electron, React 19, and TypeScript.
