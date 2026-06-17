@@ -71,4 +71,17 @@ describe('SaveCutDialog double-submit guard (F12)', () => {
       resolveRender({ jobId: 'j1', cutId: 'c1' })
     })
   })
+
+  it('submits when Enter is pressed in the title field (F27)', async () => {
+    editorStartRender.mockResolvedValue({ jobId: 'j1', cutId: 'c1' })
+    const user = userEvent.setup()
+    render(<SaveCutDialog open onOpenChange={vi.fn()} />)
+
+    const title = screen.getByLabelText('Title')
+    await user.type(title, 'My cut')
+    // Enter in the autofocused single field should submit (no mouse needed).
+    await user.type(title, '{Enter}')
+
+    expect(editorStartRender).toHaveBeenCalledTimes(1)
+  })
 })

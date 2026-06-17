@@ -115,6 +115,16 @@ export function SaveCutDialog({
               id="cut-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              // Enter in the single autofocused title field submits — the
+              // natural affordance for a one-field dialog. handleSubmit no-ops
+              // when !canSubmit, and the submittingRef guard covers re-entry.
+              // (TagInput has its own Enter handler, so this only fires here.) (F27)
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  void handleSubmit()
+                }
+              }}
               placeholder={t('save.fields.titlePlaceholder')}
               autoFocus
               maxLength={200}

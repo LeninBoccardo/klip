@@ -149,12 +149,18 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
   // dialog handling wins.
   const activeClip = timeline ? getActiveClip(timeline) : null
   const saveable = !!timeline && isTimelineSaveable(timeline)
-  useShortcut('i', handleMarkIn)
-  useShortcut('o', handleMarkOut)
-  useShortcut(',', handleFrameStepBack)
-  useShortcut('.', handleFrameStepForward)
-  useShortcut('arrowleft', handleArrowLeft)
-  useShortcut('arrowright', handleArrowRight)
+  // Gate scrub/mark shortcuts while the Save dialog is open. useShortcut only
+  // suppresses single-key shortcuts when focus is in a text input, but the
+  // dialog has non-text focus targets (radio group, buttons) — without this,
+  // tabbing to a button then pressing i/o/arrows would silently re-mark or
+  // scrub the timeline hidden behind the modal, changing what gets rendered. (F26)
+  const editorShortcutsEnabled = !saveOpen
+  useShortcut('i', handleMarkIn, { enabled: editorShortcutsEnabled })
+  useShortcut('o', handleMarkOut, { enabled: editorShortcutsEnabled })
+  useShortcut(',', handleFrameStepBack, { enabled: editorShortcutsEnabled })
+  useShortcut('.', handleFrameStepForward, { enabled: editorShortcutsEnabled })
+  useShortcut('arrowleft', handleArrowLeft, { enabled: editorShortcutsEnabled })
+  useShortcut('arrowright', handleArrowRight, { enabled: editorShortcutsEnabled })
   useShortcut('mod+enter', () => {
     if (saveable) handleSave()
   })
