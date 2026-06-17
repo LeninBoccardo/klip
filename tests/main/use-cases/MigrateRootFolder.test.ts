@@ -298,7 +298,7 @@ describe('MigrateRootFolder', () => {
 
   // ── DB failure after all folders moved ──
 
-  it('handles DB update failure after folders are moved', async () => {
+  it('rolls folders back to the old root when the DB update fails (F11)', async () => {
     vi.mocked(mocks.videoRepo.updateFilePathPrefix).mockImplementation(() => {
       throw new Error('DB locked')
     })
@@ -309,8 +309,14 @@ describe('MigrateRootFolder', () => {
     expect(result.movedCount).toBe(3)
     expect(result.error).toContain('DB update failed')
 
-    // Watcher restarted on new root (files are already there)
-    expect(mocks.fileWatcher.restart).toHaveBeenCalledWith('/new/root')
+    // F11: the path-rewrite transaction is atomic, so the DB is back at oldRoot.
+    // The folders must be moved back to match — not stranded at newRoot under a
+    // terminal 'failed' op. 3 forward moves + 3 rollback moves.
+    expect(mocks.fsWriter.moveDirectory).toHaveBeenCalledTimes(6)
+    expect(mocks.operationRepo.updateStatus).toHaveBeenCalledWith('op-123', 'failed', 'DB locked')
+    // Watcher restarted on the OLD root (where the files now live again).
+    expect(mocks.fileWatcher.restart).toHaveBeenCalledWith('/old/root')
+    expect(mocks.fileWatcher.restart).not.toHaveBeenCalledWith('/new/root')
   })
 
   it('marks payload partial=true and persists per-folder status when a rollback step fails', async () => {

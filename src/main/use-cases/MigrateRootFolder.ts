@@ -186,18 +186,22 @@ export class MigrateRootFolder implements IMigrateRootFolder {
         // Mutate the in-memory ref only after the DB writes commit.
         this.rootPathRef.value = newRootPath
       } catch (dbError) {
-        // DB update failed after all folders moved — this is a critical state.
-        // Mark operation failed but don't roll back files (they're already moved).
+        // The path-rewrite transaction is atomic, so on failure the DB
+        // (filePaths + rootPath) is rolled back to oldRoot — but the folders are
+        // physically at newRoot. Previously we marked the op terminally 'failed'
+        // and left the files at newRoot: every entity then resolved to oldRoot
+        // where nothing exists (whole library reads as "missing") with no
+        // recovery path, since 'failed' ops are never revisited. Instead, move
+        // the folders back to oldRoot so disk matches the DB. rollbackMovedFolders
+        // restarts the watcher on oldRoot and resumes notifications. (F11)
         const errorMsg =
           dbError instanceof Error ? dbError.message : 'Unknown error during DB update'
-        this.operationRepo.updateStatus(operationId, 'failed', errorMsg)
-        await this.fileWatcher.restart(newRootPath)
-        await this.processNotifications.resume()
+        await this.rollbackMovedFolders(payload, operationId, errorMsg)
         watcherRestored = true
         return {
           success: false,
           movedCount: folders.length,
-          error: `Files moved but DB update failed: ${errorMsg}`
+          error: `DB update failed; folders rolled back to the original root: ${errorMsg}`
         }
       }
 
