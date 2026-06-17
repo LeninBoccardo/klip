@@ -358,7 +358,9 @@ describe('DownloadVideo', () => {
     expect(creatorRepo.findByFolderName).toHaveBeenCalledWith('testcreator')
     expect(creatorRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'testcreator',
+        // Auto-created creators now get a generated (UUID) id like
+        // RegisterCreator — the id is NOT the folder slug.
+        id: expect.stringMatching(/^test-download-id-/),
         folderName: 'testcreator',
         name: 'TestCreator',
         status: 'active'
@@ -447,7 +449,8 @@ describe('DownloadVideo', () => {
     expect(videoRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'abc123',
-        creatorId: 'testcreator',
+        // The FK references creators.id (the generated id), never the slug.
+        creatorId: expect.stringMatching(/^test-download-id-/),
         title: 'Test Video',
         url: 'https://youtube.com/watch?v=abc123',
         duration: 120,
@@ -1027,7 +1030,7 @@ describe('DownloadVideo', () => {
     expect(downloader.fetchChannelInfo).toHaveBeenCalledTimes(1)
     expect(creatorRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'testcreator',
+        id: expect.stringMatching(/^test-download-id-/),
         avatarUrl: 'https://yt3.googleusercontent.com/test-avatar.jpg'
       })
     )
@@ -1181,7 +1184,15 @@ describe('DownloadVideo', () => {
     // write. Critically, no second creator row is created.
     expect(creatorRepo.upsert).not.toHaveBeenCalled()
     expect(downloader.download).toHaveBeenCalled()
-    expect(videoRepo.upsert).toHaveBeenCalled()
+    // F01 regression: the video FK must reference the registered creator's
+    // UUID id, NOT the folder slug. Writing the slug ('testcreator') here is
+    // what tripped SQLITE_CONSTRAINT_FOREIGNKEY and orphaned the media file.
+    expect(videoRepo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'abc123',
+        creatorId: 'b9e3a7fa-uuid-not-folder'
+      })
+    )
   })
 
   it('still completes the download when fetchChannelInfo fails', async () => {
@@ -1195,7 +1206,7 @@ describe('DownloadVideo', () => {
 
     expect(creatorRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'testcreator',
+        id: expect.stringMatching(/^test-download-id-/),
         avatarUrl: null
       })
     )

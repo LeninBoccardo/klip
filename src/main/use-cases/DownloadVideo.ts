@@ -193,13 +193,15 @@ export class DownloadVideo implements IDownloadVideo {
         // Surface the duplicate detection in history so users see that the
         // attempt was acknowledged — but mark it non-retryable so the Retry
         // button stays disabled (clicking it would just produce another
-        // duplicate row).
+        // duplicate row). Resolve the folder slug from the creator id (the
+        // history ledger stores folder names, not the UUID creatorId).
+        const dupCreator = this.creatorRepo.findById(existing.creatorId)
         this.appendHistory({
           youtubeUrl: url,
           videoId: existing.id,
           videoTitle: existing.title,
           thumbnailUrl: existing.thumbnailPath,
-          creatorFolderName: existing.creatorId,
+          creatorFolderName: dupCreator?.folderName ?? null,
           status: 'error',
           errorMessage: 'Already in your library.',
           errorRetryable: false
@@ -210,8 +212,9 @@ export class DownloadVideo implements IDownloadVideo {
       // 2. Slugify creator name for disk/DB identity
       const folderName = slugify(creatorName)
 
-      // 3. Ensure creator exists in DB
-      await this.ensureCreator(folderName, creatorName, info, url)
+      // 3. Ensure creator exists in DB. Returns the resolved Creator so the
+      //    video FK below references creators.id (a UUID), not the folder slug.
+      const creator = await this.ensureCreator(folderName, creatorName, info, url)
 
       // 4. Prepare output directory
       const outputDir = this.pathResolver.join(
@@ -253,7 +256,7 @@ export class DownloadVideo implements IDownloadVideo {
       const now = new Date().toISOString()
       const video: Video = {
         id: videoId,
-        creatorId: folderName,
+        creatorId: creator.id,
         title: result.title || info.title || videoId,
         url,
         duration: result.duration ?? info.duration ?? null,
@@ -293,7 +296,9 @@ export class DownloadVideo implements IDownloadVideo {
         videoId: video.id,
         videoTitle: video.title,
         thumbnailUrl: video.thumbnailPath,
-        creatorFolderName: video.creatorId,
+        // The history ledger keys retries by folder name (RetryDownload calls
+        // findByFolderName on this), so store the slug, not the UUID creatorId.
+        creatorFolderName: folderName,
         status: 'success',
         errorMessage: null,
         errorRetryable: false
@@ -358,23 +363,19 @@ export class DownloadVideo implements IDownloadVideo {
     displayName: string,
     info: VideoInfo,
     videoUrl: string
-  ): Promise<void> {
+  ): Promise<Creator> {
     // Look up by folderName — the on-disk identifier we'll use for the
-    // download's output folder. The previous `findById(folderName)` was
-    // wrong in general: RegisterCreator assigns `id = idGenerator.generate()`
-    // (UUID) and `folderName` is a separate field. They only coincide
-    // for creators auto-created by this very method, so the old lookup
-    // silently passed for fresh installs but exploded the moment a
-    // registered-then-downloaded workflow was exercised (the new INSERT
-    // below would trip the partial UNIQUE index on `youtube_channel_id`).
+    // download's output folder. `findById(folderName)` would be wrong:
+    // RegisterCreator assigns `id = idGenerator.generate()` (UUID) and
+    // `folderName` is a separate field, so they only coincide by accident.
+    // This method returns the resolved Creator so the caller can write
+    // `video.creatorId = creator.id` — the FK references creators.id, never
+    // the folder slug.
     //
-    // Edge case not handled here: user types a different display name
-    // for an already-registered channel. findByFolderName misses, this
-    // method falls through to INSERT, and the UNIQUE on
-    // `youtube_channel_id` still fires. The proper fix (redirect the
-    // download to the existing creator's folder and id) requires
-    // threading the resolved Creator back to the caller — out of scope
-    // for the immediate crash fix.
+    // Edge case still not handled: user types a different display name for
+    // an already-registered channel. findByFolderName misses, this method
+    // falls through to INSERT, and the UNIQUE on `youtube_channel_id` fires.
+    // Resolving that needs a secondary lookup by channelId — out of scope here.
     const existing = this.creatorRepo.findByFolderName(folderName)
 
     // The per-video yt-dlp JSON doesn't carry the channel thumbnail — only
@@ -393,7 +394,10 @@ export class DownloadVideo implements IDownloadVideo {
     if (!existing) {
       const now = new Date().toISOString()
       touched = {
-        id: folderName,
+        // Mint a UUID, exactly like RegisterCreator — `folderName` stays the
+        // disk key but the entity id must be opaque so the two creation paths
+        // share one id convention and the videos.creator_id FK is stable.
+        id: this.idGenerator.generate(),
         folderName,
         name: displayName,
         profileImagePath: null,
@@ -446,6 +450,8 @@ export class DownloadVideo implements IDownloadVideo {
     }
 
     if (needsAvatarFetch) this.scheduleAvatarFetch(touched, info, videoUrl)
+
+    return touched
   }
 
   /**
