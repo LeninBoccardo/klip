@@ -10,7 +10,8 @@
     "markIn": "Marcar início",
     "markOut": "Marcar fim",
     "clearRegion": "Limpar região",
-    "save": "Salvar corte…"
+    "save": "Salvar corte…",
+    "invalidRegion": "Essa marca inverteria a região — limpe a região primeiro."
   },
   "save": {
     "title": "Salvar corte",

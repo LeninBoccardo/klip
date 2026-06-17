@@ -10,7 +10,8 @@
     "markIn": "Mark in",
     "markOut": "Mark out",
     "clearRegion": "Clear region",
-    "save": "Save cut…"
+    "save": "Save cut…",
+    "invalidRegion": "That mark would invert the region — clear the region first."
   },
   "save": {
     "title": "Save cut",

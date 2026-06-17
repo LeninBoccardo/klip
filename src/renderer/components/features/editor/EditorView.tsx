@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/tooltip'
 import { Kbd } from '@ui/kbd'
@@ -84,14 +85,17 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
   const handleMarkIn = useCallback(() => {
     const el = videoRef.current
     if (!el) return
-    setInPoint(el.currentTime)
-  }, [setInPoint])
+    // A refused mark would otherwise be a silent no-op (the store only
+    // console.warns) — both the I shortcut and the Mark In button funnel here,
+    // so surface why nothing changed instead of feeling broken (F76).
+    if (!setInPoint(el.currentTime)) toast.error(t('controls.invalidRegion'))
+  }, [setInPoint, t])
 
   const handleMarkOut = useCallback(() => {
     const el = videoRef.current
     if (!el) return
-    setOutPoint(el.currentTime)
-  }, [setOutPoint])
+    if (!setOutPoint(el.currentTime)) toast.error(t('controls.invalidRegion'))
+  }, [setOutPoint, t])
 
   const handleSave = useCallback(() => {
     setSaveOpen(true)

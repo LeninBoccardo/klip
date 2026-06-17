@@ -58,8 +58,14 @@ interface EditorState {
   setCursor(sec: number): void
   setZoom(pxPerSec: number): void
   setScroll(sec: number): void
-  setInPoint(sec: number): void
-  setOutPoint(sec: number): void
+  /**
+   * Returns `false` when the mark is refused (it would invert/collapse the
+   * region, or there's no room at the clip boundary) so the caller can surface
+   * a toast; `true` when the region was updated. The refused state is a safe
+   * no-op — the existing region is preserved (F76).
+   */
+  setInPoint(sec: number): boolean
+  setOutPoint(sec: number): boolean
   /** Drop the in/out region — used when starting fresh on the same source. */
   clearRegion(): void
 
@@ -121,74 +127,77 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     )
   },
   setInPoint(sec) {
-    set((state) => {
-      const tl = state.timeline
-      const clip = tl ? getActiveClip(tl) : null
-      if (!tl || !clip) return {}
-      const clamped = clamp(sec, 0, clip.durationSec)
-      const existingOut = clip.region?.outSec ?? null
+    // Written as a plain action (not a `set(producer)`) so it can return a
+    // refusal status to the caller — zustand consumes a producer's return
+    // value, so a producer can't also hand a boolean back to the component.
+    const tl = get().timeline
+    const clip = tl ? getActiveClip(tl) : null
+    if (!tl || !clip) return false
+    const clamped = clamp(sec, 0, clip.durationSec)
+    const existingOut = clip.region?.outSec ?? null
 
-      // Refuse marks that would invert or collapse the region (new in
-      // at-or-past existing out). Earlier behaviour silently overwrote
-      // the user's existing out with `clamped + 0.001`, destroying their
-      // input. The user must `clearRegion()` to start over.
-      if (existingOut !== null && clamped >= existingOut) {
-        console.warn(
-          '[klip:editor] setInPoint refused — would invert the region; clearRegion() to reset'
-        )
-        return {}
-      }
+    // Refuse marks that would invert or collapse the region (new in
+    // at-or-past existing out). Earlier behaviour silently overwrote
+    // the user's existing out with `clamped + 0.001`, destroying their
+    // input. The user must `clearRegion()` to start over.
+    if (existingOut !== null && clamped >= existingOut) {
+      console.warn(
+        '[klip:editor] setInPoint refused — would invert the region; clearRegion() to reset'
+      )
+      return false
+    }
 
-      // No existing out: default to end-of-clip so the region is
-      // immediately saveable. The user refines via setOutPoint.
-      const outSec = existingOut ?? clip.durationSec
+    // No existing out: default to end-of-clip so the region is
+    // immediately saveable. The user refines via setOutPoint.
+    const outSec = existingOut ?? clip.durationSec
 
-      // Boundary case: in-mark at the very end of the clip with no room
-      // for an out-mark. Refuse rather than emit an unsaveable region.
-      if (clamped >= outSec) {
-        console.warn('[klip:editor] setInPoint refused — no room for an out-point past the mark')
-        return {}
-      }
+    // Boundary case: in-mark at the very end of the clip with no room
+    // for an out-mark. Refuse rather than emit an unsaveable region.
+    if (clamped >= outSec) {
+      console.warn('[klip:editor] setInPoint refused — no room for an out-point past the mark')
+      return false
+    }
 
-      return {
-        timeline: updateActiveClip(tl, (c) => ({
-          ...c,
-          region: { inSec: clamped, outSec }
-        }))
-      }
+    set({
+      timeline: updateActiveClip(tl, (c) => ({
+        ...c,
+        region: { inSec: clamped, outSec }
+      }))
     })
+    return true
   },
   setOutPoint(sec) {
-    set((state) => {
-      const tl = state.timeline
-      const clip = tl ? getActiveClip(tl) : null
-      if (!tl || !clip) return {}
-      const clamped = clamp(sec, 0, clip.durationSec)
-      const existingIn = clip.region?.inSec ?? null
+    // Plain action (mirrors setInPoint) so it can report a refusal to the
+    // caller; zustand would otherwise swallow a producer's return value.
+    const tl = get().timeline
+    const clip = tl ? getActiveClip(tl) : null
+    if (!tl || !clip) return false
+    const clamped = clamp(sec, 0, clip.durationSec)
+    const existingIn = clip.region?.inSec ?? null
 
-      // Symmetric to setInPoint: refuse marks that would invert the
-      // region rather than silently clobber the existing in-point.
-      if (existingIn !== null && clamped <= existingIn) {
-        console.warn(
-          '[klip:editor] setOutPoint refused — would invert the region; clearRegion() to reset'
-        )
-        return {}
-      }
+    // Symmetric to setInPoint: refuse marks that would invert the
+    // region rather than silently clobber the existing in-point.
+    if (existingIn !== null && clamped <= existingIn) {
+      console.warn(
+        '[klip:editor] setOutPoint refused — would invert the region; clearRegion() to reset'
+      )
+      return false
+    }
 
-      const inSec = existingIn ?? 0
+    const inSec = existingIn ?? 0
 
-      if (clamped <= inSec) {
-        console.warn('[klip:editor] setOutPoint refused — no room for an in-point before the mark')
-        return {}
-      }
+    if (clamped <= inSec) {
+      console.warn('[klip:editor] setOutPoint refused — no room for an in-point before the mark')
+      return false
+    }
 
-      return {
-        timeline: updateActiveClip(tl, (c) => ({
-          ...c,
-          region: { inSec, outSec: clamped }
-        }))
-      }
+    set({
+      timeline: updateActiveClip(tl, (c) => ({
+        ...c,
+        region: { inSec, outSec: clamped }
+      }))
     })
+    return true
   },
   clearRegion() {
     set((state) =>
