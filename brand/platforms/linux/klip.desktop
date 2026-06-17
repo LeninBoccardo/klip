@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Klip
+Comment=Klip
+Exec=klip
+Icon=klip
+Terminal=false
+Categories=Utility;
+StartupNotify=true

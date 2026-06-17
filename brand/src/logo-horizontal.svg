@@ -1,0 +1,35 @@
+<svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#241E19"/>
+      <stop offset="1" stop-color="#16110E"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.40" r="0.62">
+      <stop offset="0" stop-color="#4A3A28" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#4A3A28" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0.12" y1="0.08" x2="0.88" y2="0.94">
+      <stop offset="0" stop-color="#F7D488"/>
+      <stop offset="0.5" stop-color="#EAB44C"/>
+      <stop offset="1" stop-color="#D89B33"/>
+    </linearGradient>
+  </defs>
+
+  <!-- badge (132px) -->
+  <g transform="translate(214,34) scale(0.128906)">
+    <rect width="1024" height="1024" rx="184" fill="url(#bg)"/>
+    <rect width="1024" height="1024" rx="184" fill="url(#glow)"/>
+    <g transform="translate(0 25)">
+      <rect x="246" y="246" width="532" height="532" rx="132" fill="none"
+            stroke="url(#gold)" stroke-width="74" stroke-linejoin="round"/>
+      <rect x="468" y="159" width="88" height="124" rx="30" fill="url(#gold)"/>
+      <path d="M470 436 L470 588 L598 512 Z" fill="url(#gold)"
+            stroke="url(#gold)" stroke-width="30" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- wordmark (light surface: espresso ink) -->
+  <text id="wordmark" x="382" y="133" text-anchor="start"
+        font-family="'Geist','Inter',system-ui,sans-serif" font-weight="600"
+        font-size="104" letter-spacing="-2.5" fill="#1C1815">Klip</text>
+</svg>
