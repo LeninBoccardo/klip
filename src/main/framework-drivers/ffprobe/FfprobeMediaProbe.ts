@@ -56,6 +56,9 @@ export class FfprobeMediaProbe implements IMediaProbe {
         'json',
         '-show_format',
         '-show_streams',
+        // `--` terminates option parsing so a path beginning with a dash can't
+        // be interpreted by ffprobe as an option (e.g. a protocol/input option).
+        '--',
         filePath
       ]
 

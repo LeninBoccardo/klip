@@ -124,7 +124,8 @@ app.whenReady().then(() => {
     container.useCases.fetchVideoInfo,
     container.useCases.downloadVideo,
     container.useCases.probeMediaFile,
-    container.useCases.fetchChannelInfo
+    container.useCases.fetchChannelInfo,
+    container.rootPathRef
   )
   registerCreatorController(
     container.repositories.creator,

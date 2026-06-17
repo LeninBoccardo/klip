@@ -156,5 +156,10 @@ describe('FfprobeMediaProbe', () => {
       expect.arrayContaining(['-v', 'error', '-print_format', 'json', 'C:/x.mp4']),
       expect.objectContaining({ stdio: ['ignore', 'pipe', 'pipe'] })
     )
+    // F17: a literal `--` must immediately precede the file path so a path
+    // beginning with a dash can't be parsed by ffprobe as an option.
+    const args = spawnMock.mock.calls[0][1] as string[]
+    expect(args[args.length - 2]).toBe('--')
+    expect(args[args.length - 1]).toBe('C:/x.mp4')
   })
 })
