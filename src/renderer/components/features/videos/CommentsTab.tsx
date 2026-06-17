@@ -183,7 +183,10 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   const handleCopyAll = async (): Promise<void> => {
     if (!data) return
     try {
-      await navigator.clipboard.writeText(buildClipboardText(threads))
+      // Copy what's actually on screen: when a filter is active the match-count
+      // UI shows a subset, so copying the full unfiltered set would silently
+      // produce a far larger payload than the user sees. (F74)
+      await navigator.clipboard.writeText(buildClipboardText(filteredThreads))
       toast.success(t('comments.copySuccess'))
     } catch {
       toast.error(t('comments.copyError'))

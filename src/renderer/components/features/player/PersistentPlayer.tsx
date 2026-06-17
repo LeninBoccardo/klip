@@ -371,15 +371,15 @@ export function PersistentPlayer(): React.ReactElement | null {
         container.style.top = `${top}px`
         container.style.left = `${left}px`
         startRect = null
-        // Persist; the next mount (or any subsequent setting read) picks up
-        // the new corner via `corner` above. We don't await — UI continues
-        // animating regardless of the IPC round-trip.
-        if (snapped !== corner) {
-          persistCorner.mutate({ key: SETTING_KEYS.miniPlayerCorner, value: snapped })
-        }
+        // Always persist the snapped corner. We deliberately don't dedupe
+        // against the closed-over `corner`: it's derived from the async settings
+        // query and lags until the post-mutate refetch lands, so a fast second
+        // drag could compare against a stale value and skip a needed persist.
+        // The write is idempotent, so persisting unconditionally is safe. (F73)
+        persistCorner.mutate({ key: SETTING_KEYS.miniPlayerCorner, value: snapped })
       }
     })
-  }, [mode, mounted, corner, persistCorner])
+  }, [mode, mounted, persistCorner])
 
   // ── Player keyboard shortcuts (active only in detail mode) ──────────────
   const shortcutsEnabled = mode === 'detail' && Boolean(videoId)
