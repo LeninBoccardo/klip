@@ -80,6 +80,11 @@ export class SqliteVideoRepository implements IVideoRepository {
     return row ? mapRow(row) : null
   }
 
+  findByIds(ids: string[]): Video[] {
+    if (ids.length === 0) return []
+    return this.db.select().from(videos).where(inArray(videos.id, ids)).all().map(mapRow)
+  }
+
   findByYoutubeVideoId(youtubeVideoId: string): Video | null {
     return this.findById(youtubeVideoId)
   }

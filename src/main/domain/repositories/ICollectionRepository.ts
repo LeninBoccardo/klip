@@ -24,6 +24,12 @@ export interface ICollectionRepository {
    * decides how to render them.
    */
   getItems(collectionId: string): CollectionItem[]
+  /**
+   * Member counts for several collections at once, as a `Map<collectionId, count>`.
+   * Used by list views that only need `itemCount`, avoiding a full getItems()
+   * (which materializes every membership row) per collection.
+   */
+  countItemsByCollection(ids: string[]): Map<string, number>
 
   // ── Item-level writes ──
   /** Insert a single video at the supplied position (caller computes max+1). */

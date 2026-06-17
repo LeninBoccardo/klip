@@ -51,6 +51,10 @@ export class AuditedVideoRepository implements IVideoRepository {
     return this.inner.findById(id)
   }
 
+  findByIds(ids: string[]): Video[] {
+    return this.inner.findByIds(ids)
+  }
+
   findByYoutubeVideoId(youtubeVideoId: string): Video | null {
     return this.inner.findByYoutubeVideoId(youtubeVideoId)
   }

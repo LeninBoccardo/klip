@@ -94,6 +94,7 @@ function makeRepo(): ICollectionRepository {
     upsertWithPrevious: vi.fn(),
     delete: vi.fn(),
     getItems: vi.fn().mockReturnValue([]),
+    countItemsByCollection: vi.fn().mockReturnValue(new Map()),
     addVideo: vi.fn(),
     addCut: vi.fn(),
     removeVideo: vi.fn(),
@@ -107,6 +108,7 @@ function makeVideoRepo(): IVideoRepository {
     findAll: vi.fn(),
     findAllActive: vi.fn(),
     findById: vi.fn().mockReturnValue(null),
+    findByIds: vi.fn().mockReturnValue([]),
     findByCreatorId: vi.fn(),
     findByProbeStatus: vi.fn(),
     findNeedingDetail: vi.fn(),
@@ -129,6 +131,7 @@ function makeCutRepo(): ICutRepository {
     findAll: vi.fn(),
     findAllActive: vi.fn(),
     findById: vi.fn().mockReturnValue(null),
+    findByIds: vi.fn().mockReturnValue([]),
     findByCreatorId: vi.fn(),
     findByVideoId: vi.fn(),
     findByTags: vi.fn(),
@@ -440,8 +443,8 @@ describe('GetCollectionItems', () => {
       { kind: 'video', id: 'v-1', position: 0, addedAt: '2025-02-01' },
       { kind: 'cut', id: 'cut-1', position: 1, addedAt: '2025-02-01' }
     ])
-    vi.mocked(videoRepo.findById).mockReturnValue(makeVideo({ id: 'v-1', title: 'V' }))
-    vi.mocked(cutRepo.findById).mockReturnValue(makeCut({ id: 'cut-1', title: 'C' }))
+    vi.mocked(videoRepo.findByIds).mockReturnValue([makeVideo({ id: 'v-1', title: 'V' })])
+    vi.mocked(cutRepo.findByIds).mockReturnValue([makeCut({ id: 'cut-1', title: 'C' })])
 
     const useCase = new GetCollectionItems(collectionRepo, videoRepo, cutRepo)
     const items = useCase.execute('col')
@@ -455,7 +458,7 @@ describe('GetCollectionItems', () => {
     vi.mocked(collectionRepo.getItems).mockReturnValue([
       { kind: 'video', id: 'gone', position: 0, addedAt: '' }
     ])
-    vi.mocked(videoRepo.findById).mockReturnValue(null)
+    vi.mocked(videoRepo.findByIds).mockReturnValue([])
 
     const useCase = new GetCollectionItems(collectionRepo, videoRepo, cutRepo)
     const [item] = useCase.execute('col')
@@ -468,9 +471,9 @@ describe('GetCollectionItems', () => {
     vi.mocked(collectionRepo.getItems).mockReturnValue([
       { kind: 'video', id: 'v-missing', position: 0, addedAt: '' }
     ])
-    vi.mocked(videoRepo.findById).mockReturnValue(
+    vi.mocked(videoRepo.findByIds).mockReturnValue([
       makeVideo({ id: 'v-missing', title: 'Lost', status: 'missing' })
-    )
+    ])
 
     const useCase = new GetCollectionItems(collectionRepo, videoRepo, cutRepo)
     const [item] = useCase.execute('col')
@@ -504,7 +507,7 @@ describe('GetCollectionById', () => {
 })
 
 describe('GetCollectionsPaginated', () => {
-  it('maps each row through with itemCount from getItems', () => {
+  it('maps each row through with itemCount from countItemsByCollection (F44)', () => {
     const a = makeCollection({ id: 'a', name: 'A' })
     const b = makeCollection({ id: 'b', name: 'B' })
     vi.mocked(collectionRepo.findPaginated).mockReturnValue({
@@ -514,16 +517,16 @@ describe('GetCollectionsPaginated', () => {
       pageSize: 10,
       totalPages: 1
     })
-    vi.mocked(collectionRepo.getItems).mockImplementation((id: string) => {
-      if (id === 'a') return [{ kind: 'video', id: 'v-1', position: 0, addedAt: '' }]
-      return []
-    })
+    // Counts are prefetched in one batched call (no getItems per collection).
+    vi.mocked(collectionRepo.countItemsByCollection).mockReturnValue(new Map([['a', 1]]))
 
     const useCase = new GetCollectionsPaginated(collectionRepo)
     const page = useCase.execute({ page: 1, pageSize: 10 })
 
+    expect(collectionRepo.countItemsByCollection).toHaveBeenCalledWith(['a', 'b'])
+    expect(collectionRepo.getItems).not.toHaveBeenCalled()
     expect(page.data).toHaveLength(2)
     expect(page.data[0].itemCount).toBe(1)
-    expect(page.data[1].itemCount).toBe(0)
+    expect(page.data[1].itemCount).toBe(0) // absent from map → 0
   })
 })

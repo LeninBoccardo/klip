@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, sql, gt, type SQL } from 'drizzle-orm'
+import { eq, and, asc, desc, sql, gt, inArray, type SQL } from 'drizzle-orm'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { AppDatabase } from '@main/framework-drivers/database'
 import {
@@ -125,6 +125,29 @@ export class SqliteCollectionRepository implements ICollectionRepository {
     ) as Array<{ kind: 'video' | 'cut'; id: string; position: number; addedAt: string }>
 
     return rows
+  }
+
+  countItemsByCollection(ids: string[]): Map<string, number> {
+    const counts = new Map<string, number>()
+    if (ids.length === 0) return counts
+    // Two grouped COUNTs for the whole page (not a getItems() per collection):
+    // each join table contributes its membership count; sum per collection id.
+    const videoCounts = this.db
+      .select({ cid: collectionVideos.collectionId, n: sql<number>`count(*)` })
+      .from(collectionVideos)
+      .where(inArray(collectionVideos.collectionId, ids))
+      .groupBy(collectionVideos.collectionId)
+      .all()
+    const cutCounts = this.db
+      .select({ cid: collectionCuts.collectionId, n: sql<number>`count(*)` })
+      .from(collectionCuts)
+      .where(inArray(collectionCuts.collectionId, ids))
+      .groupBy(collectionCuts.collectionId)
+      .all()
+    for (const { cid, n } of [...videoCounts, ...cutCounts]) {
+      counts.set(cid, (counts.get(cid) ?? 0) + Number(n))
+    }
+    return counts
   }
 
   addVideo(collectionId: string, videoId: string, position: number, addedAt: string): void {

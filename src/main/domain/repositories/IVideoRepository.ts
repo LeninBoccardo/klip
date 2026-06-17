@@ -8,6 +8,8 @@ export interface IVideoRepository {
   findAll(): Video[]
   findAllActive(): Video[]
   findById(id: string): Video | null
+  /** Batch PK lookup — returns the videos matching `ids` (order unspecified). */
+  findByIds(ids: string[]): Video[]
   /**
    * Look up a video by its YouTube video id. Today this is a thin alias of
    * `findById` (the table PK *is* the YouTube id), but DownloadVideo's

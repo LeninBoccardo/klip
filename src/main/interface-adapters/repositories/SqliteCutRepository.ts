@@ -85,6 +85,11 @@ export class SqliteCutRepository implements ICutRepository {
     return row ? mapRowToCut(row) : null
   }
 
+  findByIds(ids: string[]): Cut[] {
+    if (ids.length === 0) return []
+    return this.db.select().from(cuts).where(inArray(cuts.id, ids)).all().map(mapRowToCut)
+  }
+
   findByCreatorId(creatorId: string): Cut[] {
     return this.db
       .select()

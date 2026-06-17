@@ -148,6 +148,25 @@ describe('SqliteCollectionRepository', () => {
       expect(repo.getItems('col')).toEqual([])
     })
 
+    it('countItemsByCollection batches member counts (video + cut) per collection (F44)', () => {
+      videoRepo.upsert(makeVideo({ id: 'v-1' }))
+      videoRepo.upsert(makeVideo({ id: 'v-2' }))
+      cutRepo.upsert(makeCut({ id: 'cut-1' }))
+      repo.upsert(makeCollection({ id: 'col-a' }))
+      repo.upsert(makeCollection({ id: 'col-b' }))
+      repo.upsert(makeCollection({ id: 'col-empty' }))
+      repo.addVideo('col-a', 'v-1', 0, '2025-02-01T00:00:00.000Z')
+      repo.addVideo('col-a', 'v-2', 1, '2025-02-01T00:00:00.000Z')
+      repo.addCut('col-a', 'cut-1', 2, '2025-02-01T00:00:00.000Z')
+      repo.addVideo('col-b', 'v-1', 0, '2025-02-01T00:00:00.000Z')
+
+      const counts = repo.countItemsByCollection(['col-a', 'col-b', 'col-empty'])
+      expect(counts.get('col-a')).toBe(3) // 2 videos + 1 cut
+      expect(counts.get('col-b')).toBe(1)
+      expect(counts.get('col-empty')).toBeUndefined() // no rows → absent
+      expect(repo.countItemsByCollection([]).size).toBe(0)
+    })
+
     it('findPaginated supports search by name and orders by updatedAt desc by default', () => {
       repo.upsert(makeCollection({ id: 'a', name: 'Alpha', updatedAt: '2025-02-01T00:00:00.000Z' }))
       repo.upsert(makeCollection({ id: 'b', name: 'Beta', updatedAt: '2025-02-03T00:00:00.000Z' }))

@@ -29,6 +29,10 @@ export class AuditedCollectionRepository implements ICollectionRepository {
     return this.inner.findById(id)
   }
 
+  countItemsByCollection(ids: string[]): Map<string, number> {
+    return this.inner.countItemsByCollection(ids)
+  }
+
   findPaginated(params: PaginationParams): PaginatedResult<Collection> {
     return this.inner.findPaginated(params)
   }

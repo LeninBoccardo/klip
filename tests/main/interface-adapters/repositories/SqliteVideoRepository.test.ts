@@ -171,6 +171,22 @@ describe('SqliteVideoRepository', () => {
     })
   })
 
+  // ── findByIds ──
+
+  it('findByIds returns the matching videos and [] for an empty id list (F43)', () => {
+    videoRepo.upsert(makeVideo({ id: 'v-1' }))
+    videoRepo.upsert(makeVideo({ id: 'v-2' }))
+    videoRepo.upsert(makeVideo({ id: 'v-3' }))
+
+    expect(videoRepo.findByIds([]).map((v) => v.id)).toEqual([])
+    expect(
+      videoRepo
+        .findByIds(['v-1', 'v-3', 'missing'])
+        .map((v) => v.id)
+        .sort()
+    ).toEqual(['v-1', 'v-3'])
+  })
+
   // ── delete ──
 
   it('deletes a video by id', () => {

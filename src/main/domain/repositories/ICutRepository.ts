@@ -8,6 +8,8 @@ export interface ICutRepository {
   findAll(): Cut[]
   findAllActive(): Cut[]
   findById(id: string): Cut | null
+  /** Batch PK lookup — returns the cuts matching `ids` (order unspecified). */
+  findByIds(ids: string[]): Cut[]
   findByCreatorId(creatorId: string): Cut[]
   findByVideoId(videoId: string): Cut[]
   /** Cheap id-only projection — see {@link IVideoRepository.findIdsByCreator}. */
