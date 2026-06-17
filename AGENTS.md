@@ -92,8 +92,8 @@ The Main process must adhere to SOLID principles and isolate business logic from
 - `use-cases/`: Application rules. Each use case receives its dependencies (repositories, ports) via constructor injection, and each implementation has a sibling interface file (`I*.ts`) that domain consumers depend on. Grouped roughly:
   - **Sync / reconciliation:** `ReconcileDirectory`, `ProcessFileNotifications`, `EnrichMediaMetadata`, `EnrichAllVideos`, `RecoverOperations`
   - **Downloads / fetch:** `DownloadVideo`, `FetchVideoInfo`, `FetchChannelInfo`, `FetchVideoDetail`, `FetchVideoComments`, `ProbeMediaFile`
-  - **Filesystem operations:** `MigrateRootFolder`
-  - **Tags + search:** `GetAllDistinctTags`, `BulkUpdateTags`, `RenameTagGlobally`, `SearchAll`
+  - **Filesystem operations:** `MigrateRootFolder`, `MoveVideosToCreator`
+  - **Tags + search:** `GetAllDistinctTags`, `BulkUpdateTags`, `RenameTagGlobally`, `SearchAll`, `SearchTranscripts`, `BackfillTranscriptIndex`
   - **Collections:** `CreateCollection`, `RenameCollection`, `DeleteCollection`, `AddToCollection`, `RemoveFromCollection`, `ReorderCollection`, `GetCollectionItems`, `GetCollectionById`, `GetCollectionsPaginated`
   - **Media protocol:** `ResolveMediaUrl` (entity-keyed `klip-media://<kind>/<id>/<asset>` resolver consumed by `KlipMediaProtocolHandler`)
   - **Editor (in-app trim):** `RenderCutFromVideo`, `CancelRender` (drive the ffmpeg render via the `IRenderBackend` port + `IEditorSessionStore`; render-job state participates in the operations saga via `RecoverOperations`)
@@ -114,7 +114,7 @@ The Main process must adhere to SOLID principles and isolate business logic from
 
 ## Database Layer (Drizzle ORM)
 
-The data layer uses **Drizzle ORM** on top of `better-sqlite3`. Raw SQL is never used in repositories — all queries go through Drizzle's type-safe query builder.
+The data layer uses **Drizzle ORM** on top of `better-sqlite3`. Most queries go through Drizzle's type-safe query builder; raw `sql` is confined to the handful of queries Drizzle can't express — `json_each` tag filters, the `UNION ALL` collection-items read, and FTS5 `MATCH`/`bm25` transcript search. In those, user input is always parameter-bound (`` sql`${value}` ``), never string-interpolated.
 
 ### Schema
 
@@ -132,6 +132,8 @@ Defined in `src/main/framework-drivers/database/schema.ts` using Drizzle's `sqli
 | `collection_cuts`   | Join table: `(collection_id, cut_id, position, added_at)`, FK CASCADE both sides.                  |
 | `audit_log`         | Immutable mutation history for all entity changes.                                                 |
 | `download_history`  | Persistent finished-downloads history. Soft FK → `videos.id` (no `ON DELETE`; `ListDownloadHistory` filters out deleted videos on read). `status = success\|error`, `error_retryable` flag, `finished_at`. |
+
+Plus one FTS5 **virtual table**, `videos_fts` (full-text transcript search), created and kept in sync via raw SQL + triggers in migration `0009` and queried through `SqliteVideoTranscriptIndex`. Drizzle can't model virtual tables, so it isn't a `sqliteTable()` export and isn't counted in the 10 above.
 
 **Unified position invariant for collections.** `position` is unique across the union of `collection_videos ∪ collection_cuts` for a given `collection_id`. SQLite cannot express that as a DB constraint (no cross-table uniqueness), so the invariant is enforced in the use case layer (`AddToCollection` uses `max(position)+1`, `ReorderCollection` densifies to `0..n-1`) inside `transactionScope.run()`. Positions stay unique but may be **sparse** — `RemoveFromCollection` leaves gaps and `getItems` returns the stored positions verbatim (ordered by `position`, with `added_at`/`id` tiebreakers); there is no renumber-on-read. Don't assume a dense `0..n-1` sequence.
 

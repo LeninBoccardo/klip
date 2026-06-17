@@ -13,7 +13,7 @@ A local, offline-first desktop asset manager for organizing downloaded source vi
 
 - **Offline-first library** — SQLite index as the single source of truth, OS file system as the storage layer
 - **Automatic sync** — Chokidar watcher reconciles disk changes back into the index without manual intervention
-- **YouTube downloads** — Bundled yt-dlp pipeline with channel detection, progress reporting, and post-download enrichment (description, tags, comments, view counts)
+- **YouTube downloads** — Bundled yt-dlp pipeline with channel detection, progress reporting, and post-download enrichment (description, tags, view/comment counts). Comment threads are fetched only on demand in the viewer, never automatically
 - **Media metadata** — Bundled ffprobe extracts duration, resolution, and file size on detection
 - **In-app playback** — HTML5 `<video>` portaled across routes so playback survives navigation; mini-player carry-over with prev/next controls
 - **Global search palette** — `Ctrl/Cmd+K` (or `/`) opens a cmdk palette with grouped results across creators, videos, cuts, and tags
