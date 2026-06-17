@@ -11,13 +11,30 @@ vi.mock('@/hooks/use-videos', () => ({
   useCachedVideoComments: vi.fn()
 }))
 
+// The thread list is virtualized. jsdom reports zero element heights, so mock
+// the virtualizer to control which rows "render". Default (null) → all rows
+// visible, so the existing assertions still see every thread. A windowing test
+// narrows `visibleIndices` to prove only the reported rows mount.
+const visibleIndices = vi.hoisted(() => ({ current: null as number[] | null }))
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => {
+    const indices = visibleIndices.current ?? Array.from({ length: count }, (_, i) => i)
+    return {
+      getTotalSize: () => count * 96,
+      getVirtualItems: () =>
+        indices
+          .filter((i) => i < count)
+          .map((i) => ({ index: i, start: i * 96, key: i, size: 96 })),
+      measureElement: vi.fn()
+    }
+  }
+}))
+
 type FetchCommentsArgs = { videoId: string; maxComments?: number }
 type FetchCommentsState = UseMutationResult<VideoCommentsResult, Error, FetchCommentsArgs>
 type CachedCommentsState = UseQueryResult<VideoCommentsResult | null, Error>
 
-function makeCacheState(
-  overrides: Partial<CachedCommentsState> = {}
-): CachedCommentsState {
+function makeCacheState(overrides: Partial<CachedCommentsState> = {}): CachedCommentsState {
   return {
     data: null,
     error: null,
@@ -70,6 +87,7 @@ function makeMutationState(overrides: Partial<FetchCommentsState>): FetchComment
 
 beforeEach(() => {
   vi.clearAllMocks()
+  visibleIndices.current = null
   // Cache lookup defaults to "no cached payload" so every existing test
   // continues to exercise the mutation-only flow it was written for.
   // Cases that want a cache hit override this per-test.
@@ -304,6 +322,23 @@ describe('CommentsTab — loaded states', () => {
 
     expect(screen.getByText('From cache')).toBeInTheDocument()
     expect(mutate).not.toHaveBeenCalled()
+  })
+
+  it('only mounts the threads the virtualizer reports as visible (F04 windowing)', () => {
+    // 500 top-level comments; the virtualizer reports just two visible.
+    const comments = Array.from({ length: 500 }, (_, i) =>
+      makeComment({ id: `top${i}`, text: `Comment ${i}`, parentId: null })
+    )
+    visibleIndices.current = [0, 1]
+    vi.mocked(useFetchVideoComments).mockReturnValue(loadedState(comments))
+
+    render(<CommentsTab videoId="v1" knownCount={null} />)
+
+    expect(screen.getByText('Comment 0')).toBeInTheDocument()
+    expect(screen.getByText('Comment 1')).toBeInTheDocument()
+    // The other 498 are not in the DOM — the windowing layer is the gate.
+    expect(screen.queryByText('Comment 2')).not.toBeInTheDocument()
+    expect(screen.queryByText('Comment 499')).not.toBeInTheDocument()
   })
 
   it('re-fires mutate when Reload is clicked', async () => {

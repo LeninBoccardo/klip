@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useTranslation } from 'react-i18next'
 import { useCachedVideoComments, useFetchVideoComments } from '@/hooks/use-videos'
 import { Button } from '@ui/button'
 import { Badge } from '@ui/badge'
 import { Input } from '@ui/input'
 import { Checkbox } from '@ui/checkbox'
-import { ScrollArea } from '@ui/scroll-area'
 import { Avatar, AvatarFallback } from '@ui/avatar'
 import { Item, ItemMedia, ItemContent } from '@ui/item'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@ui/empty'
@@ -107,8 +107,7 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   const fetchComments = useFetchVideoComments()
   // Prefer fresh mutation data when present (just-fetched results take
   // precedence over the cache snapshot), otherwise the disk-cached payload.
-  const data: VideoCommentsResult | null | undefined =
-    fetchComments.data ?? cachedComments.data
+  const data: VideoCommentsResult | null | undefined = fetchComments.data ?? cachedComments.data
 
   const threads = useMemo(() => (data ? groupThreads(data.comments) : []), [data])
   const replyCount = useMemo(() => threads.reduce((sum, t) => sum + t.replies.length, 0), [threads])
@@ -122,6 +121,20 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   const [usernameFilter, setUsernameFilter] = useState('')
   const [textFilter, setTextFilter] = useState('')
   const [pinnedOnly, setPinnedOnly] = useState(false)
+
+  // Reply-expand state is lifted out of CommentRow into a Set keyed by the
+  // top-level comment id. CommentRow is rendered by a virtualizer that recycles
+  // DOM nodes as you scroll, so per-row useState would lose its open/closed
+  // state on recycle. The Set survives recycling and re-mounts.
+  const [openThreads, setOpenThreads] = useState<Set<string>>(() => new Set())
+  const setThreadOpen = useCallback((id: string, open: boolean): void => {
+    setOpenThreads((prev) => {
+      const next = new Set(prev)
+      if (open) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
 
   const anyFilterActive = usernameFilter !== '' || textFilter !== '' || pinnedOnly
 
@@ -261,10 +274,8 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   // It's an upper-bound signal — "there might be more" — not a guarantee
   // that more exist on YouTube. The user can keep clicking Load more until
   // a non-truncated batch returns or the FETCH_ALL_MAX cap is reached.
-  const canLoadMore =
-    data.wasTruncated && requestedMax < FETCH_ALL_MAX && !fetchComments.isPending
-  const canFetchAll =
-    data.wasTruncated && requestedMax < FETCH_ALL_MAX && !fetchComments.isPending
+  const canLoadMore = data.wasTruncated && requestedMax < FETCH_ALL_MAX && !fetchComments.isPending
+  const canFetchAll = data.wasTruncated && requestedMax < FETCH_ALL_MAX && !fetchComments.isPending
   const loadingMore = fetchComments.isPending
 
   return (
@@ -327,10 +338,7 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
               className="w-52"
             />
             <label className="flex cursor-pointer select-none items-center gap-2 text-sm">
-              <Checkbox
-                checked={pinnedOnly}
-                onCheckedChange={(v) => setPinnedOnly(v === true)}
-              />
+              <Checkbox checked={pinnedOnly} onCheckedChange={(v) => setPinnedOnly(v === true)} />
               <span>{t('comments.filterPinnedOnly')}</span>
             </label>
             {anyFilterActive && (
@@ -354,17 +362,12 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
               </EmptyHeader>
             </Empty>
           ) : (
-            // Fixed height (matches TranscriptTab): radix ScrollArea's viewport
-            // only scrolls when the root has a concrete height — `max-h` lets
-            // the content push past the rounded border instead of constraining
-            // it, which produced the "comments overflow the dark box" symptom.
-            <ScrollArea className="h-150 rounded border">
-              <div className="divide-y">
-                {filteredThreads.map((thread) => (
-                  <CommentRow key={thread.top.id} thread={thread} dateLocale={dateLocale} />
-                ))}
-              </div>
-            </ScrollArea>
+            <VirtualCommentList
+              threads={filteredThreads}
+              dateLocale={dateLocale}
+              openThreads={openThreads}
+              onOpenChange={setThreadOpen}
+            />
           )}
         </>
       )}
@@ -404,17 +407,82 @@ export function CommentsTab({ videoId, knownCount }: CommentsTabProps): React.Re
   )
 }
 
+// ── Virtualized thread list ──
+
+/**
+ * Windows the comment threads with @tanstack/react-virtual (same pattern as
+ * VirtualAuditList). "Fetch all" can pull up to 50,000 comments; rendering them
+ * all unwindowed froze the renderer for seconds and re-rendered every survivor
+ * on each filter keystroke. Only the visible rows mount here.
+ *
+ * Rows are NOT uniform height (long text, expandable replies), so estimateSize
+ * is a single-line baseline and `measureElement` re-measures actual heights —
+ * including when a thread's replies expand (its ResizeObserver fires).
+ */
+function VirtualCommentList({
+  threads,
+  dateLocale,
+  openThreads,
+  onOpenChange
+}: {
+  threads: ThreadGroup[]
+  dateLocale: Locale
+  openThreads: Set<string>
+  onOpenChange: (id: string, open: boolean) => void
+}): React.ReactElement {
+  const scrollParentRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: threads.length,
+    getScrollElement: () => scrollParentRef.current,
+    // Measured baseline for a single-line top-level comment; taller rows
+    // (wrapped text, expanded replies) are corrected via measureElement.
+    estimateSize: () => 96,
+    overscan: 6
+  })
+
+  const items = virtualizer.getVirtualItems()
+
+  return (
+    <div ref={scrollParentRef} className="h-150 overflow-y-auto rounded border">
+      <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {items.map((virtualRow) => {
+          const thread = threads[virtualRow.index]
+          return (
+            <div
+              key={thread.top.id}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              className="border-border/60 absolute left-0 top-0 w-full border-b"
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
+            >
+              <CommentRow
+                thread={thread}
+                dateLocale={dateLocale}
+                open={openThreads.has(thread.top.id)}
+                onOpenChange={(v) => onOpenChange(thread.top.id, v)}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Comment row ──
 
 function CommentRow({
   thread,
-  dateLocale
+  dateLocale,
+  open,
+  onOpenChange
 }: {
   thread: ThreadGroup
   dateLocale: Locale
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }): React.ReactElement {
   const { t } = useTranslation('videos')
-  const [open, setOpen] = useState(false)
   const { top, replies } = thread
 
   return (
@@ -450,10 +518,12 @@ function CommentRow({
               {formatCount(top.likeCount)}
             </span>
           </div>
-          <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">{top.text}</p>
+          <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
+            {top.text}
+          </p>
 
           {replies.length > 0 && (
-            <Collapsible open={open} onOpenChange={setOpen} className="mt-2">
+            <Collapsible open={open} onOpenChange={onOpenChange} className="mt-2">
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
