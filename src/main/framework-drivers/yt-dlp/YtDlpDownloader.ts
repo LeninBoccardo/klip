@@ -4,6 +4,7 @@ import { isAbsolute, join } from 'path'
 import type { IBinaryResolver, IVideoDownloader, DownloadOptions } from '@domain/ports'
 import type { ChannelInfo, DownloadProgress, DownloadResult, VideoInfo } from '@domain/types'
 import type { VideoComment, VideoDetail } from '@shared/types'
+import { DownloadCancelledError } from '@domain/types/download-error'
 import { parseProgressLine, pickChannelAvatar } from './yt-dlp-helpers'
 
 // Wall-clock cap for yt-dlp metadata calls (info/detail/channel/transcript).
@@ -471,7 +472,7 @@ export class YtDlpDownloader implements IVideoDownloader {
             eta: null,
             status: 'cancelled'
           })
-          reject(new Error('Download cancelled'))
+          reject(new DownloadCancelledError())
           return
         }
 

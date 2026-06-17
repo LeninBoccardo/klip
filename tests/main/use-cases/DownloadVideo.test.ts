@@ -16,6 +16,7 @@ import type {
 } from '@domain/ports'
 import type { IFetchVideoInfo } from '@use-cases/IFetchVideoInfo'
 import type { VideoInfo, DownloadProgress, DownloadResult, ChannelInfo } from '@domain/types'
+import { DownloadCancelledError } from '@domain/types/download-error'
 import type { Creator } from '@domain/entities'
 
 // ── Mock builders ──
@@ -546,12 +547,11 @@ describe('DownloadVideo', () => {
   })
 
   it('should not notify error when download throws the cancellation sentinel', async () => {
-    // The suppression contract inside performDownload keys on the exact
-    // string `Error('Download cancelled')` — the driver throws this when
-    // SIGTERM lands on yt-dlp. A regression that changes the sentinel (or
-    // the equality check) would re-emit a spurious 'error' progress event
-    // to the UI.
-    vi.mocked(downloader.download).mockRejectedValue(new Error('Download cancelled'))
+    // The suppression contract inside performDownload keys on the typed
+    // DownloadCancelledError — the driver throws this when SIGTERM lands on
+    // yt-dlp. A regression that changes the sentinel (or the instanceof check)
+    // would re-emit a spurious 'error' progress event to the UI. (F68)
+    vi.mocked(downloader.download).mockRejectedValue(new DownloadCancelledError())
 
     await useCase.execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'TestCreator' })
     await awaitEnqueuedTask()
@@ -943,6 +943,35 @@ describe('DownloadVideo', () => {
       'download-progress',
       expect.objectContaining({ status: 'duplicate' })
     )
+  })
+
+  it('re-downloads a missing video under its ORIGINAL creator, ignoring the typed name (F67)', () => {
+    // The video already belongs to creator 'orig-uuid' (folder 'orig-folder').
+    // Re-downloading it while typing a different creator name must not silently
+    // reassign it — keep creatorId + the download folder anchored to the
+    // original creator.
+    vi.mocked(videoRepo.findByYoutubeVideoId).mockReturnValue(
+      makeExistingVideo({ id: 'abc123', status: 'missing', creatorId: 'orig-uuid' })
+    )
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) =>
+      id === 'orig-uuid'
+        ? ({ id: 'orig-uuid', folderName: 'orig-folder', name: 'Original' } as Creator)
+        : null
+    )
+    vi.mocked(fsReader.fileExists).mockReturnValue(true)
+
+    return useCase
+      .execute({ url: 'https://youtube.com/watch?v=abc123', creatorName: 'Totally Different Name' })
+      .then(() => awaitEnqueuedTask())
+      .then(() => {
+        expect(downloader.download).toHaveBeenCalledWith(
+          expect.objectContaining({ outputDir: '/root/orig-folder/downloads/abc123' }),
+          expect.any(Function)
+        )
+        expect(videoRepo.upsert).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'abc123', creatorId: 'orig-uuid' })
+        )
+      })
   })
 
   it('proceeds with download when the file is gone from disk', async () => {

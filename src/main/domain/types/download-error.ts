@@ -8,6 +8,19 @@
  * structured error codes — its stderr is the only signal we have.
  */
 
+/**
+ * Thrown by the downloader when a download is cancelled (SIGTERM'd) by the user.
+ * A dedicated class lets callers detect cancellation via `instanceof` instead of
+ * matching the error message string — a wrapped/re-thrown error would otherwise
+ * lose the exact text and fall through to the (retriable) generic-error path. (F68)
+ */
+export class DownloadCancelledError extends Error {
+  constructor() {
+    super('Download cancelled')
+    this.name = 'DownloadCancelledError'
+  }
+}
+
 const RETRIABLE_PATTERNS: readonly RegExp[] = [
   /ETIMEDOUT/i,
   /ECONNRESET/i,

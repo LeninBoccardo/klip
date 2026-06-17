@@ -16,7 +16,7 @@ import type {
 import type { DownloadRequest, DownloadProgress, VideoInfo } from '@domain/types'
 import { slugify } from '@domain/types'
 import { redactError } from '@domain/types/redact'
-import { classifyDownloadError } from '@domain/types/download-error'
+import { classifyDownloadError, DownloadCancelledError } from '@domain/types/download-error'
 import type { Video, Creator } from '@domain/entities'
 import type { IDownloadVideo, DownloadVideoResult } from './IDownloadVideo'
 import type { IFetchVideoInfo } from './IFetchVideoInfo'
@@ -209,14 +209,26 @@ export class DownloadVideo implements IDownloadVideo {
         return
       }
 
-      // 2. Slugify creator name for disk/DB identity
-      const folderName = slugify(creatorName)
+      // 2-4. Resolve the creator + output dir.
+      // Recovery: when re-downloading a video already in the library (the dedupe
+      // above only short-circuits active+present, so this is a missing/deleted/
+      // file-gone repair), keep it under its ORIGINAL creator. Otherwise a
+      // different typed creator name would silently reassign the video and leave
+      // its filePath under a different folder than creatorId. New downloads use
+      // the typed name. (F67)
+      const existingCreator = existing ? this.creatorRepo.findById(existing.creatorId) : null
+      let folderName: string
+      let creator: Creator
+      if (existingCreator) {
+        creator = existingCreator
+        folderName = existingCreator.folderName
+      } else {
+        folderName = slugify(creatorName)
+        // Returns the resolved Creator so the video FK references creators.id
+        // (a UUID), not the folder slug.
+        creator = await this.ensureCreator(folderName, creatorName, info, url)
+      }
 
-      // 3. Ensure creator exists in DB. Returns the resolved Creator so the
-      //    video FK below references creators.id (a UUID), not the folder slug.
-      const creator = await this.ensureCreator(folderName, creatorName, info, url)
-
-      // 4. Prepare output directory
       const outputDir = this.pathResolver.join(
         this.rootPath.value,
         folderName,
@@ -304,8 +316,11 @@ export class DownloadVideo implements IDownloadVideo {
         errorRetryable: false
       })
     } catch (error) {
-      // If it's a cancellation, the progress event was already sent by the driver
-      if (error instanceof Error && error.message === 'Download cancelled') {
+      // If it's a cancellation, the progress event was already sent by the
+      // driver. Detect via the typed error (not a message-string match) so a
+      // wrapped/re-thrown cancellation can't fall through to the retriable
+      // generic-error path. (F68)
+      if (error instanceof DownloadCancelledError) {
         // Still record the cancellation in history — the user wants to know
         // they cancelled (vs. "did the download just disappear?"). Mark
         // non-retryable so the row doesn't grow a meaningless Retry button.
