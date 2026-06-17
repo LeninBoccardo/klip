@@ -12,7 +12,8 @@ export const queryKeys = {
     detail: (id: string) => ['videos', 'detail', id] as const,
     transcript: (id: string) => ['videos', 'transcript', id] as const,
     transcriptSegments: (id: string) => ['videos', 'transcript-segments', id] as const,
-    comments: (id: string, maxComments: number) => ['videos', 'comments', id, maxComments] as const,
+    // Comments are cached under commentsCache(id) only; there is no maxComments-
+    // parameterized read path (the viewer seeds + reads commentsCache). (F80)
     commentsCache: (id: string) => ['videos', 'comments-cache', id] as const
   },
   cuts: {

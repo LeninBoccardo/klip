@@ -379,7 +379,10 @@ export function PersistentPlayer(): React.ReactElement | null {
         persistCorner.mutate({ key: SETTING_KEYS.miniPlayerCorner, value: snapped })
       }
     })
-  }, [mode, mounted, persistCorner])
+    // `mounted` is intentionally NOT a dep: the effect body never reads it, and
+    // it's derived from `mode` (already a dep), so it would only add redundant
+    // re-registrations of the draggable() wiring (F78).
+  }, [mode, persistCorner])
 
   // ── Player keyboard shortcuts (active only in detail mode) ──────────────
   const shortcutsEnabled = mode === 'detail' && Boolean(videoId)

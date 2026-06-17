@@ -13,10 +13,15 @@
  */
 export type MiniPlayerCorner = 'TL' | 'TR' | 'BL' | 'BR'
 
-export const MINI_PLAYER_CORNER_VALUES = ['TL', 'TR', 'BL', 'BR'] as const satisfies readonly MiniPlayerCorner[]
+export const MINI_PLAYER_CORNER_VALUES = [
+  'TL',
+  'TR',
+  'BL',
+  'BR'
+] as const satisfies readonly MiniPlayerCorner[]
 
 export const DEFAULT_MINI_PLAYER_CORNER: MiniPlayerCorner = 'BR'
 
 export function isMiniPlayerCorner(value: unknown): value is MiniPlayerCorner {
-  return value === 'TL' || value === 'TR' || value === 'BL' || value === 'BR'
+  return MINI_PLAYER_CORNER_VALUES.includes(value as MiniPlayerCorner)
 }

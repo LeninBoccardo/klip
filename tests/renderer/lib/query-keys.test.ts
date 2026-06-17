@@ -36,7 +36,7 @@ describe('queryKeys', () => {
   })
 
   describe('videos', () => {
-    it('exposes namespace + list + detail + transcript + comments', () => {
+    it('exposes namespace + list + detail + transcript + commentsCache', () => {
       expect(queryKeys.videos.all).toEqual(['videos'])
       expect(queryKeys.videos.list({ page: 1, pageSize: 10 })).toEqual([
         'videos',
@@ -45,13 +45,9 @@ describe('queryKeys', () => {
       ])
       expect(queryKeys.videos.detail('v-1')).toEqual(['videos', 'detail', 'v-1'])
       expect(queryKeys.videos.transcript('v-1')).toEqual(['videos', 'transcript', 'v-1'])
-      expect(queryKeys.videos.comments('v-1', 200)).toEqual(['videos', 'comments', 'v-1', 200])
-    })
-
-    it('comments key segregates by maxComments (different cache slots)', () => {
-      const a = queryKeys.videos.comments('v-1', 200)
-      const b = queryKeys.videos.comments('v-1', 500)
-      expect(a).not.toEqual(b)
+      // The comments viewer caches under commentsCache(id) only — there is no
+      // maxComments-parameterized key (the dead one was removed in F80).
+      expect(queryKeys.videos.commentsCache('v-1')).toEqual(['videos', 'comments-cache', 'v-1'])
     })
   })
 

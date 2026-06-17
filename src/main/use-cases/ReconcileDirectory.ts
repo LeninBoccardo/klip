@@ -144,7 +144,6 @@ export class ReconcileDirectory implements IReconcileDirectory {
           this.creatorRepo.updateStatus(creator.id, 'missing', null)
           result.creatorsMarkedMissing++
           this.markChildrenMissing(
-            creator.id,
             videosByCreator.get(creator.id) ?? [],
             cutsByCreator.get(creator.id) ?? [],
             result
@@ -243,7 +242,6 @@ export class ReconcileDirectory implements IReconcileDirectory {
           this.creatorRepo.updateStatus(existing.id, 'missing', null)
           result.creatorsMarkedMissing++
           this.markChildrenMissing(
-            existing.id,
             this.videoRepo.findByCreatorId(existing.id),
             this.cutRepo.findByCreatorId(existing.id),
             result
@@ -577,12 +575,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
 
   // ── Helpers ──
 
-  private markChildrenMissing(
-    _creatorId: string,
-    videos: Video[],
-    cuts: Cut[],
-    result: ReconcileResult
-  ): void {
+  private markChildrenMissing(videos: Video[], cuts: Cut[], result: ReconcileResult): void {
     for (const video of videos) {
       if (video.status === 'deleted' || video.status === 'missing') continue
       this.videoRepo.updateStatus(video.id, 'missing', null)

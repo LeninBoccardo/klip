@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useTheme as useNextTheme } from 'next-themes'
 import { useSetSetting } from '@/hooks/use-settings'
-import { isTheme, SETTING_KEYS, type Theme } from '@shared/types'
+import { DEFAULT_THEME, isTheme, SETTING_KEYS, type Theme } from '@shared/types'
 
 export interface ThemePreference {
   /** Currently selected value (`'light' | 'dark' | 'system'`). */
@@ -34,8 +34,8 @@ export function useThemePreference(): ThemePreference {
   )
 
   // Defensive fallback: until next-themes hydrates `theme` is `undefined`.
-  // Treat that as `'system'` to match the provider's `defaultTheme`.
-  const effectiveTheme: Theme = isTheme(theme) ? theme : 'system'
+  // Treat that as the default to match the provider's `defaultTheme` (F81).
+  const effectiveTheme: Theme = isTheme(theme) ? theme : DEFAULT_THEME
   const effectiveResolved: 'light' | 'dark' = resolvedTheme === 'light' ? 'light' : 'dark'
 
   return { theme: effectiveTheme, resolvedTheme: effectiveResolved, setTheme }
