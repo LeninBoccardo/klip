@@ -67,6 +67,26 @@ const EXT_TO_MIME: Record<string, string> = {
  * *before* `app.whenReady()` (Electron requirement); this class only owns
  * `protocol.handle()`, which runs after `whenReady`.
  */
+/**
+ * `request.url` is fully renderer-controlled (any HTML/CSS/fetch can issue an
+ * arbitrary `klip-media://` request). Drop ASCII control chars — chiefly CR/LF,
+ * which could otherwise forge fake lines in the persistent log — and cap the
+ * length so an over-long URL can't bloat the file. Defence-in-depth: Chromium
+ * already strips control chars from URLs, but this is the one log surface that
+ * emits untrusted input verbatim (F87).
+ */
+function sanitizeUrlForLog(url: string): string {
+  // Drop ASCII control chars (incl. CR/LF that could forge log lines) and cap
+  // length. Built character-wise (no control-char regex) so the source stays clean.
+  return [...url]
+    .filter((c) => {
+      const code = c.charCodeAt(0)
+      return code >= 0x20 && code !== 0x7f
+    })
+    .join('')
+    .slice(0, 512)
+}
+
 export class KlipMediaProtocolHandler {
   constructor(
     private readonly resolveMedia: IResolveMediaUrl,
@@ -79,18 +99,25 @@ export class KlipMediaProtocolHandler {
 
   private async handle(request: Request): Promise<Response> {
     const rangeHeader = request.headers.get('range')
+    const safeUrl = sanitizeUrlForLog(request.url)
     console.log(
-      `[klip-media] ← ${request.method} ${request.url}${rangeHeader ? ` range=${rangeHeader}` : ''}`
+      `[klip-media] ← ${request.method} ${safeUrl}${rangeHeader ? ` range=${rangeHeader}` : ''}`
     )
+
+    // Read-only media endpoint: only GET/HEAD are meaningful. Reject anything
+    // else explicitly (405) rather than silently serving the body via the
+    // method-agnostic net.fetch path (F86).
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      console.warn(`[klip-media] reject 405 method=${request.method}`)
+      return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } })
+    }
 
     const parsed = parseKlipMediaUrl(request.url)
     if (!parsed.ok) {
-      console.warn(`[klip-media] reject ${parsed.status} parseKlipMediaUrl: ${request.url}`)
+      console.warn(`[klip-media] reject ${parsed.status} parseKlipMediaUrl: ${safeUrl}`)
       return new Response(null, { status: parsed.status })
     }
-    console.log(
-      `[klip-media] parsed: kind=${parsed.kind} id=${parsed.id} asset=${parsed.asset}`
-    )
+    console.log(`[klip-media] parsed: kind=${parsed.kind} id=${parsed.id} asset=${parsed.asset}`)
 
     const path = this.resolveMedia.resolve({
       kind: parsed.kind,
@@ -103,9 +130,7 @@ export class KlipMediaProtocolHandler {
       )
       return new Response(null, { status: 404 })
     }
-    console.log(
-      `[klip-media] resolved path: ${redactPath(path, this.rootPathRef.value)}`
-    )
+    console.log(`[klip-media] resolved path: ${redactPath(path, this.rootPathRef.value)}`)
 
     const checked = checkPathInsideRoot(path, this.rootPathRef.value)
     if (!checked.ok) {
@@ -133,9 +158,7 @@ export class KlipMediaProtocolHandler {
       )
       return new Response(null, { status: 404 })
     }
-    console.log(
-      `[klip-media] stat OK: size=${stat.size} mtime=${stat.mtime.toISOString()}`
-    )
+    console.log(`[klip-media] stat OK: size=${stat.size} mtime=${stat.mtime.toISOString()}`)
 
     const upstream = await net.fetch(pathToFileURL(checked.absolutePath).href)
     const ext = extname(checked.absolutePath).toLowerCase()
