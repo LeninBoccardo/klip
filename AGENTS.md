@@ -32,15 +32,15 @@ Klip is an Electron desktop app built with **electron-vite**, **React 19**, and 
 | ------------- | ----------------------------- | ------------------------------------------------------------------------ |
 | **Domain**    | `src/main/domain`             | Enterprise rules, Entities, and Repository Interfaces. No external deps. |
 | **Use Cases** | `src/main/use-cases`          | Orchestrates data flow between Entities and Repositories.                |
-| **Adapters**  | `src/main/interface-adapters` | IPC Handlers and Drizzle ORM repository implementations.                 |
-| **Drivers**   | `src/main/framework-drivers`  | Drizzle ORM config, Chokidar (File Watcher), and Electron Window logic.  |
+| **Adapters**  | `src/main/interface-adapters` | IPC handlers, Drizzle ORM repository implementations, and the in-memory editor session store. |
+| **Drivers**   | `src/main/framework-drivers`  | Drizzle ORM config, Chokidar (File Watcher), yt-dlp/ffprobe/ffmpeg, and Electron Window logic.  |
 
 The renderer accesses Electron APIs exclusively through `window.electron` (typed in `src/preload/index.d.ts`). Custom APIs are exposed via `window.api`—add new IPC handlers in `src/preload/index.ts` and register them in `src/main/index.ts` with `ipcMain`.
 
 **Renderer Process:** Flattened for clarity. Features are grouped by domain (e.g., `/components/features/creators`, `/components/features/collections`, `/components/features/player`, `/components/features/search`). Two cross-cutting renderer subsystems sit in the root layout (`src/renderer/src/routes/__root.tsx`):
 
 - **Command palette** — A `cmdk`-based `<CommandPalette>` is rendered globally and toggled by `Ctrl/Cmd+K` or `/`. The handler in `__root.tsx` filters out `/` when a text input has focus to avoid hijacking typing. Search results are fetched via the `search-all` IPC channel and grouped by entity kind.
-- **Persistent player** — A single `<video>` DOM node lives in a `createPortal(..., document.body)` mount inside `<PersistentPlayer>`. Detail mode tracks a route-owned slot rect via `ResizeObserver` + capture-phase scroll listeners; mini mode pins to a fixed bottom-right corner. The same DOM node survives route changes so buffered video, decoder state, and audio context are preserved without a re-load. Playback state lives in `usePlayerStore` (zustand): `mediaKind`, `videoId`, `mode`, `resumeAt`, plus a `queue` slice for "Play all" advance.
+- **Persistent player** — A single `<video>` DOM node lives in a `createPortal(..., document.body)` mount inside `<PersistentPlayer>`. Detail mode tracks a route-owned slot rect via a `requestAnimationFrame` loop reading `getBoundingClientRect()`, plus a `ResizeObserver` for synchronous resize updates (capture-phase scroll listeners were tried and abandoned — Radix ScrollArea's viewport doesn't reliably surface scroll events); mini mode pins to a fixed bottom-right corner. The same DOM node survives route changes so buffered video, decoder state, and audio context are preserved without a re-load. Playback state lives in `usePlayerStore` (zustand): `mediaKind`, `videoId`, `mode`, `resumeAt`, plus a `queue` slice for "Play all" advance.
 
 ## Data Management & Sync Pattern
 
@@ -60,7 +60,7 @@ To ensure high performance when filtering large amounts of media, strictly follo
 
 ## Local Media Protocol (`klip-media://`)
 
-Local media is served to the renderer through a custom Electron protocol registered in `src/main/index.ts` (`protocol.registerSchemesAsPrivileged([{ scheme: 'klip-media', privileges: { secure: true, supportFetchAPI: true } }])`) and handled in `src/main/framework-drivers/electron/KlipMediaProtocolHandler.ts`.
+Local media is served to the renderer through a custom Electron protocol registered in `src/main/index.ts` (`protocol.registerSchemesAsPrivileged([{ scheme: 'klip-media', privileges: { standard: false, secure: true, supportFetchAPI: true, stream: true } }])`) and handled in `src/main/framework-drivers/electron/KlipMediaProtocolHandler.ts`. `stream: true` is load-bearing: without it `<video>` range requests fail with `MEDIA_ERR_SRC_NOT_SUPPORTED` even with correct MIME/codecs.
 
 **URL format:** `klip-media://<kind>/<id>/<asset>`
 
@@ -96,15 +96,19 @@ The Main process must adhere to SOLID principles and isolate business logic from
   - **Tags + search:** `GetAllDistinctTags`, `BulkUpdateTags`, `RenameTagGlobally`, `SearchAll`
   - **Collections:** `CreateCollection`, `RenameCollection`, `DeleteCollection`, `AddToCollection`, `RemoveFromCollection`, `ReorderCollection`, `GetCollectionItems`, `GetCollectionById`, `GetCollectionsPaginated`
   - **Media protocol:** `ResolveMediaUrl` (entity-keyed `klip-media://<kind>/<id>/<asset>` resolver consumed by `KlipMediaProtocolHandler`)
+  - **Editor (in-app trim):** `RenderCutFromVideo`, `CancelRender` (drive the ffmpeg render via the `IRenderBackend` port + `IEditorSessionStore`; render-job state participates in the operations saga via `RecoverOperations`)
+  - **Stats:** `GetStorageStats`, `GetLibraryStats`
+  - **Download history:** `ListDownloadHistory`, `RetryDownload`
 
-- `interface-adapters/`: Four subdirectories:
-  - `controllers/` — IPC handlers: `ReconcileController`, `DownloadController`, `CreatorController`, `VideoController`, `CutController`, `TagController`, `SearchController`, `CollectionController`, `ShellController`, `SettingsController`, `AuditLogController`, `OperationController`, `UpdaterController`. All handlers go through `createTypedHandler` so payloads are zod-validated against `src/shared/ipc-schemas.ts` before reaching the use case.
-  - `repositories/` — Drizzle ORM implementations (`SqliteCreatorRepository`, `SqliteVideoRepository`, `SqliteCutRepository`, `SqliteCollectionRepository`, `SqliteSettingsRepository`, `SqliteOperationRepository`, `SqliteAuditLogRepository`) and audited decorators (`AuditedCreatorRepository`, `AuditedVideoRepository`, `AuditedCutRepository`, `AuditedCollectionRepository`)
+- `interface-adapters/`: Six subdirectories:
+  - `controllers/` — IPC handlers: `ReconcileController`, `DownloadController`, `CreatorController`, `VideoController`, `CutController`, `TagController`, `SearchController`, `CollectionController`, `ShellController`, `SettingsController`, `AuditLogController`, `OperationController`, `UpdaterController`, `StatsController`, `EditorController`, `DownloadHistoryController`. All handlers go through `createTypedHandler` so payloads are zod-validated against `src/shared/ipc-schemas.ts` before reaching the use case.
+  - `repositories/` — Drizzle ORM implementations (`SqliteCreatorRepository`, `SqliteVideoRepository`, `SqliteCutRepository`, `SqliteCollectionRepository`, `SqliteSettingsRepository`, `SqliteOperationRepository`, `SqliteAuditLogRepository`, `SqliteDownloadHistoryRepository`, `SqliteVideoTranscriptIndex`) and audited decorators (`AuditedCreatorRepository`, `AuditedVideoRepository`, `AuditedCutRepository`, `AuditedCollectionRepository`)
   - `file-system/` — Port implementations (`NodeFileSystemReader`, `NodeFileSystemWriter`, `NodePathResolver`)
-  - `queue/` — Queue implementations (`PQueueNotificationQueue`, `PQueueDownloadQueue`)
+  - `queue/` — Queue implementations (`PQueueNotificationQueue`, `PQueueDownloadQueue`, `PQueueRenderQueue`)
   - `crypto/` — `NodeIdGenerator` (UUID-backed `IIdGenerator` impl)
+  - `editor/` — `InMemoryEditorSessionStore` (the `IEditorSessionStore` impl backing the in-app editor)
 
-- `framework-drivers/`: Drizzle DB initialization (`database/database.ts`), Drizzle schema definition (`database/schema.ts`), Drizzle migrations (`database/migrations/`), transaction scope (`database/SqliteTransactionScope.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`, `electron/ElectronBinaryResolver.ts`, `electron/ElectronAutoUpdater.ts`, `electron/KlipMediaProtocolHandler.ts`, `electron/klip-media-protocol.ts`), file-system watcher (`file-system/ChokidarWatcher.ts`), yt-dlp driver (`yt-dlp/YtDlpDownloader.ts`), ffprobe driver (`ffprobe/FfprobeMediaProbe.ts`), and window management.
+- `framework-drivers/`: Drizzle DB initialization (`database/database.ts`), Drizzle schema definition (`database/schema.ts`), Drizzle migrations (`database/migrations/`), transaction scope (`database/SqliteTransactionScope.ts`), timer abstractions (`timers/NodeDebouncer.ts`), Electron-specific adapters (`electron/ElectronNotifier.ts`, `electron/ElectronBinaryResolver.ts`, `electron/ElectronAutoUpdater.ts`, `electron/KlipMediaProtocolHandler.ts`, `electron/klip-media-protocol.ts`), file-system watcher (`file-system/ChokidarWatcher.ts`), yt-dlp driver (`yt-dlp/YtDlpDownloader.ts`), ffprobe driver (`ffprobe/FfprobeMediaProbe.ts`), ffmpeg render backend (`ffmpeg/FfmpegRenderBackend.ts` + `ffmpeg/argv-builder.ts`, implementing the `IRenderBackend` port for the in-app editor), and window management.
 
 - `composition-root.ts` (`src/main/composition-root.ts`): Creates and wires all concrete dependencies into an `AppContainer`. The `index.ts` entry point calls `createAppContainer()` and uses the returned container — no module-level mutable singletons.
 
@@ -114,7 +118,7 @@ The data layer uses **Drizzle ORM** on top of `better-sqlite3`. Raw SQL is never
 
 ### Schema
 
-Defined in `src/main/framework-drivers/database/schema.ts` using Drizzle's `sqliteTable` API. **9 tables** total:
+Defined in `src/main/framework-drivers/database/schema.ts` using Drizzle's `sqliteTable` API. **10 tables** total:
 
 | Table               | Purpose                                                                                            |
 | ------------------- | -------------------------------------------------------------------------------------------------- |
@@ -127,6 +131,7 @@ Defined in `src/main/framework-drivers/database/schema.ts` using Drizzle's `sqli
 | `collection_videos` | Join table: `(collection_id, video_id, position, added_at)`, FK CASCADE both sides.                |
 | `collection_cuts`   | Join table: `(collection_id, cut_id, position, added_at)`, FK CASCADE both sides.                  |
 | `audit_log`         | Immutable mutation history for all entity changes.                                                 |
+| `download_history`  | Persistent finished-downloads history. Soft FK → `videos.id` (no `ON DELETE`; `ListDownloadHistory` filters out deleted videos on read). `status = success\|error`, `error_retryable` flag, `finished_at`. |
 
 **Unified position invariant for collections.** `position` is unique across the union of `collection_videos ∪ collection_cuts` for a given `collection_id`. SQLite cannot express that as a DB constraint (no cross-table uniqueness), so the invariant is enforced in the use case layer (`AddToCollection`, `ReorderCollection`) inside `transactionScope.run()`, with a defensive renumber-on-read in `getItems`.
 
@@ -463,6 +468,11 @@ All IPC channel names are defined once in `src/shared/ipc-channels.ts` as a `con
 `SettingsController` only writes keys present in a hard-coded `SETTABLE_KEYS` allowlist. Currently:
 
 - `playbackOnNavigate` — `'floating' | 'pause' | 'stop'`, validated by `isPlaybackOnNavigate` (defined in `src/shared/types/playback.ts`)
+- `theme` — validated by `isTheme`
+- `language` — validated by `isLanguage`
+- `hasCompletedOnboarding` — `'true' | 'false'`, validated by `isBooleanString`
+- `miniPlayerCorner` — validated by `isMiniPlayerCorner`
+- `dateFormat` — validated by `isDateFormatPreset`
 
 `rootPath` is intentionally **excluded** from `SETTABLE_KEYS`. Changing the root requires the `MigrateRootFolder` saga (file moves + DB path rewrites + watcher restart) — a bare value swap would silently desync every entity's `filePath` from disk and re-point the watcher to an empty directory. The renderer must call the `migrate-root` channel instead.
 
