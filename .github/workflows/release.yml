@@ -1,0 +1,105 @@
+name: Release
+
+# Promotes a release when commits land on `master` (merge staging -> master).
+# semantic-release reads the conventional commits, computes the next semver
+# (feat -> minor, fix -> patch, BREAKING CHANGE -> major), tags it, and creates
+# the GitHub Release; the build matrix then attaches the installers + the
+# electron-updater feed (latest.yml / latest-linux.yml) to that Release.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Never cancel a release mid-flight (a half-published release is worse than a
+# queued one). Releases are serialized per ref.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Version & GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.semantic.outputs.new_release_published }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
+      tag: ${{ steps.semantic.outputs.new_release_git_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history + tags so semantic-release can find the last release.
+          fetch-depth: 0
+          # Let semantic-release push with its own token instead of a stored cred.
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run semantic-release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          extra_plugins: |
+            @semantic-release/changelog@6
+            @semantic-release/git@10
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Author the automated version-bump/changelog commit as the maintainer.
+          GIT_AUTHOR_NAME: Lenin Boccardo de Andrade
+          GIT_AUTHOR_EMAIL: lenin7092@outlook.com
+          GIT_COMMITTER_NAME: Lenin Boccardo de Andrade
+          GIT_COMMITTER_EMAIL: lenin7092@outlook.com
+
+  build:
+    name: Build & publish (${{ matrix.platform }})
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: write
+    strategy:
+      # Don't let one platform's failure cancel the other's upload.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-latest
+            platform: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout released tag
+        uses: actions/checkout@v4
+        with:
+          # The tag semantic-release just created — it carries the bumped
+          # package.json, so the artifacts and the GitHub Release agree on version.
+          ref: ${{ needs.release.outputs.tag }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        # postinstall rebuilds better-sqlite3 against the Electron ABI.
+        run: npm ci
+
+      - name: Download platform binaries (yt-dlp, ffmpeg, ffprobe)
+        # Fetches + SHA256-verifies the binaries for THIS runner's platform into
+        # resources/bin, which electron-builder copies via extraResources.
+        run: npx tsx scripts/download-binaries.ts
+
+      - name: Build and publish installer
+        run: npm run build && npx electron-builder --${{ matrix.platform }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
