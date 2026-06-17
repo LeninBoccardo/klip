@@ -196,44 +196,60 @@ app.whenReady().then(() => {
     console.error(`[klip] Operation recovery failed:`, redactError(error, rootPath))
   }
 
-  // ── Initial reconciliation (one-time full scan at startup) ──
-  try {
-    const result = container.useCases.reconcile.execute(rootPath)
-    console.log(`[klip] Initial reconciliation complete:`, result)
-  } catch (error) {
-    console.error(`[klip] Initial reconciliation failed:`, redactError(error, rootPath))
-  }
-
-  // ── Enrich media metadata for newly discovered entities (async, non-blocking) ──
-  container.useCases.enrichMedia
-    .execute()
-    .then((enrichResult) => {
-      if (enrichResult.videosProbed > 0 || enrichResult.cutsProbed > 0) {
-        console.log(`[klip] Media enrichment complete:`, enrichResult)
-      }
-    })
-    .catch((error) =>
-      console.error(`[klip] Media enrichment failed:`, redactError(error, rootPath))
-    )
-
-  // ── Backfill transcript FTS index (async, non-blocking) ──
-  // Idempotent — only touches videos that have a transcript_path but no
-  // transcript_text yet (i.e. rows that pre-existed migration 0009).
-  container.useCases.backfillTranscriptIndex
-    .execute()
-    .then((bf) => {
-      if (bf.indexed > 0 || bf.failed > 0 || bf.missing > 0) {
-        console.log(`[klip] Transcript FTS backfill complete:`, bf)
-      }
-    })
-    .catch((error) =>
-      console.error(`[klip] Transcript FTS backfill failed:`, redactError(error, rootPath))
-    )
-
-  // ── Start file watcher (runtime changes only, ignoreInitial: true) ──
-  container.services.fileWatcher.start()
-
+  // ── Create the main window FIRST so the UI paints immediately ──
+  // The startup reconcile is a synchronous full scan (~2N directory syscalls
+  // inside a SQLite transaction) — running it before the window blocked first
+  // paint for the entire scan (seconds on a cold/network root, scaling with
+  // creator count). Create the window now and defer the scan below. (F15)
   container.ports.windowManager.createMainWindow()
+
+  // ── Deferred startup work (off the first-paint critical path) ──
+  // setImmediate yields the event loop so the window's creation + renderer load
+  // proceed before the synchronous reconcile blocks the main thread.
+  setImmediate(() => {
+    // ── Initial reconciliation (one-time full scan at startup) ──
+    try {
+      const result = container.useCases.reconcile.execute(rootPath)
+      console.log(`[klip] Initial reconciliation complete:`, result)
+      // Push a refresh so a renderer that mounted mid-scan (showing
+      // pre-reconcile / empty data) updates — the startup reconcile bypasses
+      // ReconcileController, so nothing else notifies for it.
+      container.ports.notifier.notify('db-updated', { scope: ['all'] })
+    } catch (error) {
+      console.error(`[klip] Initial reconciliation failed:`, redactError(error, rootPath))
+    }
+
+    // ── Start file watcher (runtime changes only, ignoreInitial: true) ──
+    // Started after the full startup scan so the two don't race over the same
+    // initial on-disk state.
+    container.services.fileWatcher.start()
+
+    // ── Enrich media metadata for newly discovered entities (async, non-blocking) ──
+    container.useCases.enrichMedia
+      .execute()
+      .then((enrichResult) => {
+        if (enrichResult.videosProbed > 0 || enrichResult.cutsProbed > 0) {
+          console.log(`[klip] Media enrichment complete:`, enrichResult)
+        }
+      })
+      .catch((error) =>
+        console.error(`[klip] Media enrichment failed:`, redactError(error, rootPath))
+      )
+
+    // ── Backfill transcript FTS index (async, non-blocking) ──
+    // Idempotent — only touches videos that have a transcript_path but no
+    // transcript_text yet (i.e. rows that pre-existed migration 0009).
+    container.useCases.backfillTranscriptIndex
+      .execute()
+      .then((bf) => {
+        if (bf.indexed > 0 || bf.failed > 0 || bf.missing > 0) {
+          console.log(`[klip] Transcript FTS backfill complete:`, bf)
+        }
+      })
+      .catch((error) =>
+        console.error(`[klip] Transcript FTS backfill failed:`, redactError(error, rootPath))
+      )
+  })
 
   // ── Auto-check for updates (production only; DisabledUpdater is a no-op in dev) ──
   if (!is.dev) {
