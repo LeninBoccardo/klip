@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
 import { IpcChannels } from '@shared/ipc-channels'
 import type {
   DownloadProgress,
@@ -168,5 +167,9 @@ const api = {
 // which then produced opaque "Cannot read properties of undefined" errors at
 // every IPC call site. Letting it throw makes the failure visible in the
 // terminal running `npm run dev`.
-contextBridge.exposeInMainWorld('electron', electronAPI)
+//
+// Only the tightly-typed `window.api` bridge is exposed. The toolkit's generic
+// `electronAPI` (raw ipcRenderer send/invoke/on, process/webFrame helpers) is
+// deliberately NOT re-exposed — no renderer code consumed `window.electron`, and
+// dropping it narrows the renderer-reachable surface. (F52)
 contextBridge.exposeInMainWorld('api', api)

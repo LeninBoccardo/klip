@@ -150,7 +150,15 @@ const rows: Row[] = [
   // ── Cuts ──
   { channel: 'get-cuts-paginated', accept: [validCutQueryParams], reject: [[{}]] },
   { channel: 'get-cut-by-id', accept: ['cut-1'], reject: [[42]] },
-  { channel: 'get-cuts-by-tags', accept: [['a', 'b']], reject: [[42]] },
+  {
+    channel: 'get-cuts-by-tags',
+    accept: [['a', 'b']],
+    reject: [
+      [42],
+      [Array(65).fill('t')], // > 64 tags (F53 cap)
+      [[longString(65)]] // tag element > 64 chars
+    ]
+  },
   { channel: 'delete-cut', accept: ['cut-1'], reject: [[42]] },
   { channel: 'restore-cut', accept: ['cut-1'], reject: [[42]] },
 

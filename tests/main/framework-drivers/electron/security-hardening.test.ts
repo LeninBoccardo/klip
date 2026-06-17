@@ -43,6 +43,7 @@ import {
 
 interface FakeContents {
   navListener?: (event: { preventDefault: () => void }, url: string) => void
+  redirectListener?: (event: { preventDefault: () => void }, url: string) => void
   windowOpenHandler?: (args: { url: string }) => { action: 'deny' | 'allow' }
   on(event: string, listener: (event: { preventDefault: () => void }, url: string) => void): void
   setWindowOpenHandler(handler: (args: { url: string }) => { action: 'deny' | 'allow' }): void
@@ -52,6 +53,7 @@ function makeContents(): FakeContents {
   const c: FakeContents = {
     on(event, listener) {
       if (event === 'will-navigate') c.navListener = listener
+      if (event === 'will-redirect') c.redirectListener = listener
     },
     setWindowOpenHandler(handler) {
       c.windowOpenHandler = handler
@@ -137,6 +139,23 @@ describe('applySecurityHardening', () => {
 
     expect(ev.preventDefault).toHaveBeenCalled()
     expect(electronMock.shell.openExternal).toHaveBeenCalledWith('https://youtube.com/watch?v=abc')
+  })
+
+  it('gates will-redirect identically to will-navigate (F50)', () => {
+    applySecurityHardening()
+    const contents = makeContents()
+    const [listener] = electronMock.appListeners.get('web-contents-created')!
+    listener({} as Event, contents as unknown as WebContents)
+
+    // A redirect to an external host is blocked; an internal one passes.
+    const ext = { preventDefault: vi.fn() }
+    contents.redirectListener!(ext, 'https://evil.example.com/exfil')
+    expect(ext.preventDefault).toHaveBeenCalled()
+    expect(electronMock.shell.openExternal).not.toHaveBeenCalled()
+
+    const internal = { preventDefault: vi.fn() }
+    contents.redirectListener!(internal, 'klip-media://video/abc/file')
+    expect(internal.preventDefault).not.toHaveBeenCalled()
   })
 
   it('blocks will-navigate to non-allowlisted external hosts without opening a browser', () => {

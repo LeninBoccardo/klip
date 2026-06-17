@@ -148,7 +148,10 @@ export const ipcSchemas = {
   // ── Cuts ──
   'get-cuts-paginated': z.tuple([cutQueryParamsSchema]),
   'get-cut-by-id': z.tuple([z.string()]),
-  'get-cuts-by-tags': z.tuple([z.array(z.string())]),
+  // Bounded like every other tag-array channel (tagArraySchema): an unbounded
+  // array of unbounded strings from a compromised renderer would amplify into
+  // an oversized IN-list / value scan in cutRepo.findByTags. (F53)
+  'get-cuts-by-tags': z.tuple([tagArraySchema]),
   'delete-cut': z.tuple([z.string()]),
   'restore-cut': z.tuple([z.string()]),
 

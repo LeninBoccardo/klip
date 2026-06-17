@@ -1,4 +1,3 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
 import type {
   ReconcileResult,
   DownloadVideoResult,
@@ -185,7 +184,6 @@ interface KlipAPI {
 
 declare global {
   interface Window {
-    electron: ElectronAPI
     api: KlipAPI
   }
 }

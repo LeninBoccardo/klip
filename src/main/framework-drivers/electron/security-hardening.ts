@@ -90,6 +90,17 @@ function hardenContents(contents: WebContents): void {
     maybeOpenExternal(url)
   })
 
+  // Gate redirects identically to will-navigate. A server-side (30x), meta, or
+  // JS redirect that fires AFTER a navigation begins is delivered via
+  // will-redirect, not will-navigate — so without this a compromised renderer
+  // could begin an internal navigation that redirects cross-origin in-window.
+  // (F50)
+  contents.on('will-redirect', (event, url) => {
+    if (isInternalNavigation(url)) return
+    event.preventDefault()
+    maybeOpenExternal(url)
+  })
+
   contents.setWindowOpenHandler(({ url }) => {
     maybeOpenExternal(url)
     return { action: 'deny' }
