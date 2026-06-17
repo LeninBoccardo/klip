@@ -9,7 +9,7 @@ function trimRecipe(opts: {
   in: number
   out: number
   mode: 'copy' | 'reencode'
-  container?: 'mp4' | 'webm' | 'mkv'
+  container?: 'mp4' | 'webm'
 }): EditRecipe {
   return {
     version: 1,

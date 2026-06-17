@@ -92,7 +92,13 @@ export const editRecipeSchema = z
     ops: z.array(editOpSchema).min(1).max(64),
     output: z
       .object({
-        container: z.enum(['mp4', 'webm', 'mkv']),
+        // Only containers Chromium's <video> can play. mkv is deliberately
+        // excluded: a matroska-DocType file is rejected with
+        // MEDIA_ERR_SRC_NOT_SUPPORTED regardless of MIME (same rule the
+        // download path enforces), so an mkv cut would render unplayably.
+        // Validated at IPC, the cut-data.json sidecar read, and the DB read,
+        // so a non-first-party producer can't smuggle mkv into the pipeline.
+        container: z.enum(['mp4', 'webm']),
         mode: z.enum(['copy', 'reencode'])
       })
       .strict()

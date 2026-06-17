@@ -135,7 +135,7 @@ export function timelineForSource(input: {
  */
 export function recipeFromTimeline(
   state: TimelineState,
-  output: { container: 'mp4' | 'webm' | 'mkv'; mode: 'copy' | 'reencode' }
+  output: { container: 'mp4' | 'webm'; mode: 'copy' | 'reencode' }
 ): EditRecipe {
   assertSingleClipInvariant(state)
   const clip = getActiveClip(state)

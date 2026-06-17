@@ -417,6 +417,18 @@ const rows: Row[] = [
             version: 1,
             sourceVideoId: 'vid-1',
             ops: [{ type: 'trim', in: 1, out: 2 }],
+            output: { container: 'mkv', mode: 'copy' } // F18: mkv is unplayable in <video>, rejected
+          },
+          title: 'x',
+          tags: []
+        }
+      ],
+      [
+        {
+          recipe: {
+            version: 1,
+            sourceVideoId: 'vid-1',
+            ops: [{ type: 'trim', in: 1, out: 2 }],
             output: { container: 'mp4', mode: 'copy' }
           },
           title: '', // empty title
