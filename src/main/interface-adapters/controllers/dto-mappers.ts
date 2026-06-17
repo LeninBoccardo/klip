@@ -1,5 +1,5 @@
-import type { Creator, Video, Cut } from '@domain/entities'
-import type { CreatorDto, VideoDto, CutDto } from '@shared/dtos'
+import type { Creator, Video, Cut, Operation } from '@domain/entities'
+import type { CreatorDto, VideoDto, CutDto, OperationDto } from '@shared/dtos'
 import type { EditRecipe, PaginatedResult } from '@shared/types'
 import { editRecipeSchema } from '@shared/types'
 
@@ -82,6 +82,23 @@ export function toCutDto(cut: Cut): CutDto {
     deletedAt: cut.deletedAt,
     createdAt: cut.createdAt,
     updatedAt: cut.updatedAt
+  }
+}
+
+/**
+ * Map an Operation entity to its DTO, dropping `payload` — it embeds serialized
+ * absolute filesystem paths (migrate_root old/new roots) that must not cross
+ * the IPC boundary. (F63)
+ */
+export function toOperationDto(op: Operation): OperationDto {
+  return {
+    id: op.id,
+    type: op.type,
+    status: op.status,
+    error: op.error,
+    startedAt: op.startedAt,
+    completedAt: op.completedAt,
+    createdAt: op.createdAt
   }
 }
 

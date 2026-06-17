@@ -21,6 +21,16 @@ import { renderCutRequestSchema } from './types'
  * the inverse — a controller registers a channel that has no schema.
  */
 const entityStatusSchema = z.enum(['active', 'deleted', 'missing'])
+// Mirrors the domain OperationStatus union. Lives here (not imported from
+// @domain) because @shared must not depend on the main process; the
+// `satisfies` clause on ipcSchemas + the controller cast keep them aligned.
+const operationStatusSchema = z.enum([
+  'pending',
+  'in_progress',
+  'completed',
+  'failed',
+  'rolled_back'
+])
 
 // Numeric bounds defend against renderer-XSS-driven DoS: a `pageSize: 1e9`
 // on an unindexed query is a memory amplification primitive. UI never asks
@@ -262,7 +272,7 @@ export const ipcSchemas = {
 
   // ── Operations ──
   'get-operation-by-id': z.tuple([z.string()]),
-  'get-operations-by-status': z.tuple([z.string()]),
+  'get-operations-by-status': z.tuple([operationStatusSchema]),
 
   // ── Download history ──
   // limit caps the renderer's payload size; 500 is well above the realistic

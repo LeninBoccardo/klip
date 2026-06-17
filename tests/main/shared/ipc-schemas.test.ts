@@ -351,7 +351,11 @@ const rows: Row[] = [
 
   // ── Operations ──
   { channel: 'get-operation-by-id', accept: ['op-1'], reject: [[42]] },
-  { channel: 'get-operations-by-status', accept: ['pending'], reject: [[42]] },
+  {
+    channel: 'get-operations-by-status',
+    accept: ['pending'],
+    reject: [[42], ['bogus'], ['']] // F65: only the 5 OperationStatus values
+  },
 
   // ── Download history ──
   {

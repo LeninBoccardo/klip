@@ -60,4 +60,23 @@ describe('OperationController', () => {
     await invoke('get-operations-by-status', 'pending')
     expect(repo.findByStatus).toHaveBeenCalledWith('pending')
   })
+
+  it('strips the path-bearing payload from the returned DTO (F63)', async () => {
+    const repo = makeRepo()
+    vi.mocked(repo.findById).mockReturnValue({
+      id: 'op-1',
+      type: 'migrate_root',
+      status: 'completed',
+      payload: JSON.stringify({ oldRoot: 'C:/secret/old', newRoot: 'C:/secret/new' }),
+      error: null,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      completedAt: '2026-01-01T00:01:00.000Z',
+      createdAt: '2026-01-01T00:00:00.000Z'
+    })
+    registerOperationController(repo)
+
+    const dto = await invoke<Record<string, unknown>>('get-operation-by-id', 'op-1')
+    expect(dto).not.toHaveProperty('payload')
+    expect(dto).toMatchObject({ id: 'op-1', type: 'migrate_root', status: 'completed' })
+  })
 })
