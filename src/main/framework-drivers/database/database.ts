@@ -182,6 +182,22 @@ function pushSchema(db: AppDatabase): void {
     )
   `)
 
+  // ── Download history (mirrored in 0011_slimy_blue_shield.sql) ──
+  db.run(sql`
+    CREATE TABLE IF NOT EXISTS download_history (
+      id TEXT PRIMARY KEY NOT NULL,
+      youtube_url TEXT NOT NULL,
+      video_id TEXT,
+      video_title TEXT,
+      thumbnail_url TEXT,
+      creator_folder_name TEXT,
+      status TEXT NOT NULL,
+      error_message TEXT,
+      error_retryable INTEGER DEFAULT true NOT NULL,
+      finished_at TEXT DEFAULT (datetime('now')) NOT NULL
+    )
+  `)
+
   // Indexes
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_yt_channel_id ON creators(youtube_channel_id)`)
@@ -204,6 +220,9 @@ function pushSchema(db: AppDatabase): void {
   )
   db.run(
     sql`CREATE INDEX IF NOT EXISTS idx_collection_cuts_position ON collection_cuts(collection_id, position)`
+  )
+  db.run(
+    sql`CREATE INDEX IF NOT EXISTS idx_download_history_finished_at ON download_history(finished_at)`
   )
 
   // ── Transcript FTS5 (mirrored in 0009_swift_silent_search.sql) ──
