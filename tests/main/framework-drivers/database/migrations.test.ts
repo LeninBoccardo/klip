@@ -69,6 +69,7 @@ describe('Migrations — fresh apply', () => {
         'collections',
         'creators',
         'cuts',
+        'download_history',
         'operations',
         'settings',
         'videos',
