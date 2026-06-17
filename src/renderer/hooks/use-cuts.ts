@@ -18,22 +18,6 @@ export function useCutsPaginated(
   })
 }
 
-export function useCutById(id: string | undefined): UseQueryResult<CutDto | null, Error> {
-  return useQuery({
-    queryKey: queryKeys.cuts.detail(id!),
-    queryFn: () => window.api.getCutById(id!),
-    enabled: !!id
-  })
-}
-
-export function useCutsByTags(tags: string[]): UseQueryResult<CutDto[], Error> {
-  return useQuery({
-    queryKey: queryKeys.cuts.byTags(tags),
-    queryFn: () => window.api.getCutsByTags(tags),
-    enabled: tags.length > 0
-  })
-}
-
 export function useDeleteCut(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({

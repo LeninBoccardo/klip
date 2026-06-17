@@ -34,7 +34,18 @@ export class FetchVideoComments implements IFetchVideoComments {
       throw new Error(`Video has no URL — cannot fetch comments: ${videoId}`)
     }
 
-    const { comments, wasTruncated } = await this.downloader.fetchComments(video.url, maxComments)
+    let fetched: { comments: VideoCommentsResult['comments']; wasTruncated: boolean }
+    try {
+      fetched = await this.downloader.fetchComments(video.url, maxComments)
+    } catch (err) {
+      // A manual refresh failed (HTTP 429, network drop, etc.). Drop the stale
+      // on-disk payload so the next GetCachedVideoComments doesn't keep serving
+      // comments the user just tried — and failed — to refresh. This is the
+      // documented purpose of cache.invalidate(); without this call it was dead.
+      this.cache.invalidate(videoId)
+      throw err
+    }
+    const { comments, wasTruncated } = fetched
 
     const result: VideoCommentsResult = {
       videoId: video.id,

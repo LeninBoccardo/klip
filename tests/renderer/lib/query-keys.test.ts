@@ -56,17 +56,10 @@ describe('queryKeys', () => {
   })
 
   describe('cuts', () => {
-    it('byTags includes the tag list verbatim', () => {
-      expect(queryKeys.cuts.byTags(['a', 'b'])).toEqual(['cuts', 'byTags', ['a', 'b']])
-    })
-
-    it('byTags is order-sensitive (different order → different cache slot)', () => {
-      // Documented behavior: callers are expected to sort tags before passing
-      // them in if they want order-insensitive invalidation. If this changes,
-      // adjust here AND audit every call site.
-      const a = queryKeys.cuts.byTags(['a', 'b'])
-      const b = queryKeys.cuts.byTags(['b', 'a'])
-      expect(a).not.toEqual(b)
+    it('exposes namespace + paginated list key', () => {
+      expect(queryKeys.cuts.all).toEqual(['cuts'])
+      const params = { page: 1, pageSize: 50 }
+      expect(queryKeys.cuts.list(params)).toEqual(['cuts', 'list', params])
     })
   })
 

@@ -17,9 +17,7 @@ export const queryKeys = {
   },
   cuts: {
     all: ['cuts'] as const,
-    list: (params: CutQueryParams) => ['cuts', 'list', params] as const,
-    detail: (id: string) => ['cuts', 'detail', id] as const,
-    byTags: (tags: string[]) => ['cuts', 'byTags', tags] as const
+    list: (params: CutQueryParams) => ['cuts', 'list', params] as const
   },
   settings: {
     all: ['settings'] as const,

@@ -8,6 +8,8 @@ export const IpcChannels = {
   FetchVideoInfo: 'fetch-video-info',
   DownloadVideo: 'download-video',
   CancelDownload: 'cancel-download',
+  // No current renderer consumer — kept as an intentional on-demand probing
+  // surface (path-contained under rootPath in DownloadController). (F38)
   ProbeMediaFile: 'probe-media-file',
 
   // ── Channel ──
@@ -86,6 +88,8 @@ export const IpcChannels = {
   GetAuditLogRecent: 'get-audit-log-recent',
 
   // ── Operations ──
+  // No current renderer consumer — intentional read surface for a future
+  // operations/admin view; the boundary is still zod-validated. (F38)
   GetOperationById: 'get-operation-by-id',
   GetOperationsByStatus: 'get-operations-by-status',
 

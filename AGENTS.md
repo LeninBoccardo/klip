@@ -126,7 +126,7 @@ Defined in `src/main/framework-drivers/database/schema.ts` using Drizzle's `sqli
 | `videos`            | Indexed source videos. FK → `creators(id)` with `ON DELETE CASCADE`.                               |
 | `cuts`              | Indexed video cuts. FK → `creators(id)` CASCADE, FK → `videos(id)` SET NULL.                       |
 | `settings`          | App configuration key-value store (`rootPath`, `playbackOnNavigate`).                              |
-| `operations`        | Persistent saga log for crash-safe multi-step FS operations (rename, migrate, bulk import).        |
+| `operations`        | Persistent saga log for crash-safe multi-step operations. Implemented types: `migrate_root`, `render_cut`. `rename_folder` / `bulk_import` are reserved forward-compat seams (no use case creates them yet).        |
 | `collections`       | Manual playlists. `kind = 'manual'` for v1; `'smart'` reserved for future saved-query collections. |
 | `collection_videos` | Join table: `(collection_id, video_id, position, added_at)`, FK CASCADE both sides.                |
 | `collection_cuts`   | Join table: `(collection_id, cut_id, position, added_at)`, FK CASCADE both sides.                  |

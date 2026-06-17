@@ -54,7 +54,11 @@ function makeComment(overrides: Partial<VideoComment> = {}): VideoComment {
 function makeMocks(): {
   videoRepo: IVideoRepository
   downloader: IVideoDownloader
-  cache: { read: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn>; invalidate: ReturnType<typeof vi.fn> }
+  cache: {
+    read: ReturnType<typeof vi.fn>
+    write: ReturnType<typeof vi.fn>
+    invalidate: ReturnType<typeof vi.fn>
+  }
 } {
   const videoRepo: IVideoRepository = {
     findAll: vi.fn(),
@@ -196,6 +200,18 @@ describe('FetchVideoComments', () => {
     vi.mocked(mocks.downloader.fetchComments).mockRejectedValue(new Error('boom'))
 
     await expect(useCase.execute('video-1')).rejects.toThrow('boom')
+    expect(mocks.cache.write).not.toHaveBeenCalled()
+  })
+
+  it('invalidates the stale on-disk cache when a refresh fails (F34)', async () => {
+    // A failed manual refresh must drop the prior cached payload so the next
+    // GetCachedVideoComments doesn't keep serving comments the user just tried
+    // to refresh — the documented purpose of cache.invalidate().
+    vi.mocked(mocks.videoRepo.findById).mockReturnValue(makeVideo())
+    vi.mocked(mocks.downloader.fetchComments).mockRejectedValue(new Error('HTTP 429'))
+
+    await expect(useCase.execute('video-1')).rejects.toThrow('HTTP 429')
+    expect(mocks.cache.invalidate).toHaveBeenCalledWith('video-1')
     expect(mocks.cache.write).not.toHaveBeenCalled()
   })
 
