@@ -6,6 +6,14 @@ import type { ChannelInfo, DownloadProgress, DownloadResult, VideoInfo } from '@
 import type { VideoComment, VideoDetail } from '@shared/types'
 import { parseProgressLine, pickChannelAvatar } from './yt-dlp-helpers'
 
+// Wall-clock cap for yt-dlp metadata calls (info/detail/channel/transcript).
+// yt-dlp can stall indefinitely on a consent/captcha wall, a geo-block, or a
+// slow-trickle connection; --socket-timeout is per-read, not a total bound.
+// Without a reaper the child stays alive and the returned Promise never settles,
+// wedging the download row in 'fetching-info' with no error and no retry.
+// fetchComments keeps its own dynamic cap (it can legitimately run for minutes).
+const METADATA_TIMEOUT_MS = 90_000
+
 /**
  * yt-dlp–backed implementation of IVideoDownloader.
  *
@@ -17,26 +25,31 @@ export class YtDlpDownloader implements IVideoDownloader {
 
   constructor(private binaryResolver: IBinaryResolver) {}
 
-  // ── fetchInfo ──
-
-  async fetchInfo(url: string): Promise<VideoInfo> {
+  /**
+   * Spawn yt-dlp, collect stdout/stderr, and resolve `{ code, stdout, stderr }`
+   * on close. A settled-guard + SIGTERM reaper rejects (and kills the child) if
+   * the process exceeds `timeoutMs`, and `error` rejects on spawn failure. The
+   * exit code is returned (not auto-rejected) so each caller keeps its own
+   * non-zero handling (e.g. fetchTranscript treats "no subtitles" as null).
+   */
+  private runYtDlp(
+    args: string[],
+    label: string,
+    timeoutMs: number = METADATA_TIMEOUT_MS
+  ): Promise<{ code: number | null; stdout: string; stderr: string }> {
     const bin = this.binaryResolver.resolve('yt-dlp')
-
-    return new Promise<VideoInfo>((resolve, reject) => {
-      // `--no-playlist` keeps yt-dlp focused on the single video even
-      // when the URL carries a `&list=…` query (very common — every
-      // "watch from playlist" link includes one). Without it, yt-dlp
-      // walks every entry in the playlist and fails the whole call if
-      // any item is region-blocked, members-only, etc.
-      // `--` is the end-of-options terminator: it forces yt-dlp to treat the
-      // trailing `url` strictly as a positional argument even if it begins
-      // with a dash. Without it a renderer-supplied value like `--exec=…`
-      // would be parsed as a yt-dlp option (arbitrary command execution).
-      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', '--', url]
+    return new Promise((resolve, reject) => {
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
-
       let stdout = ''
       let stderr = ''
+      let settled = false
+
+      const timeout = setTimeout(() => {
+        if (settled) return
+        settled = true
+        proc.kill('SIGTERM')
+        reject(new Error(`yt-dlp ${label}: timed out after ${Math.round(timeoutMs / 1000)}s`))
+      }, timeoutMs)
 
       proc.stdout.on('data', (chunk: Buffer) => {
         stdout += chunk.toString()
@@ -46,168 +59,140 @@ export class YtDlpDownloader implements IVideoDownloader {
       })
 
       proc.on('close', (code) => {
-        if (code !== 0) {
-          reject(new Error(`yt-dlp fetchInfo failed (code ${code}): ${stderr.trim()}`))
-          return
-        }
-
-        try {
-          const json = JSON.parse(stdout)
-          resolve({
-            videoId: json.id ?? '',
-            title: json.title ?? json.fulltitle ?? '',
-            channel: json.channel ?? json.uploader ?? null,
-            duration: json.duration ?? null,
-            thumbnailUrl: json.thumbnail ?? null,
-            description: json.description ?? null,
-            // ── Channel metadata ──
-            channelId: json.channel_id ?? null,
-            channelUrl: json.channel_url ?? null,
-            uploaderUrl: json.uploader_url ?? null,
-            subscriberCount: json.channel_follower_count ?? null,
-            viewCount: json.view_count ?? null
-          })
-        } catch (e) {
-          reject(new Error(`yt-dlp fetchInfo: failed to parse JSON output: ${e}`))
-        }
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        resolve({ code, stdout, stderr })
       })
 
       proc.on('error', (err) => {
-        reject(new Error(`yt-dlp fetchInfo: failed to spawn process: ${err.message}`))
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        reject(new Error(`yt-dlp ${label}: failed to spawn: ${err.message}`))
       })
     })
+  }
+
+  // ── fetchInfo ──
+
+  async fetchInfo(url: string): Promise<VideoInfo> {
+    // `--no-playlist` keeps yt-dlp focused on the single video even
+    // when the URL carries a `&list=…` query (very common — every
+    // "watch from playlist" link includes one). Without it, yt-dlp
+    // walks every entry in the playlist and fails the whole call if
+    // any item is region-blocked, members-only, etc.
+    // `--` is the end-of-options terminator: it forces yt-dlp to treat the
+    // trailing `url` strictly as a positional argument even if it begins
+    // with a dash. Without it a renderer-supplied value like `--exec=…`
+    // would be parsed as a yt-dlp option (arbitrary command execution).
+    const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', '--', url]
+    const { code, stdout, stderr } = await this.runYtDlp(args, 'fetchInfo')
+    if (code !== 0) {
+      throw new Error(`yt-dlp fetchInfo failed (code ${code}): ${stderr.trim()}`)
+    }
+    try {
+      const json = JSON.parse(stdout)
+      return {
+        videoId: json.id ?? '',
+        title: json.title ?? json.fulltitle ?? '',
+        channel: json.channel ?? json.uploader ?? null,
+        duration: json.duration ?? null,
+        thumbnailUrl: json.thumbnail ?? null,
+        description: json.description ?? null,
+        // ── Channel metadata ──
+        channelId: json.channel_id ?? null,
+        channelUrl: json.channel_url ?? null,
+        uploaderUrl: json.uploader_url ?? null,
+        subscriberCount: json.channel_follower_count ?? null,
+        viewCount: json.view_count ?? null
+      }
+    } catch (e) {
+      throw new Error(`yt-dlp fetchInfo: failed to parse JSON output: ${e}`)
+    }
   }
 
   // ── fetchChannelInfo ──
 
   async fetchChannelInfo(channelUrl: string): Promise<ChannelInfo> {
-    const bin = this.binaryResolver.resolve('yt-dlp')
-
-    return new Promise<ChannelInfo>((resolve, reject) => {
-      // `--flat-playlist --dump-single-json --playlist-items 1` returns a
-      // single playlist-shaped JSON for the channel (with channel-level
-      // `thumbnails` containing the avatar in multiple sizes) plus one flat
-      // entry. The previous per-video `--dump-json` call only exposed video
-      // thumbnails, never the channel avatar.
-      const args = [
-        '--flat-playlist',
-        '--dump-single-json',
-        '--playlist-items',
-        '1',
-        '--no-download',
-        '--no-warnings',
-        // See fetchInfo: `--` terminates options so `channelUrl` can never be
-        // parsed as a yt-dlp flag.
-        '--',
-        channelUrl
-      ]
-      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
-
-      let stdout = ''
-      let stderr = ''
-
-      proc.stdout.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString()
-      })
-      proc.stderr.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString()
-      })
-
-      proc.on('close', (code) => {
-        if (code !== 0) {
-          reject(new Error(`yt-dlp fetchChannelInfo failed (code ${code}): ${stderr.trim()}`))
-          return
-        }
-
-        try {
-          const json = JSON.parse(stdout)
-          resolve({
-            channelId: json.channel_id ?? '',
-            channelName: json.channel ?? json.uploader ?? json.title ?? '',
-            channelUrl: json.channel_url ?? json.webpage_url ?? null,
-            uploaderUrl: json.uploader_url ?? null,
-            subscriberCount: json.channel_follower_count ?? null,
-            avatarUrl: pickChannelAvatar(json.thumbnails)
-          })
-        } catch (e) {
-          reject(new Error(`yt-dlp fetchChannelInfo: failed to parse JSON: ${e}`))
-        }
-      })
-
-      proc.on('error', (err) => {
-        reject(new Error(`yt-dlp fetchChannelInfo: failed to spawn: ${err.message}`))
-      })
-    })
+    // `--flat-playlist --dump-single-json --playlist-items 1` returns a
+    // single playlist-shaped JSON for the channel (with channel-level
+    // `thumbnails` containing the avatar in multiple sizes) plus one flat
+    // entry. The previous per-video `--dump-json` call only exposed video
+    // thumbnails, never the channel avatar.
+    const args = [
+      '--flat-playlist',
+      '--dump-single-json',
+      '--playlist-items',
+      '1',
+      '--no-download',
+      '--no-warnings',
+      // See fetchInfo: `--` terminates options so `channelUrl` can never be
+      // parsed as a yt-dlp flag.
+      '--',
+      channelUrl
+    ]
+    const { code, stdout, stderr } = await this.runYtDlp(args, 'fetchChannelInfo')
+    if (code !== 0) {
+      throw new Error(`yt-dlp fetchChannelInfo failed (code ${code}): ${stderr.trim()}`)
+    }
+    try {
+      const json = JSON.parse(stdout)
+      return {
+        channelId: json.channel_id ?? '',
+        channelName: json.channel ?? json.uploader ?? json.title ?? '',
+        channelUrl: json.channel_url ?? json.webpage_url ?? null,
+        uploaderUrl: json.uploader_url ?? null,
+        subscriberCount: json.channel_follower_count ?? null,
+        avatarUrl: pickChannelAvatar(json.thumbnails)
+      }
+    } catch (e) {
+      throw new Error(`yt-dlp fetchChannelInfo: failed to parse JSON: ${e}`)
+    }
   }
 
   // ── fetchVideoDetail ──
 
   async fetchVideoDetail(url: string): Promise<Omit<VideoDetail, 'hasTranscript'>> {
-    const bin = this.binaryResolver.resolve('yt-dlp')
+    // See fetchInfo for the `--no-playlist` and `--` (end-of-options) rationale.
+    const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', '--', url]
+    const { code, stdout, stderr } = await this.runYtDlp(args, 'fetchVideoDetail')
+    if (code !== 0) {
+      throw new Error(`yt-dlp fetchVideoDetail failed (code ${code}): ${stderr.trim()}`)
+    }
+    try {
+      const json = JSON.parse(stdout)
+      const tags: string[] = Array.isArray(json.tags)
+        ? json.tags.filter((t: unknown): t is string => typeof t === 'string')
+        : []
+      const categories: string[] = Array.isArray(json.categories) ? json.categories : []
+      const duration = typeof json.duration === 'number' ? json.duration : null
+      const width = typeof json.width === 'number' ? json.width : null
+      const height = typeof json.height === 'number' ? json.height : null
+      // YouTube Shorts: ≤ 60s and vertical aspect ratio
+      const isShort =
+        duration !== null && duration <= 60 && height !== null && width !== null && height > width
+      // Normalize "20240315" → "2024-03-15"
+      const uploadDate =
+        typeof json.upload_date === 'string' && /^\d{8}$/.test(json.upload_date)
+          ? `${json.upload_date.slice(0, 4)}-${json.upload_date.slice(4, 6)}-${json.upload_date.slice(6, 8)}`
+          : (json.upload_date ?? null)
 
-    return new Promise((resolve, reject) => {
-      // See fetchInfo for the `--no-playlist` and `--` (end-of-options) rationale.
-      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', '--', url]
-      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
-
-      let stdout = ''
-      let stderr = ''
-
-      proc.stdout.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString()
-      })
-      proc.stderr.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString()
-      })
-
-      proc.on('close', (code) => {
-        if (code !== 0) {
-          reject(new Error(`yt-dlp fetchVideoDetail failed (code ${code}): ${stderr.trim()}`))
-          return
-        }
-        try {
-          const json = JSON.parse(stdout)
-          const tags: string[] = Array.isArray(json.tags)
-            ? json.tags.filter((t: unknown): t is string => typeof t === 'string')
-            : []
-          const categories: string[] = Array.isArray(json.categories) ? json.categories : []
-          const duration = typeof json.duration === 'number' ? json.duration : null
-          const width = typeof json.width === 'number' ? json.width : null
-          const height = typeof json.height === 'number' ? json.height : null
-          // YouTube Shorts: ≤ 60s and vertical aspect ratio
-          const isShort =
-            duration !== null &&
-            duration <= 60 &&
-            height !== null &&
-            width !== null &&
-            height > width
-          // Normalize "20240315" → "2024-03-15"
-          const uploadDate =
-            typeof json.upload_date === 'string' && /^\d{8}$/.test(json.upload_date)
-              ? `${json.upload_date.slice(0, 4)}-${json.upload_date.slice(4, 6)}-${json.upload_date.slice(6, 8)}`
-              : (json.upload_date ?? null)
-
-          resolve({
-            videoId: json.id ?? '',
-            likeCount: json.like_count ?? null,
-            dislikeCount: json.dislike_count ?? null,
-            commentCount: json.comment_count ?? null,
-            viewCount: json.view_count ?? null,
-            category: categories[0] ?? null,
-            tags,
-            uploadDate,
-            description: json.description ?? null,
-            isShort
-          })
-        } catch (e) {
-          reject(new Error(`yt-dlp fetchVideoDetail: failed to parse JSON: ${e}`))
-        }
-      })
-
-      proc.on('error', (err) => {
-        reject(new Error(`yt-dlp fetchVideoDetail: failed to spawn: ${err.message}`))
-      })
-    })
+      return {
+        videoId: json.id ?? '',
+        likeCount: json.like_count ?? null,
+        dislikeCount: json.dislike_count ?? null,
+        commentCount: json.comment_count ?? null,
+        viewCount: json.view_count ?? null,
+        category: categories[0] ?? null,
+        tags,
+        uploadDate,
+        description: json.description ?? null,
+        isShort
+      }
+    } catch (e) {
+      throw new Error(`yt-dlp fetchVideoDetail: failed to parse JSON: ${e}`)
+    }
   }
 
   // ── fetchTranscript ──
@@ -217,81 +202,57 @@ export class YtDlpDownloader implements IVideoDownloader {
     outputDir: string,
     languagesPriority: string[]
   ): Promise<string | null> {
-    const bin = this.binaryResolver.resolve('yt-dlp')
     const outputTemplate = join(outputDir, 'transcript')
 
     // Defensive: an empty priority list is a caller bug, but treating it as
     // "English" keeps the downloader robust during refactors.
     const langs = languagesPriority.length > 0 ? languagesPriority : ['en']
 
-    return new Promise((resolve, reject) => {
-      const args = [
-        '--write-auto-subs',
-        '--sub-langs',
-        langs.join(','),
-        '--sub-format',
-        'vtt',
-        '--skip-download',
-        // See fetchInfo for the `--no-playlist` rationale.
-        '--no-playlist',
-        '--no-warnings',
-        '-o',
-        outputTemplate,
-        // See fetchInfo: `--` terminates options so `url` is always positional.
-        '--',
-        url
-      ]
-      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const args = [
+      '--write-auto-subs',
+      '--sub-langs',
+      langs.join(','),
+      '--sub-format',
+      'vtt',
+      '--skip-download',
+      // See fetchInfo for the `--no-playlist` rationale.
+      '--no-playlist',
+      '--no-warnings',
+      '-o',
+      outputTemplate,
+      // See fetchInfo: `--` terminates options so `url` is always positional.
+      '--',
+      url
+    ]
+    const { code, stderr } = await this.runYtDlp(args, 'fetchTranscript')
 
-      let stderr = ''
-      proc.stderr.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString()
-      })
+    if (code !== 0) {
+      // yt-dlp returns non-zero when no subs available; treat as null rather than throw
+      if (stderr.includes('There are no subtitles')) return null
+      throw new Error(`yt-dlp fetchTranscript failed (code ${code}): ${stderr.trim()}`)
+    }
 
-      proc.on('close', (code) => {
-        if (code !== 0) {
-          // yt-dlp returns non-zero when no subs available; treat as null rather than throw
-          if (stderr.includes('There are no subtitles')) {
-            resolve(null)
-            return
-          }
-          reject(new Error(`yt-dlp fetchTranscript failed (code ${code}): ${stderr.trim()}`))
-          return
-        }
-
-        // yt-dlp writes `<template>.<lang>.vtt` for every available language in
-        // `langs`. Walk the priority list and return the first match so a
-        // non-English user gets their native captions instead of whichever
-        // file readdir happened to surface first.
-        try {
-          const all = readdirSync(outputDir).filter(
-            (f) => f.startsWith('transcript.') && f.endsWith('.vtt')
-          )
-          if (all.length === 0) {
-            resolve(null)
-            return
-          }
-          for (const lang of langs) {
-            const match = all.find((f) => f === `transcript.${lang}.vtt`)
-            if (match) {
-              resolve(join(outputDir, match))
-              return
-            }
-          }
-          // None of the priority entries matched a filename verbatim (regex /
-          // alias resolution can produce a different suffix). Fall back to the
-          // first available file so we still surface something rather than
-          // silently dropping a downloaded VTT.
-          resolve(join(outputDir, all[0]))
-        } catch (e) {
-          reject(new Error(`yt-dlp fetchTranscript: failed to locate output: ${e}`))
-        }
-      })
-
-      proc.on('error', (err) => {
-        reject(new Error(`yt-dlp fetchTranscript: failed to spawn: ${err.message}`))
-      })
-    })
+    // yt-dlp writes `<template>.<lang>.vtt` for every available language in
+    // `langs`. Walk the priority list and return the first match so a
+    // non-English user gets their native captions instead of whichever
+    // file readdir happened to surface first.
+    try {
+      const all = readdirSync(outputDir).filter(
+        (f) => f.startsWith('transcript.') && f.endsWith('.vtt')
+      )
+      if (all.length === 0) return null
+      for (const lang of langs) {
+        const match = all.find((f) => f === `transcript.${lang}.vtt`)
+        if (match) return join(outputDir, match)
+      }
+      // None of the priority entries matched a filename verbatim (regex /
+      // alias resolution can produce a different suffix). Fall back to the
+      // first available file so we still surface something rather than
+      // silently dropping a downloaded VTT.
+      return join(outputDir, all[0])
+    } catch (e) {
+      throw new Error(`yt-dlp fetchTranscript: failed to locate output: ${e}`)
+    }
   }
 
   // ── fetchComments ──

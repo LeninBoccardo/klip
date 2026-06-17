@@ -4,6 +4,10 @@ import type { IBinaryResolver } from '@domain/ports'
 import type { MediaProbeResult } from '@domain/types'
 import type { IMediaProbe } from '@domain/ports'
 
+// ffprobe on a local file is normally sub-second; cap it so a stalled probe
+// can't wedge the enrichment pipeline with a never-settling promise.
+const FFPROBE_TIMEOUT_MS = 60_000
+
 /**
  * ffprobe-backed implementation of IMediaProbe.
  *
@@ -66,6 +70,17 @@ export class FfprobeMediaProbe implements IMediaProbe {
 
       let stdout = ''
       let stderr = ''
+      let settled = false
+
+      // Reaper: ffprobe on a local file is normally sub-second, but a
+      // network/stalled FS (or a wedged binary) could hang the call forever,
+      // blocking the enrichment pipeline. SIGTERM + reject after the cap.
+      const timeout = setTimeout(() => {
+        if (settled) return
+        settled = true
+        proc.kill('SIGTERM')
+        reject(new Error(`ffprobe: timed out after ${FFPROBE_TIMEOUT_MS / 1000}s`))
+      }, FFPROBE_TIMEOUT_MS)
 
       proc.stdout.on('data', (chunk: Buffer) => {
         stdout += chunk.toString()
@@ -75,6 +90,9 @@ export class FfprobeMediaProbe implements IMediaProbe {
       })
 
       proc.on('close', (code) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
         if (code !== 0) {
           reject(new Error(`ffprobe failed (code ${code}): ${stderr.trim()}`))
           return
@@ -100,6 +118,9 @@ export class FfprobeMediaProbe implements IMediaProbe {
       })
 
       proc.on('error', (err) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
         reject(new Error(`Failed to spawn ffprobe: ${err.message}`))
       })
     })

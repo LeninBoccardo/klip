@@ -162,4 +162,21 @@ describe('FfprobeMediaProbe', () => {
     expect(args[args.length - 2]).toBe('--')
     expect(args[args.length - 1]).toBe('C:/x.mp4')
   })
+
+  it('rejects and SIGTERMs the child when ffprobe never settles (F09 timeout)', async () => {
+    vi.useFakeTimers()
+    try {
+      const proc = new FakeChildProcess() as FakeChildProcess & { kill: ReturnType<typeof vi.fn> }
+      proc.kill = vi.fn()
+      spawnMock.mockImplementationOnce(() => proc)
+
+      const assertion = expect(probe.probe('C:/hang.mp4')).rejects.toThrow(/timed out/)
+      // Advance past the 60s cap — the child never emits 'close'.
+      await vi.advanceTimersByTimeAsync(60_000)
+      await assertion
+      expect(proc.kill).toHaveBeenCalledWith('SIGTERM')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
