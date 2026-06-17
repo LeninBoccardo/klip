@@ -120,7 +120,7 @@ export class SqliteCollectionRepository implements ICollectionRepository {
         SELECT 'cut' AS kind, cut_id AS id, position, added_at AS addedAt
         FROM collection_cuts
         WHERE collection_id = ${collectionId}
-        ORDER BY position ASC
+        ORDER BY position ASC, addedAt ASC, id ASC
       `
     ) as Array<{ kind: 'video' | 'cut'; id: string; position: number; addedAt: string }>
 

@@ -171,16 +171,17 @@ export const operations = sqliteTable(
 // deleted. The renderer/use cases enforce a unified `position` invariant —
 // across the union of `collection_videos` and `collection_cuts` for a given
 // collection, positions are unique. SQLite cannot express that as a DB
-// constraint, so the invariant lives in the use case layer (with a defensive
-// renumber-on-read in `getItems`).
+// constraint, so the invariant lives in the use case layer. Positions stay
+// unique but may be sparse (RemoveFromCollection leaves gaps); `getItems` reads
+// them verbatim ordered by position — there is no renumber-on-read. Only
+// `reorderItems` densifies, on write.
 //
 // AUDIT-2026-05-02 (deferred): a deferred UNIQUE on (collection_id, position)
 // across the union would close the gap if a future raw-SQL writer (CLI,
 // external migration) violated the invariant. SQLite's deferred-constraint
 // support across two tables is awkward (no cross-table CHECK), and the
-// existing renumber-on-read + two-phase shift in `reorderItems` covers every
-// realistic write path through the app. Revisit if a multi-process writer
-// is ever introduced.
+// two-phase shift in `reorderItems` covers every realistic write path through
+// the app. Revisit if a multi-process writer is ever introduced.
 
 export const collections = sqliteTable(
   'collections',
@@ -293,9 +294,7 @@ export const downloadHistory = sqliteTable(
     // 'success' | 'error' — narrow union enforced at the use-case layer.
     status: text('status').notNull(),
     errorMessage: text('error_message'),
-    errorRetryable: integer('error_retryable', { mode: 'boolean' })
-      .notNull()
-      .default(true),
+    errorRetryable: integer('error_retryable', { mode: 'boolean' }).notNull().default(true),
     finishedAt: text('finished_at')
       .notNull()
       .default(sql`(datetime('now'))`)
