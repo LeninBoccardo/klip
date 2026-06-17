@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Copy } from 'lucide-react'
 import { toast } from 'sonner'
@@ -65,7 +66,20 @@ export function TranscriptTab({
 
   const [query, setQuery] = useState('')
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
-  const segmentRefs = useRef<Map<number, HTMLLIElement>>(new Map())
+
+  // Virtualize the segment list: a captioned 1-2h video can have thousands of
+  // segments, and mounting every <li> dropped scroll/search performance (the
+  // same problem VirtualAuditList exists to avoid). Only visible rows mount.
+  const scrollParentRef = useRef<HTMLDivElement>(null)
+  const segmentCount = segments?.length ?? 0
+  const virtualizer = useVirtualizer({
+    count: segmentCount,
+    getScrollElement: () => scrollParentRef.current,
+    // Measured baseline for a one-line caption; wrapped rows are corrected via
+    // measureElement.
+    estimateSize: () => 44,
+    overscan: 12
+  })
 
   // Use HH:MM:SS once the underlying video is ≥ 1h, so the first row
   // (which starts at 00:00) lines up with later rows that pass the hour
@@ -121,9 +135,11 @@ export function TranscriptTab({
     if (matches.length === 0) return
     const target = matches[currentMatchIndex]
     if (!target) return
-    const node = segmentRefs.current.get(target.segmentIndex)
-    node?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }, [currentMatchIndex, matches])
+    // Scroll the virtualizer to the matched segment by index — the target row
+    // may not be mounted (windowed), so a ref-based scrollIntoView can't be
+    // used. scrollToIndex mounts and centers it.
+    virtualizer.scrollToIndex(target.segmentIndex, { align: 'center' })
+  }, [currentMatchIndex, matches, virtualizer])
 
   const goToNext = (): void => {
     if (matches.length === 0) return
@@ -251,40 +267,43 @@ export function TranscriptTab({
                 </>
               )}
             </div>
-            <ScrollArea className="h-125 rounded border">
-              <ul className="divide-border divide-y p-1">
-                {segments.map((seg, segIdx) => (
-                  <li
-                    key={`${seg.startMs}-${seg.endMs}`}
-                    ref={(node) => {
-                      if (node) segmentRefs.current.set(segIdx, node)
-                      else segmentRefs.current.delete(segIdx)
-                    }}
-                    className="min-w-0"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleSeek(seg.startMs)}
-                      aria-label={t('detail.transcript.seekAria', {
-                        time: formatTimestamp(seg.startMs, includeHours)
-                      })}
-                      className="hover:bg-muted/40 focus-visible:bg-muted/60 flex w-full items-start gap-3 rounded px-3 py-2 text-left transition-colors focus-visible:outline-none"
+            <div ref={scrollParentRef} className="h-125 overflow-y-auto rounded border">
+              <ul className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const segIdx = virtualRow.index
+                  const seg = segments[segIdx]
+                  return (
+                    <li
+                      key={`${seg.startMs}-${seg.endMs}`}
+                      data-index={segIdx}
+                      ref={virtualizer.measureElement}
+                      className="border-border/60 absolute left-0 top-0 w-full min-w-0 border-b"
+                      style={{ transform: `translateY(${virtualRow.start}px)` }}
                     >
-                      <span
-                        className={`text-muted-foreground shrink-0 pt-0.5 font-mono text-xs tabular-nums ${
-                          includeHours ? 'w-18' : 'w-14'
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => handleSeek(seg.startMs)}
+                        aria-label={t('detail.transcript.seekAria', {
+                          time: formatTimestamp(seg.startMs, includeHours)
+                        })}
+                        className="hover:bg-muted/40 focus-visible:bg-muted/60 flex w-full items-start gap-3 rounded px-3 py-2 text-left transition-colors focus-visible:outline-none"
                       >
-                        {formatTimestamp(seg.startMs, includeHours)}
-                      </span>
-                      <span className="wrap-break-word min-w-0 text-sm leading-relaxed">
-                        {renderSegmentText(seg.text, segIdx)}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                        <span
+                          className={`text-muted-foreground shrink-0 pt-0.5 font-mono text-xs tabular-nums ${
+                            includeHours ? 'w-18' : 'w-14'
+                          }`}
+                        >
+                          {formatTimestamp(seg.startMs, includeHours)}
+                        </span>
+                        <span className="wrap-break-word min-w-0 text-sm leading-relaxed">
+                          {renderSegmentText(seg.text, segIdx)}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
-            </ScrollArea>
+            </div>
           </>
         ) : plainText ? (
           // Fallback for transcripts that exist as plain text in the DB but
