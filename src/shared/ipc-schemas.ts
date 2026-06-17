@@ -51,6 +51,17 @@ const tagSchema = z.string().min(1).max(64)
 const idArraySchema = z.array(z.string().min(1)).max(5000)
 const tagArraySchema = z.array(tagSchema).max(64)
 
+// A renderer-supplied URL bound for a yt-dlp spawn. Beyond URL-shape validation
+// it must be http(s): a `file:` / `javascript:` URL — or a leading-dash value
+// yt-dlp would parse as an option (`--exec=…` → arbitrary command execution) —
+// has no legitimate use here. Defence-in-depth alongside the `--` end-of-options
+// terminator inserted before every URL positional in YtDlpDownloader.
+const ytDlpUrlSchema = z
+  .string()
+  .url()
+  .max(4096)
+  .refine((u) => /^https?:\/\//i.test(u), { message: 'URL must use http(s)' })
+
 const channelInfoSchema = z.object({
   channelId: z.string(),
   channelName: z.string(),
@@ -86,11 +97,11 @@ const bulkUpdateTagsRequestSchema = z
 export const ipcSchemas = {
   // ── Reconcile / Download / Probe ──
   reconcile: z.tuple([]),
-  'fetch-video-info': z.tuple([z.string()]),
-  'download-video': z.tuple([z.string(), z.string()]),
+  'fetch-video-info': z.tuple([ytDlpUrlSchema]),
+  'download-video': z.tuple([ytDlpUrlSchema, z.string().min(1).max(200)]),
   'cancel-download': z.tuple([z.string()]),
   'probe-media-file': z.tuple([z.string()]),
-  'fetch-channel-info': z.tuple([z.string()]),
+  'fetch-channel-info': z.tuple([ytDlpUrlSchema]),
 
   // ── Creators ──
   'get-creators-paginated': z.tuple([paginationParamsSchema]),

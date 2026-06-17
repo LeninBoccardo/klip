@@ -28,7 +28,11 @@ export class YtDlpDownloader implements IVideoDownloader {
       // "watch from playlist" link includes one). Without it, yt-dlp
       // walks every entry in the playlist and fails the whole call if
       // any item is region-blocked, members-only, etc.
-      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', url]
+      // `--` is the end-of-options terminator: it forces yt-dlp to treat the
+      // trailing `url` strictly as a positional argument even if it begins
+      // with a dash. Without it a renderer-supplied value like `--exec=…`
+      // would be parsed as a yt-dlp option (arbitrary command execution).
+      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', '--', url]
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
 
       let stdout = ''
@@ -92,6 +96,9 @@ export class YtDlpDownloader implements IVideoDownloader {
         '1',
         '--no-download',
         '--no-warnings',
+        // See fetchInfo: `--` terminates options so `channelUrl` can never be
+        // parsed as a yt-dlp flag.
+        '--',
         channelUrl
       ]
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
@@ -139,8 +146,8 @@ export class YtDlpDownloader implements IVideoDownloader {
     const bin = this.binaryResolver.resolve('yt-dlp')
 
     return new Promise((resolve, reject) => {
-      // See fetchInfo for the `--no-playlist` rationale.
-      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', url]
+      // See fetchInfo for the `--no-playlist` and `--` (end-of-options) rationale.
+      const args = ['--dump-json', '--no-download', '--no-playlist', '--no-warnings', '--', url]
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
 
       let stdout = ''
@@ -230,6 +237,8 @@ export class YtDlpDownloader implements IVideoDownloader {
         '--no-warnings',
         '-o',
         outputTemplate,
+        // See fetchInfo: `--` terminates options so `url` is always positional.
+        '--',
         url
       ]
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
@@ -303,6 +312,8 @@ export class YtDlpDownloader implements IVideoDownloader {
         // See fetchInfo for the `--no-playlist` rationale.
         '--no-playlist',
         '--no-warnings',
+        // See fetchInfo: `--` terminates options so `url` is always positional.
+        '--',
         url
       ]
       const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
@@ -463,6 +474,8 @@ export class YtDlpDownloader implements IVideoDownloader {
         'jpg',
         '-o',
         `${outputDir}/${videoId}.%(ext)s`,
+        // See fetchInfo: `--` terminates options so `url` is always positional.
+        '--',
         url
       ]
 

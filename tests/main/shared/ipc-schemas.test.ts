@@ -42,15 +42,41 @@ const validRegisterCreatorRequest = {
 const rows: Row[] = [
   // ── Reconcile / Download / Probe ──
   { channel: 'reconcile', accept: [], reject: [['extra']] },
-  { channel: 'fetch-video-info', accept: ['https://yt/x'], reject: [[42], []] },
+  {
+    channel: 'fetch-video-info',
+    accept: ['https://yt/x'],
+    reject: [
+      [42],
+      [],
+      ['--exec=calc.exe'], // option-injection: not a URL
+      ['file:///etc/passwd'], // non-http(s) scheme
+      ['javascript:alert(1)'], // non-http(s) scheme
+      ['x'.repeat(4097)] // exceeds 4096 cap
+    ]
+  },
   {
     channel: 'download-video',
     accept: ['https://yt/x', 'creator-name'],
-    reject: [[42, 'creator-name'], ['url'], ['url', 'name', 'extra']]
+    reject: [
+      [42, 'creator-name'],
+      ['url'],
+      ['url', 'name', 'extra'],
+      ['--exec=calc.exe', 'creator-name'], // option-injection
+      ['file:///etc/passwd', 'creator-name'], // non-http(s) scheme
+      ['https://yt/x', ''] // empty creatorName
+    ]
   },
   { channel: 'cancel-download', accept: ['dl-1'], reject: [[42], []] },
   { channel: 'probe-media-file', accept: ['C:/file.mp4'], reject: [[42]] },
-  { channel: 'fetch-channel-info', accept: ['https://yt/c/x'], reject: [[42]] },
+  {
+    channel: 'fetch-channel-info',
+    accept: ['https://yt/c/x'],
+    reject: [
+      [42],
+      ['--config-location=//evil/share/x.conf'], // option-injection
+      ['ftp://yt/c/x'] // non-http(s) scheme
+    ]
+  },
 
   // ── Creators ──
   {
@@ -85,6 +111,7 @@ const rows: Row[] = [
       [{ ...validRegisterCreatorRequest, tags: [longString(65)] }]
     ]
   },
+  { channel: 'refresh-creator-avatar', accept: ['c-1'], reject: [[42], []] },
 
   // ── Videos ──
   {
@@ -317,6 +344,14 @@ const rows: Row[] = [
   // ── Operations ──
   { channel: 'get-operation-by-id', accept: ['op-1'], reject: [[42]] },
   { channel: 'get-operations-by-status', accept: ['pending'], reject: [[42]] },
+
+  // ── Download history ──
+  {
+    channel: 'list-download-history',
+    accept: [100],
+    reject: [[0], [501], [1.5], ['42']]
+  },
+  { channel: 'retry-download', accept: ['dl-1'], reject: [[''], [42], []] },
 
   // ── Updater ──
   { channel: 'check-for-updates', accept: [], reject: [['extra']] },
