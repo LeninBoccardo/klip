@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@ui/button'
 import {
@@ -46,6 +46,12 @@ export function SaveCutDialog({
   const [tags, setTags] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  // Synchronous re-entrancy guard. `submitting` is React state set
+  // asynchronously, so two fast clicks (or a double-click) both read
+  // `submitting === false` and pass `canSubmit` before the disabled re-render
+  // commits — firing two renders and creating two Cut rows for one trim. A ref
+  // flips synchronously, so the second in-flight click is rejected.
+  const submittingRef = useRef(false)
 
   // Reset form fields whenever the dialog opens — saving once and reopening
   // should not pre-populate with the previous title/tags.
@@ -57,6 +63,7 @@ export function SaveCutDialog({
       setSubmitError(null)
       setSubmitting(false)
       /* eslint-enable react-hooks/set-state-in-effect */
+      submittingRef.current = false
     }
   }, [open])
 
@@ -66,6 +73,8 @@ export function SaveCutDialog({
 
   const handleSubmit = async (): Promise<void> => {
     if (!timeline || !canSubmit) return
+    if (submittingRef.current) return
+    submittingRef.current = true
     setSubmitting(true)
     setSubmitError(null)
     try {
@@ -86,6 +95,7 @@ export function SaveCutDialog({
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : String(err))
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
