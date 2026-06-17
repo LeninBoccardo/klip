@@ -31,21 +31,44 @@ const FFMPEG_VERSION = '6.1'
 const FFPROBE_VERSION = FFMPEG_VERSION
 
 // ── SHA256 hashes — verify downloaded binaries against upstream releases ──
-// Bumping versions: download the new binary, run `shasum -a 256 <file>` (or
-// `Get-FileHash -Algorithm SHA256 <file>` on Windows), paste the result here.
-// `null` skips verification with a warning — useful only while introducing the
-// pinning workflow. Aim to fill in every entry before the next public release.
+// Keyed by the DOWNLOAD ARTIFACT filename (the basename of spec.url), NOT the
+// installed `outputName`: macOS and Linux both install to `ffmpeg`/`ffprobe`/
+// `yt-dlp`, so an outputName-keyed map cannot hold their three distinct hashes.
+// The artifact filename is unique per platform/arch, so it disambiguates.
 //
-// Set `KLIP_SKIP_BINARY_VERIFY=1` to bypass mismatches at install time (escape
-// hatch for one-off dev setup; never use in CI or release pipelines).
-const SHASUMS: Record<string, string | null> = {
-  'yt-dlp.exe': null,
-  'yt-dlp_macos': null,
-  'yt-dlp_linux': null,
-  'ffprobe.exe': null,
-  ffprobe: null,
-  'ffmpeg.exe': null,
-  ffmpeg: null
+// VALUES are the SHA256 of the INSTALLED binary — for yt-dlp the downloaded
+// file itself; for ffmpeg/ffprobe the binary EXTRACTED from the zip (that is
+// what `verifyBinaryHash` hashes). The ffbinaries `<name>-<version>-*.zip` keys
+// are templated off the version constants so a bump retargets them automatically.
+//
+// Bumping versions: update the version constant, fetch the new artifacts, and
+// repin. yt-dlp publishes an official `SHA2-256SUMS` per release (use those
+// directly). ffbinaries does not, so download each zip, extract, and hash the
+// inner binary (`unzip -o <zip> && shasum -a 256 <bin>` / `Get-FileHash`). A
+// stale or missing hash fails closed (refuses to install) — set
+// `KLIP_SKIP_BINARY_VERIFY=1` to bypass for one-off dev setup; never in CI/release.
+const SHASUMS: Record<string, string> = {
+  // yt-dlp 2025.02.19 — official SHA2-256SUMS for the raw release binaries.
+  'yt-dlp.exe': 'b9fac42a19e118e1b0a5c98832928a1c25782d805a9905476bb55d479212621a',
+  'yt-dlp_macos': 'fc92f4bc4b5bc4bb0406f47c52b1617e7d4b7e34ef4b6af992e80e338d5cda31',
+  'yt-dlp_linux': 'a3e45133e1960a2ecc3c575b8470ab0d48a52bd92eb1ee3b4b82698fb9a2fc48',
+  // ffmpeg/ffprobe 6.1 (ffbinaries) — SHA256 of the binary extracted from each zip.
+  [`ffmpeg-${FFMPEG_VERSION}-win-64.zip`]:
+    'ba242553f0ff60ad788069d5d376c1b4f7a2f3a3566416e0ed950ca7920da5fa',
+  [`ffprobe-${FFPROBE_VERSION}-win-64.zip`]:
+    'ae5db42a4b7d7fa719a325082e447adb5df674a69935117eb9dff2292a1f23ec',
+  [`ffmpeg-${FFMPEG_VERSION}-macos-64.zip`]:
+    'ca8945e5eef946a246d29c943b21f10db345a2ef050dd7ea1c77f877277dc2fa',
+  [`ffprobe-${FFPROBE_VERSION}-macos-64.zip`]:
+    '82f8b544e9924aed20f691f4b1b1ad0ba7e31d2a2e856ac29a1b6a31537e7f1f',
+  [`ffmpeg-${FFMPEG_VERSION}-linux-64.zip`]:
+    'a0082b064cc83f5606554fa2cc5b07194ade90f6669b1fcfd6499b29861ca403',
+  [`ffprobe-${FFPROBE_VERSION}-linux-64.zip`]:
+    'c2b0313686684e48f5dedbe29e510d56e70dead57a5e4219d32c6db32455c32a',
+  [`ffmpeg-${FFMPEG_VERSION}-linux-arm-64.zip`]:
+    '593df241f0e9f472e3e3fd2cbe12186b2509dceef82f02aa99e0053acec5dbd2',
+  [`ffprobe-${FFPROBE_VERSION}-linux-arm-64.zip`]:
+    '013c6ce924d689205e11d726a9e6d6924d5251bf2ea4d56256a9630d1a0522df'
 }
 
 // ── Platform detection ──
@@ -210,28 +233,38 @@ async function downloadAndExtractZip(url: string, outputName: string): Promise<v
   }
 }
 
-function verifyBinaryHash(filePath: string, outputName: string): void {
-  const expected = SHASUMS[outputName]
+function verifyBinaryHash(filePath: string, spec: BinarySpec): void {
+  // Hashes are keyed by the download-artifact filename (basename of the URL),
+  // which is unique per platform/arch — unlike outputName, which collides across
+  // platforms (mac/linux both install plain `ffmpeg`/`ffprobe`/`yt-dlp`).
+  const artifact = spec.url.split('/').pop() ?? spec.url
+  const expected = SHASUMS[artifact]
   if (!expected) {
-    console.warn(
-      `  ⚠ No SHA256 pinned for ${outputName} — skipping verification (TODO: pin in scripts/download-binaries.ts).`
+    if (process.env.KLIP_SKIP_BINARY_VERIFY === '1') {
+      console.warn(`  ⚠ No SHA256 pinned for ${artifact} — bypassed via KLIP_SKIP_BINARY_VERIFY.`)
+      return
+    }
+    unlinkSync(filePath)
+    throw new Error(
+      `No SHA256 pinned for ${artifact}. Refusing to install an unverified binary. ` +
+        `Pin its hash in scripts/download-binaries.ts (SHASUMS), or set ` +
+        `KLIP_SKIP_BINARY_VERIFY=1 to bypass (dev only).`
     )
-    return
   }
   const actual = createHash('sha256').update(readFileSync(filePath)).digest('hex')
   if (actual === expected) {
-    console.log(`  ✓ SHA256 verified for ${outputName}`)
+    console.log(`  ✓ SHA256 verified for ${spec.outputName} (${artifact})`)
     return
   }
   if (process.env.KLIP_SKIP_BINARY_VERIFY === '1') {
     console.warn(
-      `  ⚠ SHA256 mismatch for ${outputName} (expected ${expected}, got ${actual}) — bypassed via KLIP_SKIP_BINARY_VERIFY.`
+      `  ⚠ SHA256 mismatch for ${artifact} (expected ${expected}, got ${actual}) — bypassed via KLIP_SKIP_BINARY_VERIFY.`
     )
     return
   }
   unlinkSync(filePath)
   throw new Error(
-    `SHA256 mismatch for ${outputName}: expected ${expected}, got ${actual}. ` +
+    `SHA256 mismatch for ${artifact}: expected ${expected}, got ${actual}. ` +
       `Refusing to install a tampered or stale binary. ` +
       `Set KLIP_SKIP_BINARY_VERIFY=1 to bypass (dev only).`
   )
@@ -259,7 +292,7 @@ async function downloadBinary(spec: BinarySpec): Promise<void> {
 
   // Verify the binary integrity BEFORE making it executable. A tampered binary
   // should never be marked +x — that's the whole point of the check.
-  verifyBinaryHash(dest, spec.outputName)
+  verifyBinaryHash(dest, spec)
 
   // Make executable on Unix
   if (platform !== 'win32') {
