@@ -18,11 +18,21 @@ export function useCutsPaginated(
   })
 }
 
+// See use-videos.ts invalidateVideoTrees — soft delete/restore emits no
+// db-updated push, so mirror the db-listener's 'cuts' scope here. (F28)
+function invalidateCutTrees(qc: ReturnType<typeof useQueryClient>): void {
+  qc.invalidateQueries({ queryKey: queryKeys.cuts.all })
+  qc.invalidateQueries({ queryKey: queryKeys.collections.all })
+  qc.invalidateQueries({ queryKey: queryKeys.search.all })
+  qc.invalidateQueries({ queryKey: queryKeys.tags.all })
+  qc.invalidateQueries({ queryKey: queryKeys.stats.all })
+}
+
 export function useDeleteCut(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.deleteCut(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cuts.all })
+    onSuccess: () => invalidateCutTrees(qc)
   })
 }
 
@@ -30,6 +40,6 @@ export function useRestoreCut(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.restoreCut(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cuts.all })
+    onSuccess: () => invalidateCutTrees(qc)
   })
 }

@@ -32,6 +32,13 @@ describe('useDeleteVideo', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(api.deleteVideo).toHaveBeenCalledWith('video-1')
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.videos.all })
+    // F28: a soft delete also invalidates the cross-cutting trees the
+    // db-listener would refresh (collections embed the video; stats/search/tags
+    // reflect its status) — these emit no db-updated push.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.collections.all })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.search.all })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.tags.all })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.stats.all })
   })
 })
 

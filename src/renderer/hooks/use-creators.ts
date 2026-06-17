@@ -32,11 +32,20 @@ export function useCreatorById(id: string | undefined): UseQueryResult<CreatorDt
   })
 }
 
+// See use-videos.ts invalidateVideoTrees — soft delete/restore emits no
+// db-updated push, so mirror the db-listener's 'creators' scope (search + stats
+// also reflect creator status). (F28)
+function invalidateCreatorTrees(qc: ReturnType<typeof useQueryClient>): void {
+  qc.invalidateQueries({ queryKey: queryKeys.creators.all })
+  qc.invalidateQueries({ queryKey: queryKeys.search.all })
+  qc.invalidateQueries({ queryKey: queryKeys.stats.all })
+}
+
 export function useDeleteCreator(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.deleteCreator(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.creators.all })
+    onSuccess: () => invalidateCreatorTrees(qc)
   })
 }
 
@@ -44,7 +53,7 @@ export function useRestoreCreator(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.restoreCreator(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.creators.all })
+    onSuccess: () => invalidateCreatorTrees(qc)
   })
 }
 

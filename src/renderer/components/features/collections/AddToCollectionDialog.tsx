@@ -58,6 +58,15 @@ export function AddToCollectionDialog({
     onOpenChange(false)
   }
 
+  // The dialog stays mounted across opens (parent only flips `open`), so a
+  // typed-but-not-selected filter would otherwise survive into the next open
+  // and hide most collections. Clear the query on any dismissal (Escape /
+  // overlay / X), mirroring CommandPalette. (F25)
+  const handleOpenChange = (next: boolean): void => {
+    if (!next) setQuery('')
+    onOpenChange(next)
+  }
+
   const handleAdd = (collectionId: string, collectionName: string): void => {
     if (!entity) return
     addItem.mutate(
@@ -102,7 +111,7 @@ export function AddToCollectionDialog({
   return (
     <CommandDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       title={t('addToCollection.title')}
       description={t('addToCollection.description', {
         title: entity?.title ?? t('addToCollection.fallbackTitle')

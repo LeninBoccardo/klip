@@ -35,11 +35,23 @@ export function useVideoById(id: string | undefined): UseQueryResult<VideoDto | 
   })
 }
 
+// Soft delete/restore goes through controllers that emit no db-updated push, so
+// the cross-cutting trees the db-listener would refresh on a 'videos' scope are
+// invalidated here too: collection item DTOs embed the video, and
+// stats/search/tags all reflect its status. (F28)
+function invalidateVideoTrees(qc: ReturnType<typeof useQueryClient>): void {
+  qc.invalidateQueries({ queryKey: queryKeys.videos.all })
+  qc.invalidateQueries({ queryKey: queryKeys.collections.all })
+  qc.invalidateQueries({ queryKey: queryKeys.search.all })
+  qc.invalidateQueries({ queryKey: queryKeys.tags.all })
+  qc.invalidateQueries({ queryKey: queryKeys.stats.all })
+}
+
 export function useDeleteVideo(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.deleteVideo(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.videos.all })
+    onSuccess: () => invalidateVideoTrees(qc)
   })
 }
 
@@ -47,7 +59,7 @@ export function useRestoreVideo(): UseMutationResult<void, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => window.api.restoreVideo(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.videos.all })
+    onSuccess: () => invalidateVideoTrees(qc)
   })
 }
 
