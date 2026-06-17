@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RecoverOperations } from '@use-cases/RecoverOperations'
-import type { ICutRepository, IOperationRepository } from '@domain/repositories'
+import type {
+  ICutRepository,
+  IOperationRepository,
+  ISettingsRepository
+} from '@domain/repositories'
 import type { IFileSystemReader, IFileSystemWriter, IPathResolver } from '@domain/ports'
 import type { Operation } from '@domain/entities'
 
@@ -75,6 +79,17 @@ function mockPathResolver(): IPathResolver {
   }
 }
 
+function mockSettingsRepo(overrides: Partial<ISettingsRepository> = {}): ISettingsRepository {
+  return {
+    // Default: rootPath is unset / not newRoot, so the F02 idempotency guard
+    // doesn't fire and the normal rollback path runs in existing tests.
+    get: vi.fn().mockReturnValue(null),
+    set: vi.fn(),
+    getAll: vi.fn().mockReturnValue({}),
+    ...overrides
+  }
+}
+
 function makeOperation(overrides: Partial<Operation> = {}): Operation {
   return {
     id: 'op-1',
@@ -97,6 +112,7 @@ describe('RecoverOperations', () => {
   let fsWriter: IFileSystemWriter
   let pathResolver: IPathResolver
   let cutRepo: ICutRepository
+  let settingsRepo: ISettingsRepository
   let useCase: RecoverOperations
 
   beforeEach(() => {
@@ -105,7 +121,15 @@ describe('RecoverOperations', () => {
     fsWriter = mockFsWriter()
     pathResolver = mockPathResolver()
     cutRepo = mockCutRepo()
-    useCase = new RecoverOperations(operationRepo, fsReader, fsWriter, pathResolver, cutRepo)
+    settingsRepo = mockSettingsRepo()
+    useCase = new RecoverOperations(
+      operationRepo,
+      fsReader,
+      fsWriter,
+      pathResolver,
+      cutRepo,
+      settingsRepo
+    )
   })
 
   it('should return zero counts when no stale operations exist', () => {
@@ -223,6 +247,40 @@ describe('RecoverOperations', () => {
   })
 
   // ── migrate_root recovery ──
+
+  it('marks a migrate_root op completed (no rollback) when rootPath already points at newRoot (F02)', () => {
+    // The path-rewrite transaction committed (settings.rootPath === newRoot) but
+    // a hard kill happened before the op was marked completed. Recovery must NOT
+    // move the folders back — that would un-do a successful migration and leave
+    // the whole library "missing".
+    const op = makeOperation({
+      id: 'op-migrate-committed',
+      type: 'migrate_root',
+      status: 'in_progress',
+      payload: JSON.stringify({
+        version: 2,
+        oldRoot: '/old/root',
+        newRoot: '/new/root',
+        folders: ['creator-a', 'creator-b'],
+        moves: [
+          { folder: 'creator-a', status: 'moved' },
+          { folder: 'creator-b', status: 'moved' }
+        ]
+      })
+    })
+    vi.mocked(operationRepo.findByStatus).mockImplementation((status) =>
+      status === 'in_progress' ? [op] : []
+    )
+    vi.mocked(settingsRepo.get).mockReturnValue('/new/root')
+    // Folders are still at newRoot — but recovery must leave them there.
+    vi.mocked(fsReader.directoryExists).mockReturnValue(true)
+
+    const result = useCase.execute()
+
+    expect(result).toEqual({ completed: 1, rolledBack: 0, total: 1 })
+    expect(operationRepo.updateStatus).toHaveBeenCalledWith('op-migrate-committed', 'completed')
+    expect(fsWriter.moveDirectory).not.toHaveBeenCalled()
+  })
 
   it('should physically move folders back from new root to old root for migrate_root', () => {
     const op = makeOperation({

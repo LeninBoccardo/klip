@@ -175,6 +175,13 @@ export class MigrateRootFolder implements IMigrateRootFolder {
           this.videoRepo.updateFilePathPrefix(oldRootPath, newRootPath)
           this.cutRepo.updateFilePathPrefix(oldRootPath, newRootPath)
           this.settingsRepo.set('rootPath', newRootPath)
+          // Mark the operation terminal INSIDE the same transaction as the
+          // path rewrite. Otherwise a hard kill in the (synchronous) gap before
+          // a separate updateStatus('completed') would leave the op
+          // 'in_progress' while the DB already points at newRoot — and
+          // RecoverOperations would then move every folder back to oldRoot,
+          // un-doing a successful migration (mass "missing" library). (F02)
+          this.operationRepo.updateStatus(operationId, 'completed')
         })
         // Mutate the in-memory ref only after the DB writes commit.
         this.rootPathRef.value = newRootPath
@@ -194,8 +201,9 @@ export class MigrateRootFolder implements IMigrateRootFolder {
         }
       }
 
-      // ── Complete ──
-      this.operationRepo.updateStatus(operationId, 'completed')
+      // ── Complete ── (status already committed atomically in the
+      // transaction above; from here on a crash is harmless — recovery sees a
+      // 'completed' op and skips it.)
 
       // ── Restart watcher on new root ──
       await this.fileWatcher.restart(newRootPath)

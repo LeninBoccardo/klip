@@ -1,5 +1,9 @@
 import { z } from 'zod'
-import type { ICutRepository, IOperationRepository } from '@domain/repositories'
+import type {
+  ICutRepository,
+  IOperationRepository,
+  ISettingsRepository
+} from '@domain/repositories'
 import type { IFileSystemReader, IFileSystemWriter, IPathResolver } from '@domain/ports'
 import type { Operation } from '@domain/entities'
 import { redactError } from '@domain/types/redact'
@@ -80,7 +84,8 @@ export class RecoverOperations implements IRecoverOperations {
     private fsReader: IFileSystemReader,
     private fsWriter: IFileSystemWriter,
     private pathResolver: IPathResolver,
-    private cutRepo: ICutRepository
+    private cutRepo: ICutRepository,
+    private settingsRepo: ISettingsRepository
   ) {}
 
   execute(): RecoverResult {
@@ -173,12 +178,24 @@ export class RecoverOperations implements IRecoverOperations {
       return false
     }
 
+    const payload = result.value
+
+    // Idempotency guard (F02): if the DB already points at newRoot, the
+    // migration's path-rewrite transaction committed — files belong at newRoot
+    // and the only thing left undone was a post-commit step (e.g. the op-status
+    // write, watcher restart, or reconcile). Rolling the folders back here would
+    // actively un-do a successful migration and leave the entire library
+    // "missing". Treat it as completed instead.
+    if (this.settingsRepo.get('rootPath') === payload.newRoot) {
+      this.operationRepo.updateStatus(op.id, 'completed')
+      return true
+    }
+
     // Normalise both schemas into a single { oldRoot, newRoot, moves } shape.
     // `'moves' in payload` is the v2/v1 discriminator: only v2 carries explicit
     // per-folder status, so a v1 payload (legacy `movedSoFar: string[]`) is
     // upgraded into the same shape with status='moved' so the rest of the
     // recovery loop is uniform.
-    const payload = result.value
     const moves: Array<{ folder: string; status: 'moved' | 'rolled-back' }> =
       'moves' in payload
         ? payload.moves

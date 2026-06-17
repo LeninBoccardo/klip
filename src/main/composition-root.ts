@@ -380,7 +380,8 @@ export function createAppContainer(config: AppConfig): AppContainer {
     fsReader,
     fsWriter,
     pathResolver,
-    cutRepo
+    cutRepo,
+    settingsRepo
   )
 
   // ── File watcher ──
