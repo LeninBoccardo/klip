@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { PersistentPlayer } from '@/components/features/player/PersistentPlayer'
 import { usePlayerSlot } from '@/components/features/player/player-slot-ref'
 import { usePlayerStore } from '@/hooks/use-player-store'
+import { createQueryWrapper } from '../../../helpers/test-utils'
+
+// PersistentPlayer reads the mini-player corner via useSetting (a react-query
+// hook), so it must render under a QueryClientProvider.
+const renderPlayer = (): ReturnType<typeof render> =>
+  render(<PersistentPlayer />, { wrapper: createQueryWrapper() })
 
 // jsdom does not implement ResizeObserver — provide a no-op shim so the
 // detail-mode positioning effect can run without throwing.
@@ -31,7 +37,13 @@ beforeEach(() => {
   navigateMock.mockReset()
   openMediaExternally.mockReset().mockResolvedValue({ ok: true })
   Object.defineProperty(window, 'api', {
-    value: { openMediaExternally },
+    value: {
+      openMediaExternally,
+      // useSetting(miniPlayerCorner) fires on mount; stub the read/write so the
+      // query resolves cleanly instead of hitting an undefined api method.
+      getSetting: vi.fn().mockResolvedValue(null),
+      setSetting: vi.fn().mockResolvedValue(undefined)
+    },
     writable: true,
     configurable: true
   })
@@ -44,7 +56,7 @@ beforeEach(() => {
 
 describe('PersistentPlayer', () => {
   it('renders nothing when the player is idle', () => {
-    const { container } = render(<PersistentPlayer />)
+    const { container } = renderPlayer()
     expect(container.querySelector('[data-testid="persistent-player"]')).toBeNull()
   })
 
@@ -53,13 +65,13 @@ describe('PersistentPlayer', () => {
       usePlayerStore.getState().play({ videoId: 'v-1', title: 'A' })
       usePlayerStore.getState().setMode('paused')
     })
-    const { container } = render(<PersistentPlayer />)
+    const { container } = renderPlayer()
     expect(container.querySelector('[data-testid="persistent-player"]')).toBeNull()
   })
 
   it('renders a portaled <video> in detail mode tagged with the mode', async () => {
     act(() => usePlayerStore.getState().play({ videoId: 'v-1', title: 'A', mode: 'detail' }))
-    render(<PersistentPlayer />)
+    renderPlayer()
 
     const root = await screen.findByTestId('persistent-player')
     expect(root).toHaveAttribute('data-player-mode', 'detail')
@@ -68,7 +80,7 @@ describe('PersistentPlayer', () => {
 
   it('shows mini-mode overlay buttons (expand, close, open externally)', async () => {
     act(() => usePlayerStore.getState().play({ videoId: 'v-1', title: 'My Title', mode: 'mini' }))
-    render(<PersistentPlayer />)
+    renderPlayer()
 
     expect(await screen.findByLabelText('Expand to detail')).toBeInTheDocument()
     expect(screen.getByLabelText('Close player')).toBeInTheDocument()
@@ -78,7 +90,7 @@ describe('PersistentPlayer', () => {
 
   it('close button stops the player (clears videoId)', async () => {
     act(() => usePlayerStore.getState().play({ videoId: 'v-1', title: 'A', mode: 'mini' }))
-    render(<PersistentPlayer />)
+    renderPlayer()
 
     const user = userEvent.setup()
     await user.click(await screen.findByLabelText('Close player'))
@@ -89,7 +101,7 @@ describe('PersistentPlayer', () => {
 
   it('expand button navigates to /videos/$videoId and flips mode to detail', async () => {
     act(() => usePlayerStore.getState().play({ videoId: 'v-1', title: 'A', mode: 'mini' }))
-    render(<PersistentPlayer />)
+    renderPlayer()
 
     const user = userEvent.setup()
     await user.click(await screen.findByLabelText('Expand to detail'))
@@ -103,7 +115,7 @@ describe('PersistentPlayer', () => {
 
   it('"open externally" calls window.api.openMediaExternally for the active video', async () => {
     act(() => usePlayerStore.getState().play({ videoId: 'v-1', title: 'A', mode: 'mini' }))
-    render(<PersistentPlayer />)
+    renderPlayer()
 
     const user = userEvent.setup()
     await user.click(await screen.findByLabelText('Open in external player'))
