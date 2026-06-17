@@ -217,6 +217,25 @@ describe('AuditedCutRepository', () => {
     expect(changes.deletedAt).toEqual({ old: null, new: '2025-06-01T00:00:00.000Z' })
   })
 
+  // ── updateProbeResult ──
+
+  it('logs "probe_status_changed" for updateProbeResult', () => {
+    repo.upsert(makeCut({ probeStatus: 'pending' }))
+    repo.updateProbeResult('cut-1', {
+      duration: 30,
+      resolution: '1280x720',
+      fileSize: 1_000_000,
+      probeStatus: 'complete'
+    })
+
+    const logs = auditLogRepo.findByEntity('cut', 'cut-1')
+    const probeLog = logs.find((l) => l.action === 'probe_status_changed')
+    expect(probeLog).toBeDefined()
+    const changes = JSON.parse(probeLog!.changes!)
+    expect(changes.probeStatus).toEqual({ old: 'pending', new: 'complete' })
+    expect(repo.findById('cut-1')?.duration).toBe(30)
+  })
+
   // ── delete ──
 
   it('logs "deleted" action', () => {

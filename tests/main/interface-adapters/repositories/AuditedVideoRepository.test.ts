@@ -168,6 +168,28 @@ describe('AuditedVideoRepository', () => {
     expect(changes.status).toEqual({ old: 'active', new: 'missing' })
   })
 
+  // ── updateProbeResult ──
+
+  it('does NOT audit updateProbeResult — pure ffprobe enrichment is silent (F10)', () => {
+    repo.upsert(makeVideo())
+    const before = auditLogRepo.findByEntity('video', 'video-1').length
+
+    repo.updateProbeResult('video-1', {
+      duration: 120,
+      resolution: '1920x1080',
+      fileSize: 5_000_000,
+      probeStatus: 'complete'
+    })
+
+    const after = auditLogRepo.findByEntity('video', 'video-1')
+    // No new audit row — matches the ENRICHMENT_ONLY_FIELDS suppression on the
+    // upsert path, so the activity feed isn't peppered after every download.
+    expect(after.length).toBe(before)
+    expect(after.some((l) => l.action === 'probe_status_changed')).toBe(false)
+    // The write still landed.
+    expect(repo.findById('video-1')?.probeStatus).toBe('complete')
+  })
+
   // ── delete ──
 
   it('logs "deleted" action', () => {

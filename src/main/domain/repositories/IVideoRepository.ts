@@ -54,6 +54,22 @@ export interface IVideoRepository {
   upsertWithPrevious(video: Video, previous: Video | null): void
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void
+  /**
+   * Column-scoped write of probe results. Touches ONLY duration, resolution,
+   * fileSize and probeStatus — never the whole row — so a concurrent writer
+   * (e.g. FetchVideoDetail setting viewCount/transcript, or MarkVideoMissing
+   * flipping status) that interleaves with a slow ffprobe is not clobbered by a
+   * stale read-modify-write upsert.
+   */
+  updateProbeResult(
+    id: string,
+    result: {
+      duration: number | null
+      resolution: string | null
+      fileSize: number | null
+      probeStatus: ProbeStatus
+    }
+  ): void
   delete(id: string): void
   findPaginated(params: VideoQueryParams): PaginatedResult<Video>
   /** Bulk-replace a path prefix in filePath and thumbnailPath columns */

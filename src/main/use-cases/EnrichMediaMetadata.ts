@@ -30,13 +30,16 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
       if (video.status !== 'active') continue
       try {
         const metadata = await this.mediaProbe.probe(video.filePath)
-        this.videoRepo.upsert({
-          ...video,
+        // Column-scoped write (not a full upsert): the stale `video` snapshot
+        // was read before the await, so re-writing every column would clobber
+        // any concurrent change (FetchVideoDetail's viewCount/transcript,
+        // MarkVideoMissing's status) that landed during the probe. Only touch
+        // the probe-derived columns.
+        this.videoRepo.updateProbeResult(video.id, {
           duration: metadata.duration ?? video.duration,
           resolution: metadata.resolution ?? video.resolution,
           fileSize: metadata.fileSize ?? video.fileSize,
-          probeStatus: 'complete',
-          updatedAt: new Date().toISOString()
+          probeStatus: 'complete'
         })
         result.videosProbed++
       } catch (err) {
@@ -54,13 +57,13 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
       if (cut.status !== 'active') continue
       try {
         const metadata = await this.mediaProbe.probe(cut.filePath)
-        this.cutRepo.upsert({
-          ...cut,
+        // See the video loop: column-scoped write to avoid clobbering
+        // concurrent mutations to the same cut row across the probe await.
+        this.cutRepo.updateProbeResult(cut.id, {
           duration: metadata.duration ?? cut.duration,
           resolution: metadata.resolution ?? cut.resolution,
           fileSize: metadata.fileSize ?? cut.fileSize,
-          probeStatus: 'complete',
-          updatedAt: new Date().toISOString()
+          probeStatus: 'complete'
         })
         result.cutsProbed++
       } catch (err) {

@@ -81,6 +81,7 @@ function mockVideoRepo(): IVideoRepository {
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     updateProbeStatus: vi.fn(),
+    updateProbeResult: vi.fn(),
     delete: vi.fn(),
     findPaginated: vi.fn()
   }
@@ -98,6 +99,7 @@ function mockCutRepo(): ICutRepository {
     upsert: vi.fn(),
     updateStatus: vi.fn(),
     updateProbeStatus: vi.fn(),
+    updateProbeResult: vi.fn(),
     delete: vi.fn(),
     findPaginated: vi.fn()
   }
@@ -129,15 +131,15 @@ describe('EnrichMediaMetadata', () => {
     const result = await useCase.execute()
 
     expect(mediaProbe.probe).toHaveBeenCalledWith(video.filePath)
-    expect(videoRepo.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'video-1',
-        duration: 120,
-        resolution: '1920x1080',
-        fileSize: 50_000_000,
-        probeStatus: 'complete'
-      })
-    )
+    // F10: column-scoped write — EXACTLY the four probe columns, no full-row
+    // upsert that would clobber concurrent status/detail writes.
+    expect(videoRepo.updateProbeResult).toHaveBeenCalledWith('video-1', {
+      duration: 120,
+      resolution: '1920x1080',
+      fileSize: 50_000_000,
+      probeStatus: 'complete'
+    })
+    expect(videoRepo.upsert).not.toHaveBeenCalled()
     expect(result.videosProbed).toBe(1)
   })
 
@@ -148,15 +150,13 @@ describe('EnrichMediaMetadata', () => {
     const result = await useCase.execute()
 
     expect(mediaProbe.probe).toHaveBeenCalledWith(cut.filePath)
-    expect(cutRepo.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'cut-1',
-        duration: 120,
-        resolution: '1920x1080',
-        fileSize: 50_000_000,
-        probeStatus: 'complete'
-      })
-    )
+    expect(cutRepo.updateProbeResult).toHaveBeenCalledWith('cut-1', {
+      duration: 120,
+      resolution: '1920x1080',
+      fileSize: 50_000_000,
+      probeStatus: 'complete'
+    })
+    expect(cutRepo.upsert).not.toHaveBeenCalled()
     expect(result.cutsProbed).toBe(1)
   })
 
@@ -168,7 +168,7 @@ describe('EnrichMediaMetadata', () => {
     const result = await useCase.execute()
 
     expect(videoRepo.updateProbeStatus).toHaveBeenCalledWith('video-1', 'failed')
-    expect(videoRepo.upsert).not.toHaveBeenCalled()
+    expect(videoRepo.updateProbeResult).not.toHaveBeenCalled()
     expect(result.failures).toBe(1)
     expect(result.videosProbed).toBe(0)
   })
@@ -181,7 +181,7 @@ describe('EnrichMediaMetadata', () => {
     const result = await useCase.execute()
 
     expect(cutRepo.updateProbeStatus).toHaveBeenCalledWith('cut-1', 'failed')
-    expect(cutRepo.upsert).not.toHaveBeenCalled()
+    expect(cutRepo.updateProbeResult).not.toHaveBeenCalled()
     expect(result.failures).toBe(1)
     expect(result.cutsProbed).toBe(0)
   })
@@ -252,13 +252,11 @@ describe('EnrichMediaMetadata', () => {
 
     await useCase.execute()
 
-    expect(videoRepo.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        duration: 60,
-        resolution: '1280x720',
-        fileSize: 10_000,
-        probeStatus: 'complete'
-      })
-    )
+    expect(videoRepo.updateProbeResult).toHaveBeenCalledWith('video-1', {
+      duration: 60,
+      resolution: '1280x720',
+      fileSize: 10_000,
+      probeStatus: 'complete'
+    })
   })
 })

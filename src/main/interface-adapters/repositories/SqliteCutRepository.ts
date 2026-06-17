@@ -265,6 +265,28 @@ export class SqliteCutRepository implements ICutRepository {
       .run()
   }
 
+  updateProbeResult(
+    id: string,
+    result: {
+      duration: number | null
+      resolution: string | null
+      fileSize: number | null
+      probeStatus: ProbeStatus
+    }
+  ): void {
+    this.db
+      .update(cuts)
+      .set({
+        duration: result.duration,
+        resolution: result.resolution,
+        fileSize: result.fileSize,
+        probeStatus: result.probeStatus,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(cuts.id, id))
+      .run()
+  }
+
   delete(id: string): void {
     this.db.delete(cuts).where(eq(cuts.id, id)).run()
   }

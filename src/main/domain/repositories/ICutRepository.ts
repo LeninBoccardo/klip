@@ -31,6 +31,16 @@ export interface ICutRepository {
   upsertWithPrevious(cut: Cut, previous: Cut | null): void
   updateStatus(id: string, status: EntityStatus, deletedAt: string | null): void
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void
+  /** See {@link IVideoRepository.updateProbeResult} — same column-scoped semantics. */
+  updateProbeResult(
+    id: string,
+    result: {
+      duration: number | null
+      resolution: string | null
+      fileSize: number | null
+      probeStatus: ProbeStatus
+    }
+  ): void
   delete(id: string): void
   findPaginated(params: CutQueryParams): PaginatedResult<Cut>
   /** Bulk-replace a path prefix in filePath and thumbnailPath columns */

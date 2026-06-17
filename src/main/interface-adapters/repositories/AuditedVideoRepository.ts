@@ -12,12 +12,7 @@ import { diffObjects } from './diff-objects'
  * so the activity feed isn't peppered with "Atualizado" lines that just
  * mean "ffprobe finished". `updatedAt` is already filtered in diffObjects.
  */
-const ENRICHMENT_ONLY_FIELDS = new Set([
-  'probeStatus',
-  'duration',
-  'resolution',
-  'fileSize'
-])
+const ENRICHMENT_ONLY_FIELDS = new Set(['probeStatus', 'duration', 'resolution', 'fileSize'])
 
 function isEnrichmentOnly(changesJson: string): boolean {
   try {
@@ -169,6 +164,25 @@ export class AuditedVideoRepository implements IVideoRepository {
         createdAt: new Date().toISOString()
       })
     })
+  }
+
+  updateProbeResult(
+    id: string,
+    result: {
+      duration: number | null
+      resolution: string | null
+      fileSize: number | null
+      probeStatus: ProbeStatus
+    }
+  ): void {
+    // Intentionally NOT audited. updateProbeResult writes exactly the
+    // enrichment fields (probeStatus/duration/resolution/fileSize), and those
+    // are precisely the keys ENRICHMENT_ONLY_FIELDS suppresses on the upsert
+    // path — pure ffprobe enrichment fires ~1s after every download and would
+    // otherwise pepper the activity feed with empty "updated" lines. Probe
+    // FAILURES still audit via updateProbeStatus. Single write, no transaction
+    // needed.
+    this.inner.updateProbeResult(id, result)
   }
 
   delete(id: string): void {

@@ -130,6 +130,34 @@ export class AuditedCutRepository implements ICutRepository {
     })
   }
 
+  updateProbeResult(
+    id: string,
+    result: {
+      duration: number | null
+      resolution: string | null
+      fileSize: number | null
+      probeStatus: ProbeStatus
+    }
+  ): void {
+    this.transaction.run(() => {
+      const existing = this.inner.findById(id)
+      this.inner.updateProbeResult(id, result)
+
+      this.auditLog.append({
+        entityType: 'cut',
+        entityId: id,
+        action: 'probe_status_changed',
+        changes: JSON.stringify({
+          probeStatus: { old: existing?.probeStatus ?? null, new: result.probeStatus },
+          duration: { old: existing?.duration ?? null, new: result.duration },
+          resolution: { old: existing?.resolution ?? null, new: result.resolution },
+          fileSize: { old: existing?.fileSize ?? null, new: result.fileSize }
+        }),
+        createdAt: new Date().toISOString()
+      })
+    })
+  }
+
   delete(id: string): void {
     this.transaction.run(() => {
       this.inner.delete(id)

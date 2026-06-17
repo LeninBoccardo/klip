@@ -302,6 +302,28 @@ export class SqliteVideoRepository implements IVideoRepository {
       .run()
   }
 
+  updateProbeResult(
+    id: string,
+    result: {
+      duration: number | null
+      resolution: string | null
+      fileSize: number | null
+      probeStatus: ProbeStatus
+    }
+  ): void {
+    this.db
+      .update(videos)
+      .set({
+        duration: result.duration,
+        resolution: result.resolution,
+        fileSize: result.fileSize,
+        probeStatus: result.probeStatus,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(videos.id, id))
+      .run()
+  }
+
   delete(id: string): void {
     this.db.delete(videos).where(eq(videos.id, id)).run()
   }

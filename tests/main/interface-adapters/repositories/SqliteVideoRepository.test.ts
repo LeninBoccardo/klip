@@ -135,6 +135,42 @@ describe('SqliteVideoRepository', () => {
     expect(videoRepo.findAll()).toHaveLength(1)
   })
 
+  // ── updateProbeResult ──
+
+  it('updateProbeResult writes only the probe columns, preserving other fields (F10)', () => {
+    videoRepo.upsert(
+      makeVideo({
+        id: 'video-1',
+        status: 'active',
+        viewCount: 999,
+        title: 'Keep me',
+        probeStatus: 'pending',
+        duration: null,
+        resolution: null,
+        fileSize: null
+      })
+    )
+
+    videoRepo.updateProbeResult('video-1', {
+      duration: 120,
+      resolution: '1920x1080',
+      fileSize: 5_000_000,
+      probeStatus: 'complete'
+    })
+
+    expect(videoRepo.findById('video-1')).toMatchObject({
+      duration: 120,
+      resolution: '1920x1080',
+      fileSize: 5_000_000,
+      probeStatus: 'complete',
+      // Columns the probe write must NOT touch — a stale full-row upsert would
+      // have reverted these.
+      status: 'active',
+      viewCount: 999,
+      title: 'Keep me'
+    })
+  })
+
   // ── delete ──
 
   it('deletes a video by id', () => {
