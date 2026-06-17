@@ -200,7 +200,12 @@ function pushSchema(db: AppDatabase): void {
 
   // Indexes
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status)`)
-  db.run(sql`CREATE INDEX IF NOT EXISTS idx_creators_yt_channel_id ON creators(youtube_channel_id)`)
+  // Partial UNIQUE index (matches migration 0007) — enforces one creator per
+  // youtube_channel_id while allowing many NULLs. pushSchema previously kept the
+  // pre-0007 plain index, so :memory: tests didn't enforce this uniqueness. (F41)
+  db.run(
+    sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_creators_yt_channel_id_unique ON creators(youtube_channel_id) WHERE youtube_channel_id IS NOT NULL`
+  )
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_creator_id ON videos(creator_id)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status)`)
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_videos_status_created ON videos(status, created_at)`)
@@ -221,6 +226,13 @@ function pushSchema(db: AppDatabase): void {
   db.run(
     sql`CREATE INDEX IF NOT EXISTS idx_collection_cuts_position ON collection_cuts(collection_id, position)`
   )
+  // FK reverse-lookup indexes (mirrored from migration 0008) — back the
+  // "which collections contain X?" lookup and the FK CASCADE on video/cut
+  // delete. Present in production; were missing from the :memory: test schema. (F41)
+  db.run(
+    sql`CREATE INDEX IF NOT EXISTS idx_collection_videos_video_id ON collection_videos(video_id)`
+  )
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_collection_cuts_cut_id ON collection_cuts(cut_id)`)
   db.run(
     sql`CREATE INDEX IF NOT EXISTS idx_download_history_finished_at ON download_history(finished_at)`
   )

@@ -228,3 +228,30 @@ describe('Migrations — idempotency', () => {
     second.raw.close()
   })
 })
+
+describe('pushSchema (:memory:) ↔ migrations index parity', () => {
+  function indexNames(raw: BetterSqlite3.Database): string[] {
+    return (
+      raw
+        .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
+        .all() as Array<{ name: string }>
+    )
+      .map((r) => r.name)
+      .sort()
+  }
+
+  it('the in-memory pushSchema DB has the same idx_* set as a migrated on-disk DB (F41)', () => {
+    const migrated = initializeDatabase(dbPath)
+    const onDiskIdx = indexNames(migrated.raw)
+    migrated.raw.close()
+
+    const mem = initializeDatabase(':memory:')
+    const memIdx = indexNames(mem.raw)
+    mem.raw.close()
+
+    // The FK reverse-lookup indexes (from migration 0008) must exist in both.
+    expect(onDiskIdx).toContain('idx_collection_videos_video_id')
+    expect(onDiskIdx).toContain('idx_collection_cuts_cut_id')
+    expect(memIdx).toEqual(onDiskIdx)
+  })
+})
