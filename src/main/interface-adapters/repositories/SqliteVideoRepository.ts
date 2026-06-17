@@ -369,6 +369,13 @@ export class SqliteVideoRepository implements IVideoRepository {
     const direction = params.sortDirection === 'desc' ? desc(sortColumn) : asc(sortColumn)
     const offset = (params.page - 1) * params.pageSize
 
+    // The COUNT and the row SELECT below are two separate queries, not wrapped
+    // in one transaction/snapshot (F66). better-sqlite3 is synchronous and
+    // single-threaded, so a single findPaginated call can't be interleaved
+    // mid-method; the only effect is that a background write committing between
+    // the two queries could make `total` reflect a slightly different instant
+    // than `data` (a momentarily off-by-one total / empty last page). Accepted
+    // as cosmetic — wrap both in transactionScope.run() if exactness is needed.
     const [{ count }] = this.db
       .select({ count: sql<number>`count(*)` })
       .from(videos)

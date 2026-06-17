@@ -24,6 +24,11 @@ export default defineConfig({
       },
       {
         plugins: [react()],
+        // electron.vite.config injects __APP_VERSION__ from package.json at
+        // build time; vitest doesn't run that config, so stub it here (F72).
+        define: {
+          __APP_VERSION__: '"test"'
+        },
         test: {
           name: 'renderer',
           environment: 'jsdom',

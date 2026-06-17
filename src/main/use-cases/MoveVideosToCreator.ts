@@ -72,6 +72,16 @@ export class MoveVideosToCreator implements IMoveVideosToCreator {
         const targetDownloads = this.pathResolver.join(root, target.folderName, 'downloads')
         this.fsWriter.ensureDirectory(targetDownloads)
 
+        // NOTE (F22): the FS move and the DB row update below are deliberately
+        // NOT wrapped in an Operation saga / transaction (unlike MigrateRootFolder
+        // / RenderCutFromVideo). A hard kill between moveDirectory and
+        // upsertWithPrevious leaves the file at newDir while the DB still points
+        // at oldDir. This is an accepted tradeoff: it self-heals on the next
+        // reconcile (the id-keyed upsertVideoFromDisk re-discovers the file under
+        // the target creator and overwrites the row — no orphan, no duplicate),
+        // the only residual cost being a loss of user-set metadata (tags reset,
+        // title→meta.json) on that one row. Per-video, narrow window. If strict
+        // saga parity is ever needed, add a 'move_creator' OperationType.
         if (this.fsReader.directoryExists(oldDir)) {
           this.fsWriter.moveDirectory(oldDir, newDir)
         }

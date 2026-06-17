@@ -96,7 +96,9 @@ export function AppSidebar(): React.ReactElement {
 
       <SidebarFooter className="border-t px-4 py-3">
         <RenderProgressChip />
-        <p className="text-xs text-muted-foreground">{t('version', { version: '0.0.1' })}</p>
+        <p className="text-xs text-muted-foreground">
+          {t('version', { version: __APP_VERSION__ })}
+        </p>
       </SidebarFooter>
     </Sidebar>
   )

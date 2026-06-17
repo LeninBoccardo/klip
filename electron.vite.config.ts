@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import type { PluginOption } from 'vite'
 import { cpSync } from 'node:fs'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import pkg from './package.json'
 
 function copyMigrations(): PluginOption {
   return {
@@ -56,6 +57,11 @@ export default defineConfig({
     }
   },
   renderer: {
+    // Single source of truth for the app version (F72): inject package.json's
+    // version at build time so the sidebar/About no longer hardcode '0.0.1'.
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version)
+    },
     resolve: {
       alias: {
         '@': resolve('src/renderer'),

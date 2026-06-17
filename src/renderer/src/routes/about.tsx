@@ -24,7 +24,7 @@ function AboutPage(): React.ReactElement {
         <CardContent className="flex flex-col items-center justify-center gap-4 py-12">
           <Clapperboard className="size-16 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight">Klip</h1>
-          <Badge variant="secondary">v0.0.1</Badge>
+          <Badge variant="secondary">v{__APP_VERSION__}</Badge>
           <p className="max-w-md text-center text-muted-foreground">{t('appDescription')}</p>
         </CardContent>
       </Card>
