@@ -55,6 +55,7 @@ function makeMocks(): {
     findMissingForRecovery: vi.fn().mockReturnValue([]),
     findPaginated: vi.fn(),
     upsert: vi.fn(),
+    updateDetail: vi.fn(),
     updateStatus: vi.fn(),
     updateProbeStatus: vi.fn(),
     delete: vi.fn(),
@@ -145,7 +146,8 @@ describe('FetchVideoDetail', () => {
     expect(result.transcriptText).toBe('Hello world')
     expect(result.hasTranscript).toBe(true)
 
-    expect(mocks.videoRepo.upsert).toHaveBeenCalledWith(
+    expect(mocks.videoRepo.updateDetail).toHaveBeenCalledWith(
+      'video-1',
       expect.objectContaining({
         likeCount: 100,
         commentCount: 25,
@@ -157,6 +159,9 @@ describe('FetchVideoDetail', () => {
         detailFetchedAt: expect.any(String)
       })
     )
+    // F21: scoped detail write, never a full-row upsert (which would clobber a
+    // concurrent ffprobe enrichment's probe columns).
+    expect(mocks.videoRepo.upsert).not.toHaveBeenCalled()
   })
 
   it('persists detail with null transcript when fetchTranscript returns null', async () => {
@@ -179,7 +184,8 @@ describe('FetchVideoDetail', () => {
 
     expect(result.transcriptText).toBeNull()
     expect(result.hasTranscript).toBe(false)
-    expect(mocks.videoRepo.upsert).toHaveBeenCalledWith(
+    expect(mocks.videoRepo.updateDetail).toHaveBeenCalledWith(
+      'video-1',
       expect.objectContaining({
         isShort: true,
         transcriptPath: null
@@ -206,7 +212,7 @@ describe('FetchVideoDetail', () => {
     const result = await useCase.execute('video-1')
 
     expect(result.hasTranscript).toBe(false)
-    expect(mocks.videoRepo.upsert).toHaveBeenCalled()
+    expect(mocks.videoRepo.updateDetail).toHaveBeenCalled()
   })
 
   it('marks the video missing when YouTube returns 404 (unavailable)', async () => {
@@ -219,8 +225,8 @@ describe('FetchVideoDetail', () => {
 
     expect(mocks.markMissing.execute).toHaveBeenCalledWith('video-1', 'unavailable')
     expect(mocks.markActive.execute).not.toHaveBeenCalled()
-    // No upsert when fetch fails — we don't want stale detail.
-    expect(mocks.videoRepo.upsert).not.toHaveBeenCalled()
+    // No detail write when fetch fails — we don't want stale detail.
+    expect(mocks.videoRepo.updateDetail).not.toHaveBeenCalled()
   })
 
   it('marks the video missing when YouTube returns 403 (unauthorized)', async () => {

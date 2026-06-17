@@ -1,5 +1,5 @@
 import type { Video } from '@domain/entities'
-import type { IVideoRepository, VideoQueryParams } from '@domain/repositories'
+import type { IVideoRepository, VideoQueryParams, VideoDetailUpdate } from '@domain/repositories'
 import type { IAuditLogRepository } from '@domain/repositories'
 import type { ITransactionScope } from '@domain/ports'
 import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
@@ -187,6 +187,36 @@ export class AuditedVideoRepository implements IVideoRepository {
     // FAILURES still audit via updateProbeStatus. Single write, no transaction
     // needed.
     this.inner.updateProbeResult(id, result)
+  }
+
+  updateDetail(id: string, detail: VideoDetailUpdate): void {
+    this.transaction.run(() => {
+      const existing = this.inner.findById(id)
+      this.inner.updateDetail(id, detail)
+
+      // Mirror the upsert path's audit behavior. Detail-fetch columns are NOT
+      // in ENRICHMENT_ONLY_FIELDS (unlike ffprobe results), so a genuine detail
+      // change is a user-meaningful "updated" entry. We diff the prior row
+      // against it-plus-the-scoped-columns so the changes JSON matches what the
+      // old full-row upsert produced — same fields, same suppression rule. A
+      // missing prior row shouldn't happen (detail fetch presupposes the video
+      // exists), so there is nothing to audit.
+      if (!existing) return
+      const after = { ...existing, ...detail }
+      const changes = diffObjects(
+        existing as unknown as Record<string, unknown>,
+        after as unknown as Record<string, unknown>
+      )
+      if (changes && !isEnrichmentOnly(changes)) {
+        this.auditLog.append({
+          entityType: 'video',
+          entityId: id,
+          action: 'updated',
+          changes,
+          createdAt: new Date().toISOString()
+        })
+      }
+    })
   }
 
   delete(id: string): void {

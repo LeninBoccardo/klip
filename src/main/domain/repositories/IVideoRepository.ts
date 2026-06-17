@@ -4,6 +4,26 @@ import type { VideoQueryParams } from '@shared/types'
 
 export type { VideoQueryParams } from '@shared/types'
 
+/**
+ * Detail-fetch columns written by {@link IVideoRepository.updateDetail}.
+ * Disjoint from the probe columns written by {@link IVideoRepository.updateProbeResult},
+ * so the two scoped writers compose without clobbering each other (F21).
+ */
+export interface VideoDetailUpdate {
+  viewCount: number | null
+  likeCount: number | null
+  dislikeCount: number | null
+  commentCount: number | null
+  category: string | null
+  tags: string[]
+  uploadDate: string | null
+  description: string | null
+  isShort: boolean
+  transcriptPath: string | null
+  transcriptText: string | null
+  detailFetchedAt: string
+}
+
 export interface IVideoRepository {
   findAll(): Video[]
   findAllActive(): Video[]
@@ -72,6 +92,14 @@ export interface IVideoRepository {
       probeStatus: ProbeStatus
     }
   ): void
+  /**
+   * Column-scoped write of fetched detail metadata — the counterpart to
+   * {@link updateProbeResult} for FetchVideoDetail. Touches ONLY the detail
+   * columns (see {@link VideoDetailUpdate}), never the whole row, so a slow
+   * detail fetch interleaving with a concurrent ffprobe enrichment can't
+   * clobber the probe columns via a stale read-modify-write upsert (F21).
+   */
+  updateDetail(id: string, detail: VideoDetailUpdate): void
   delete(id: string): void
   findPaginated(params: VideoQueryParams): PaginatedResult<Video>
   /** Bulk-replace a path prefix in filePath and thumbnailPath columns */

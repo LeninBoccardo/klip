@@ -3,7 +3,7 @@ import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { AppDatabase } from '@main/framework-drivers/database'
 import { videos } from '@main/framework-drivers/database/schema'
 import type { Video } from '@domain/entities'
-import type { IVideoRepository, VideoQueryParams } from '@domain/repositories'
+import type { IVideoRepository, VideoQueryParams, VideoDetailUpdate } from '@domain/repositories'
 import type { PaginatedResult, EntityStatus, ProbeStatus } from '@domain/types'
 import { paginatedResult } from '@domain/types'
 import { escapeLike } from './escape-like'
@@ -323,6 +323,29 @@ export class SqliteVideoRepository implements IVideoRepository {
         resolution: result.resolution,
         fileSize: result.fileSize,
         probeStatus: result.probeStatus,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(videos.id, id))
+      .run()
+  }
+
+  updateDetail(id: string, detail: VideoDetailUpdate): void {
+    this.db
+      .update(videos)
+      .set({
+        viewCount: detail.viewCount,
+        likeCount: detail.likeCount,
+        dislikeCount: detail.dislikeCount,
+        commentCount: detail.commentCount,
+        category: detail.category,
+        // tags is a JSON text column (see upsert) — serialize like the insert path.
+        tags: JSON.stringify(detail.tags ?? []),
+        uploadDate: detail.uploadDate,
+        description: detail.description,
+        isShort: detail.isShort,
+        transcriptPath: detail.transcriptPath,
+        transcriptText: detail.transcriptText,
+        detailFetchedAt: detail.detailFetchedAt,
         updatedAt: new Date().toISOString()
       })
       .where(eq(videos.id, id))

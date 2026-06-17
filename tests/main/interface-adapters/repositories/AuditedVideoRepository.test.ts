@@ -190,6 +190,79 @@ describe('AuditedVideoRepository', () => {
     expect(repo.findById('video-1')?.probeStatus).toBe('complete')
   })
 
+  // ── updateDetail ──
+
+  it('DOES audit updateDetail as "updated" — detail is user-meaningful, not enrichment (F21)', () => {
+    repo.upsert(makeVideo())
+    const before = auditLogRepo.findByEntity('video', 'video-1').length
+
+    repo.updateDetail('video-1', {
+      viewCount: 5000,
+      likeCount: 100,
+      dislikeCount: null,
+      commentCount: 25,
+      category: 'Music',
+      tags: ['rock'],
+      uploadDate: '2024-03-15',
+      description: 'A song',
+      isShort: false,
+      transcriptPath: null,
+      transcriptText: null,
+      detailFetchedAt: '2025-02-01T00:00:00.000Z'
+    })
+
+    const logs = auditLogRepo.findByEntity('video', 'video-1')
+    // Unlike updateProbeResult, the detail columns are NOT in
+    // ENRICHMENT_ONLY_FIELDS, so a real change produces one "updated" entry —
+    // matching the behavior of the full-row upsert this replaced.
+    expect(logs.length).toBe(before + 1)
+    const updateLog = logs.find((l) => l.action === 'updated')
+    expect(updateLog).toBeDefined()
+    const changes = JSON.parse(updateLog!.changes!)
+    expect(changes.likeCount).toEqual({ old: null, new: 100 })
+    expect(changes.tags).toEqual({ old: [], new: ['rock'] })
+    // The write landed.
+    expect(repo.findById('video-1')?.likeCount).toBe(100)
+  })
+
+  it('does NOT audit updateDetail when nothing actually changed (F21)', () => {
+    // Seed the row already carrying the detail values, then re-write the same
+    // ones: the diff is empty (updatedAt is filtered) so no "updated" entry.
+    repo.upsert(
+      makeVideo({
+        viewCount: 5000,
+        likeCount: 100,
+        dislikeCount: null,
+        commentCount: 25,
+        category: 'Music',
+        tags: ['rock'],
+        uploadDate: '2024-03-15',
+        description: 'A song',
+        isShort: false,
+        transcriptPath: null,
+        detailFetchedAt: '2025-02-01T00:00:00.000Z'
+      })
+    )
+    const before = auditLogRepo.findByEntity('video', 'video-1').length
+
+    repo.updateDetail('video-1', {
+      viewCount: 5000,
+      likeCount: 100,
+      dislikeCount: null,
+      commentCount: 25,
+      category: 'Music',
+      tags: ['rock'],
+      uploadDate: '2024-03-15',
+      description: 'A song',
+      isShort: false,
+      transcriptPath: null,
+      transcriptText: null,
+      detailFetchedAt: '2025-02-01T00:00:00.000Z'
+    })
+
+    expect(auditLogRepo.findByEntity('video', 'video-1').length).toBe(before)
+  })
+
   // ── delete ──
 
   it('logs "deleted" action', () => {

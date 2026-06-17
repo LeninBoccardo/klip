@@ -126,11 +126,7 @@ export class FetchVideoDetail implements IFetchVideoDetail {
     let transcriptError: string | null = null
     try {
       const languagesPriority = buildTranscriptLanguagePriority(this.resolveAppLanguage())
-      transcriptPath = await this.downloader.fetchTranscript(
-        video.url,
-        videoDir,
-        languagesPriority
-      )
+      transcriptPath = await this.downloader.fetchTranscript(video.url, videoDir, languagesPriority)
       if (transcriptPath) {
         const raw = this.fsReader.readTextFile(transcriptPath)
         transcriptText = raw ? parseVtt(raw) : null
@@ -159,8 +155,12 @@ export class FetchVideoDetail implements IFetchVideoDetail {
     }
 
     const now = new Date().toISOString()
-    this.videoRepo.upsert({
-      ...video,
+    // Column-scoped write (not a full-row upsert): EnrichMediaMetadata may be
+    // probing this same row concurrently, and a full-row upsert from our stale
+    // snapshot would clobber its just-written duration/resolution/fileSize. The
+    // detail columns and probe columns are disjoint, so the two scoped writers
+    // compose cleanly (F21).
+    this.videoRepo.updateDetail(video.id, {
       likeCount: detail.likeCount,
       dislikeCount: detail.dislikeCount,
       commentCount: detail.commentCount,
@@ -172,8 +172,7 @@ export class FetchVideoDetail implements IFetchVideoDetail {
       isShort: detail.isShort,
       transcriptPath,
       transcriptText,
-      detailFetchedAt: now,
-      updatedAt: now
+      detailFetchedAt: now
     })
 
     // Auto-recovery: if the video was previously flagged missing (likely

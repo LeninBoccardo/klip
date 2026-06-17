@@ -171,6 +171,64 @@ describe('SqliteVideoRepository', () => {
     })
   })
 
+  // ── updateDetail ──
+
+  it('updateDetail writes only the detail columns, preserving probe columns (F21)', () => {
+    videoRepo.upsert(
+      makeVideo({
+        id: 'video-1',
+        status: 'active',
+        title: 'Keep me',
+        // probe columns a concurrent EnrichMediaMetadata would have just written
+        duration: 300,
+        resolution: '3840x2160',
+        fileSize: 9_000_000,
+        probeStatus: 'complete',
+        // detail columns start empty
+        viewCount: null,
+        likeCount: null,
+        tags: [],
+        transcriptText: null,
+        detailFetchedAt: null
+      })
+    )
+
+    videoRepo.updateDetail('video-1', {
+      viewCount: 5000,
+      likeCount: 100,
+      dislikeCount: 2,
+      commentCount: 25,
+      category: 'Music',
+      tags: ['rock', 'live'],
+      uploadDate: '2024-03-15',
+      description: 'A song',
+      isShort: false,
+      transcriptPath: '/videos/transcript.en.vtt',
+      transcriptText: 'Hello world',
+      detailFetchedAt: '2025-02-01T00:00:00.000Z'
+    })
+
+    expect(videoRepo.findById('video-1')).toMatchObject({
+      // detail columns updated
+      viewCount: 5000,
+      likeCount: 100,
+      commentCount: 25,
+      category: 'Music',
+      tags: ['rock', 'live'],
+      isShort: false,
+      transcriptText: 'Hello world',
+      detailFetchedAt: '2025-02-01T00:00:00.000Z',
+      // probe columns the detail write must NOT touch — a stale full-row upsert
+      // would have reverted these to the pre-probe snapshot (the F21 race).
+      duration: 300,
+      resolution: '3840x2160',
+      fileSize: 9_000_000,
+      probeStatus: 'complete',
+      status: 'active',
+      title: 'Keep me'
+    })
+  })
+
   // ── findByIds ──
 
   it('findByIds returns the matching videos and [] for an empty id list (F43)', () => {
