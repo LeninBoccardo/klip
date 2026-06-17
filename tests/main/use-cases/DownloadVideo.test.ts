@@ -544,6 +544,17 @@ describe('DownloadVideo', () => {
         status: 'error'
       })
     )
+    // F95: the outer catch must also persist a history row so the failed
+    // attempt shows in the Finished-downloads list (and Retry can act on it),
+    // mirroring performDownload's own terminal-error path.
+    expect(downloadHistoryRepo.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        youtubeUrl: 'https://youtube.com/watch?v=abc123',
+        videoId: null,
+        videoTitle: null,
+        status: 'error'
+      })
+    )
   })
 
   it('should not notify error when download throws the cancellation sentinel', async () => {

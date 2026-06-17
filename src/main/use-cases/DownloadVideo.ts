@@ -115,6 +115,7 @@ export class DownloadVideo implements IDownloadVideo {
     this.downloadQueue
       .enqueue(() => this.performDownload(downloadId, url, trimmedCreator))
       .catch((err) => {
+        const retriable = classifyDownloadError(err) === 'retriable'
         this.notifier.notify('download-progress', {
           downloadId,
           url,
@@ -123,12 +124,26 @@ export class DownloadVideo implements IDownloadVideo {
           eta: null,
           status: 'error',
           creatorName: trimmedCreator,
-          retriable: classifyDownloadError(err) === 'retriable'
+          retriable
         })
         console.error(
           `[klip] Download queue error (${downloadId}):`,
           redactError(err, this.rootPath.value)
         )
+        // Mirror performDownload's terminal-error history row. This outer catch
+        // is the one terminal path that otherwise persisted nothing, so a
+        // failure here (e.g. the inner catch's notifier throwing) would be
+        // invisible to the Finished-downloads list and its Retry button (F95).
+        this.appendHistory({
+          youtubeUrl: url,
+          videoId: null,
+          videoTitle: null,
+          thumbnailUrl: null,
+          creatorFolderName: slugify(trimmedCreator),
+          status: 'error',
+          errorMessage: err instanceof Error ? err.message : String(err),
+          errorRetryable: retriable
+        })
       })
 
     return { downloadId }
