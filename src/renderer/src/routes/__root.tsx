@@ -23,6 +23,7 @@ import {
 } from '@ui/breadcrumb'
 import { Separator } from '@ui/separator'
 import { queryClient } from '@/lib/query-client'
+import { queryKeys } from '@/lib/query-keys'
 import { useDbListener } from '@/hooks/use-db-listener'
 import { useDownloadProgressListener } from '@/hooks/use-downloads'
 import { useUpdaterStatus, useInstallUpdate } from '@/hooks/use-updater'
@@ -178,6 +179,39 @@ const ROUTE_KEYS: Record<
   '/about': 'about'
 }
 
+/**
+ * Resolve a localized/display label for a dynamic detail match (e.g.
+ * `/creators/$creatorId`) so the breadcrumb shows the entity's name instead of
+ * the raw UUID in the pathname. Reads the already-loaded entity from the query
+ * cache (the detail page populates it). Returns null when the route isn't a
+ * known dynamic detail or the entity isn't cached yet — the caller then skips
+ * the crumb rather than render an opaque id. (F29)
+ */
+function dynamicCrumbLabel(routeId: string, params: Record<string, string>): string | null {
+  switch (routeId) {
+    case '/creators/$creatorId': {
+      const d = queryClient.getQueryData(queryKeys.creators.detail(params.creatorId)) as
+        | { name?: string }
+        | undefined
+      return d?.name ?? null
+    }
+    case '/videos/$videoId': {
+      const d = queryClient.getQueryData(queryKeys.videos.detail(params.videoId)) as
+        | { title?: string }
+        | undefined
+      return d?.title ?? null
+    }
+    case '/collections/$collectionId': {
+      const d = queryClient.getQueryData(queryKeys.collections.detail(params.collectionId)) as
+        | { name?: string }
+        | undefined
+      return d?.name ?? null
+    }
+    default:
+      return null
+  }
+}
+
 function AppBreadcrumb(): React.ReactElement | null {
   const { t } = useTranslation('navigation')
   const matches = useMatches()
@@ -189,7 +223,22 @@ function AppBreadcrumb(): React.ReactElement | null {
   for (const m of matches) {
     if (m.id === '__root__') continue
     const key = ROUTE_KEYS[m.pathname]
-    const label = key ? t(key) : m.pathname.split('/').pop() || ''
+    let label: string
+    if (key) {
+      label = t(key)
+    } else {
+      // Not a static top-level route. If it's a dynamic detail route, use the
+      // entity's display name; never fall back to the raw UUID — skip instead.
+      const dynamic = dynamicCrumbLabel(m.routeId, m.params as Record<string, string>)
+      const tail = m.pathname.split('/').pop() ?? ''
+      const isDynamicId = Object.values((m.params ?? {}) as Record<string, string>).includes(tail)
+      if (isDynamicId) {
+        if (!dynamic) continue
+        label = dynamic
+      } else {
+        label = tail
+      }
+    }
     if (!label) continue
     segmentsMap.set(m.pathname, { path: m.pathname, label })
   }

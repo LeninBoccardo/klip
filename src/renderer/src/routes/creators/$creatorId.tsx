@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useShortcut } from '@/hooks/use-shortcut'
+import { useBackOnEscape } from '@/hooks/use-back-on-escape'
 import { useTranslation } from 'react-i18next'
 import { useCreatorById } from '@/hooks/use-creators'
 import { useVideosPaginated, useDeleteVideo, useRestoreVideo } from '@/hooks/use-videos'
@@ -40,9 +40,7 @@ export const Route = createFileRoute('/creators/$creatorId')({
 function CreatorDetailPage(): React.ReactElement {
   const { t } = useTranslation('creators')
   const { creatorId } = Route.useParams()
-  const router = useRouter()
-  useShortcut('escape', () => router.history.back())
-  useShortcut('backspace', () => router.history.back())
+  useBackOnEscape()
   const { data: creator, isLoading: creatorLoading } = useCreatorById(creatorId)
 
   if (creatorLoading) {
