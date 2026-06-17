@@ -154,7 +154,7 @@ describe('MoveVideosToCreator', () => {
   })
 
   it('moves a video on disk and rewrites paths in the DB row', async () => {
-    vi.mocked(creatorRepo.findById).mockReturnValue(makeCreator('new'))
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) => makeCreator(id))
     const video = makeVideo({ id: 'v-1', creatorId: 'old' })
     vi.mocked(videoRepo.findById).mockReturnValue(video)
 
@@ -171,8 +171,53 @@ describe('MoveVideosToCreator', () => {
     expect(updated.thumbnailPath).toBe('/root/new/downloads/v-1/thumb.jpg')
   })
 
+  it('builds disk paths from folderName, not the entity id (F03)', async () => {
+    // Registered creators carry a UUID id with a separate slug folderName.
+    // Using the id for disk paths pointed at a directory that never existed,
+    // so the move was silently skipped while the DB creatorId flipped anyway
+    // — a permanent mis-linkage. Paths must be keyed by folderName.
+    const source: Creator = { ...makeCreator('uuid-source'), folderName: 'source-slug' }
+    const target: Creator = { ...makeCreator('uuid-target'), folderName: 'target-slug' }
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) =>
+      id === 'uuid-target' ? target : id === 'uuid-source' ? source : null
+    )
+    const video = makeVideo({
+      id: 'v-1',
+      creatorId: 'uuid-source',
+      filePath: '/root/source-slug/downloads/v-1/v-1.mp4',
+      thumbnailPath: '/root/source-slug/downloads/v-1/thumb.jpg'
+    })
+    vi.mocked(videoRepo.findById).mockReturnValue(video)
+
+    const result = await useCase.execute({ videoIds: ['v-1'], targetCreatorId: 'uuid-target' })
+
+    expect(result.moved).toBe(1)
+    // Disk paths use the slugs, never the UUIDs.
+    expect(fsWriter.moveDirectory).toHaveBeenCalledWith(
+      '/root/source-slug/downloads/v-1',
+      '/root/target-slug/downloads/v-1'
+    )
+    const [updated] = vi.mocked(videoRepo.upsertWithPrevious).mock.calls[0]
+    // ...but the DB FK references the target's UUID id.
+    expect(updated.creatorId).toBe('uuid-target')
+    expect(updated.filePath).toBe('/root/target-slug/downloads/v-1/v-1.mp4')
+  })
+
+  it('records an error when the source creator cannot be resolved', async () => {
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) =>
+      id === 'new' ? makeCreator('new') : null
+    )
+    vi.mocked(videoRepo.findById).mockReturnValue(makeVideo({ id: 'v-1', creatorId: 'orphan' }))
+
+    const result = await useCase.execute({ videoIds: ['v-1'], targetCreatorId: 'new' })
+
+    expect(result.moved).toBe(0)
+    expect(result.errors['v-1']).toContain('orphan')
+    expect(fsWriter.moveDirectory).not.toHaveBeenCalled()
+  })
+
   it('skips videos that are already in the target creator', async () => {
-    vi.mocked(creatorRepo.findById).mockReturnValue(makeCreator('new'))
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) => makeCreator(id))
     vi.mocked(videoRepo.findById).mockReturnValue(makeVideo({ creatorId: 'new' }))
 
     const result = await useCase.execute({ videoIds: ['v-1'], targetCreatorId: 'new' })
@@ -183,7 +228,7 @@ describe('MoveVideosToCreator', () => {
   })
 
   it('skips videos with status != active', async () => {
-    vi.mocked(creatorRepo.findById).mockReturnValue(makeCreator('new'))
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) => makeCreator(id))
     vi.mocked(videoRepo.findById).mockReturnValue(makeVideo({ status: 'deleted' }))
 
     const result = await useCase.execute({ videoIds: ['v-1'], targetCreatorId: 'new' })
@@ -193,7 +238,7 @@ describe('MoveVideosToCreator', () => {
   })
 
   it('still updates the DB when source dir is missing on disk', async () => {
-    vi.mocked(creatorRepo.findById).mockReturnValue(makeCreator('new'))
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) => makeCreator(id))
     vi.mocked(videoRepo.findById).mockReturnValue(makeVideo())
     vi.mocked(fsReader.directoryExists).mockReturnValue(false)
 
@@ -205,7 +250,7 @@ describe('MoveVideosToCreator', () => {
   })
 
   it('records per-video errors without aborting the batch', async () => {
-    vi.mocked(creatorRepo.findById).mockReturnValue(makeCreator('new'))
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) => makeCreator(id))
     vi.mocked(videoRepo.findById)
       .mockReturnValueOnce(makeVideo({ id: 'v-1', creatorId: 'old' }))
       .mockReturnValueOnce(makeVideo({ id: 'v-2', creatorId: 'old' }))
@@ -227,7 +272,7 @@ describe('MoveVideosToCreator', () => {
   })
 
   it('emits a single db-updated notification when at least one move succeeds', async () => {
-    vi.mocked(creatorRepo.findById).mockReturnValue(makeCreator('new'))
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) => makeCreator(id))
     vi.mocked(videoRepo.findById).mockReturnValue(makeVideo())
 
     await useCase.execute({ videoIds: ['v-1'], targetCreatorId: 'new' })
@@ -239,7 +284,7 @@ describe('MoveVideosToCreator', () => {
   })
 
   it('does not emit db-updated when nothing moved', async () => {
-    vi.mocked(creatorRepo.findById).mockReturnValue(makeCreator('new'))
+    vi.mocked(creatorRepo.findById).mockImplementation((id: string) => makeCreator(id))
     vi.mocked(videoRepo.findById).mockReturnValue(makeVideo({ creatorId: 'new' }))
 
     await useCase.execute({ videoIds: ['v-1'], targetCreatorId: 'new' })

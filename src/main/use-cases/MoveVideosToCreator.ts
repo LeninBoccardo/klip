@@ -51,14 +51,25 @@ export class MoveVideosToCreator implements IMoveVideosToCreator {
         continue
       }
 
-      const oldDir = this.pathResolver.join(root, video.creatorId, 'downloads', videoId)
-      const newDir = this.pathResolver.join(root, targetCreatorId, 'downloads', videoId)
+      // Disk paths are keyed by the creator's folderName (a slug), NOT the
+      // entity id (a UUID). Using the id worked only for download-created
+      // creators where id happened to equal folderName; for a RegisterCreator'd
+      // creator (UUID id) the path didn't exist, the move was silently skipped,
+      // and the DB creatorId flipped anyway — leaving the file mis-linked.
+      const sourceCreator = this.creatorRepo.findById(video.creatorId)
+      if (!sourceCreator) {
+        errors[videoId] = `Source creator "${video.creatorId}" not found`
+        continue
+      }
+
+      const oldDir = this.pathResolver.join(root, sourceCreator.folderName, 'downloads', videoId)
+      const newDir = this.pathResolver.join(root, target.folderName, 'downloads', videoId)
 
       try {
         // Make sure the destination tree exists. moveDirectory itself only
         // moves the leaf; the parent `<root>/<target>/downloads/` may not
         // exist yet if the target creator has never had a download.
-        const targetDownloads = this.pathResolver.join(root, targetCreatorId, 'downloads')
+        const targetDownloads = this.pathResolver.join(root, target.folderName, 'downloads')
         this.fsWriter.ensureDirectory(targetDownloads)
 
         if (this.fsReader.directoryExists(oldDir)) {
