@@ -42,6 +42,7 @@ export function toVideoDto(video: Video): VideoDto {
     duration: video.duration,
     resolution: video.resolution,
     fileSize: video.fileSize,
+    frameRate: video.frameRate,
     hasThumbnail: video.thumbnailPath !== null,
     hasTranscript: video.transcriptPath !== null,
     downloadDate: video.downloadDate,

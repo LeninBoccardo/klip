@@ -78,10 +78,10 @@ export interface IVideoRepository {
   updateProbeStatus(id: string, probeStatus: ProbeStatus): void
   /**
    * Column-scoped write of probe results. Touches ONLY duration, resolution,
-   * fileSize and probeStatus — never the whole row — so a concurrent writer
-   * (e.g. FetchVideoDetail setting viewCount/transcript, or MarkVideoMissing
-   * flipping status) that interleaves with a slow ffprobe is not clobbered by a
-   * stale read-modify-write upsert.
+   * fileSize, frameRate and probeStatus — never the whole row — so a concurrent
+   * writer (e.g. FetchVideoDetail setting viewCount/transcript, or
+   * MarkVideoMissing flipping status) that interleaves with a slow ffprobe is
+   * not clobbered by a stale read-modify-write upsert.
    */
   updateProbeResult(
     id: string,
@@ -89,6 +89,7 @@ export interface IVideoRepository {
       duration: number | null
       resolution: string | null
       fileSize: number | null
+      frameRate: number | null
       probeStatus: ProbeStatus
     }
   ): void

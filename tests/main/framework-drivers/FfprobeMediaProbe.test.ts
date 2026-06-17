@@ -49,24 +49,82 @@ describe('FfprobeMediaProbe', () => {
     probe = new FfprobeMediaProbe(binaryResolver)
   })
 
-  it('parses duration and resolution from a well-formed video probe', async () => {
+  it('parses duration, resolution, and frame rate from a well-formed video probe', async () => {
     emitFfprobeRun(
       JSON.stringify({
         format: { duration: '120.5' },
-        streams: [{ codec_type: 'audio' }, { codec_type: 'video', width: 1920, height: 1080 }]
+        streams: [
+          { codec_type: 'audio' },
+          { codec_type: 'video', width: 1920, height: 1080, r_frame_rate: '30000/1001' }
+        ]
       }),
       0
     )
 
     const result = await probe.probe('C:/file.mp4')
-    expect(result).toEqual({
-      duration: 120.5,
-      resolution: '1920x1080',
-      fileSize: 12345
-    })
+    expect(result.duration).toBe(120.5)
+    expect(result.resolution).toBe('1920x1080')
+    expect(result.fileSize).toBe(12345)
+    // 30000/1001 is NTSC 29.97fps — the whole point of REAL, not INTEGER (F71).
+    expect(result.frameRate).toBeCloseTo(29.97, 2)
   })
 
-  it('falls back to null resolution when there is no video stream (audio-only)', async () => {
+  it('parses an integer-ratio frame rate exactly (25/1 → 25)', async () => {
+    emitFfprobeRun(
+      JSON.stringify({
+        format: { duration: '10' },
+        streams: [{ codec_type: 'video', width: 1920, height: 1080, r_frame_rate: '25/1' }]
+      }),
+      0
+    )
+
+    const result = await probe.probe('C:/pal.mp4')
+    expect(result.frameRate).toBe(25)
+  })
+
+  it('falls back to avg_frame_rate when r_frame_rate is 0/0 (F71)', async () => {
+    emitFfprobeRun(
+      JSON.stringify({
+        format: { duration: '10' },
+        streams: [
+          {
+            codec_type: 'video',
+            width: 1920,
+            height: 1080,
+            r_frame_rate: '0/0',
+            avg_frame_rate: '24/1'
+          }
+        ]
+      }),
+      0
+    )
+
+    const result = await probe.probe('C:/film.mp4')
+    expect(result.frameRate).toBe(24)
+  })
+
+  it('returns null frame rate when both rates are 0/0 (unparseable)', async () => {
+    emitFfprobeRun(
+      JSON.stringify({
+        format: { duration: '10' },
+        streams: [
+          {
+            codec_type: 'video',
+            width: 1920,
+            height: 1080,
+            r_frame_rate: '0/0',
+            avg_frame_rate: '0/0'
+          }
+        ]
+      }),
+      0
+    )
+
+    const result = await probe.probe('C:/weird.mp4')
+    expect(result.frameRate).toBeNull()
+  })
+
+  it('falls back to null resolution and frame rate when there is no video stream (audio-only)', async () => {
     emitFfprobeRun(
       JSON.stringify({
         format: { duration: '60.0' },
@@ -79,6 +137,7 @@ describe('FfprobeMediaProbe', () => {
     expect(result.duration).toBe(60)
     expect(result.resolution).toBeNull()
     expect(result.fileSize).toBe(12345)
+    expect(result.frameRate).toBeNull()
   })
 
   it('returns null resolution when video stream is missing width/height', async () => {

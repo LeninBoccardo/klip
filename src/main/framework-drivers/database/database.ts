@@ -72,6 +72,7 @@ function pushSchema(db: AppDatabase): void {
       duration INTEGER,
       resolution TEXT,
       file_size INTEGER,
+      frame_rate REAL,
       file_path TEXT NOT NULL,
       thumbnail_path TEXT,
       download_date TEXT,

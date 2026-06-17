@@ -13,6 +13,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     duration: 120,
     resolution: '1920x1080',
     fileSize: 1000,
+    frameRate: null,
     filePath: '/root/creator-1/downloads/video-1/video.mp4',
     thumbnailPath: null,
     downloadDate: null,

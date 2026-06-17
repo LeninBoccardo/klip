@@ -8,6 +8,8 @@ export interface Video {
   duration: number | null
   resolution: string | null
   fileSize: number | null
+  /** Frames per second from ffprobe (e.g. 29.97); null until probed. */
+  frameRate: number | null
   filePath: string
   thumbnailPath: string | null
   downloadDate: string | null

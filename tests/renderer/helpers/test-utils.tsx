@@ -122,6 +122,7 @@ export function makeVideoDto(overrides: Partial<VideoDto> = {}): VideoDto {
     duration: 120,
     resolution: '1920x1080',
     fileSize: 50 * 1024 * 1024,
+    frameRate: null,
     hasThumbnail: false,
     hasTranscript: false,
     downloadDate: '2026-01-01T00:00:00Z',

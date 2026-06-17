@@ -39,6 +39,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     duration: 120,
     resolution: '1920x1080',
     fileSize: 50_000_000,
+    frameRate: null,
     filePath: '/videos/test.mp4',
     thumbnailPath: '/videos/thumb.jpg',
     downloadDate: '2025-01-02T00:00:00.000Z',

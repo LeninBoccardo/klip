@@ -16,6 +16,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     duration: null,
     resolution: null,
     fileSize: null,
+    frameRate: null,
     filePath: '/root/creator-1/downloads/video-1/video.mp4',
     thumbnailPath: null,
     downloadDate: null,
@@ -66,7 +67,8 @@ function makeCut(overrides: Partial<Cut> = {}): Cut {
 const probeResult: MediaProbeResult = {
   duration: 120,
   resolution: '1920x1080',
-  fileSize: 50_000_000
+  fileSize: 50_000_000,
+  frameRate: 30
 }
 
 // ── Mock builders ──
@@ -131,16 +133,39 @@ describe('EnrichMediaMetadata', () => {
     const result = await useCase.execute()
 
     expect(mediaProbe.probe).toHaveBeenCalledWith(video.filePath)
-    // F10: column-scoped write — EXACTLY the four probe columns, no full-row
-    // upsert that would clobber concurrent status/detail writes.
+    // F10/F71: column-scoped write — EXACTLY the probe columns (now including
+    // frameRate), no full-row upsert that would clobber concurrent status/detail
+    // writes.
     expect(videoRepo.updateProbeResult).toHaveBeenCalledWith('video-1', {
       duration: 120,
       resolution: '1920x1080',
       fileSize: 50_000_000,
+      frameRate: 30,
       probeStatus: 'complete'
     })
     expect(videoRepo.upsert).not.toHaveBeenCalled()
     expect(result.videosProbed).toBe(1)
+  })
+
+  it('preserves the existing frameRate when the probe reports none (F71)', async () => {
+    // A re-probe that can't read the rate (e.g. audio-only remux) must not wipe
+    // a frameRate an earlier probe already captured — mirrors the duration/etc.
+    // `?? video.X` fallbacks.
+    const video = makeVideo({ frameRate: 60 })
+    vi.mocked(videoRepo.findByProbeStatus).mockReturnValue([video])
+    vi.mocked(mediaProbe.probe).mockResolvedValue({
+      duration: 120,
+      resolution: '1920x1080',
+      fileSize: 50_000_000,
+      frameRate: null
+    })
+
+    await useCase.execute()
+
+    expect(videoRepo.updateProbeResult).toHaveBeenCalledWith(
+      'video-1',
+      expect.objectContaining({ frameRate: 60 })
+    )
   })
 
   it('probes pending cuts and updates metadata + probeStatus to complete', async () => {
@@ -247,7 +272,8 @@ describe('EnrichMediaMetadata', () => {
     vi.mocked(mediaProbe.probe).mockResolvedValue({
       duration: null,
       resolution: null,
-      fileSize: null
+      fileSize: null,
+      frameRate: null
     })
 
     await useCase.execute()
@@ -256,6 +282,7 @@ describe('EnrichMediaMetadata', () => {
       duration: 60,
       resolution: '1280x720',
       fileSize: 10_000,
+      frameRate: null,
       probeStatus: 'complete'
     })
   })

@@ -9,6 +9,21 @@ import type { IMediaProbe } from '@domain/ports'
 const FFPROBE_TIMEOUT_MS = 60_000
 
 /**
+ * Parse an ffprobe frame-rate rational ("num/den", e.g. "30000/1001") to fps.
+ * Returns null for anything unusable: a non-string, a missing/zero denominator,
+ * a zero numerator (ffprobe emits "0/0" for streams with no defined rate), or
+ * non-finite parts. A bare integer string ("25") is treated as "25/1".
+ */
+function parseFrameRate(raw: unknown): number | null {
+  if (typeof raw !== 'string') return null
+  const [n, d] = raw.split('/')
+  const num = Number(n)
+  const den = d === undefined ? 1 : Number(d)
+  if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0 || num === 0) return null
+  return num / den
+}
+
+/**
  * ffprobe-backed implementation of IMediaProbe.
  *
  * Spawns ffprobe as a child process with JSON output,
@@ -23,7 +38,8 @@ export class FfprobeMediaProbe implements IMediaProbe {
     const result: MediaProbeResult = {
       duration: null,
       resolution: null,
-      fileSize: null
+      fileSize: null,
+      frameRate: null
     }
 
     // Get file size from OS stat (more reliable than ffprobe for this)
@@ -34,10 +50,11 @@ export class FfprobeMediaProbe implements IMediaProbe {
       // Non-fatal
     }
 
-    // Spawn ffprobe for duration + resolution
+    // Spawn ffprobe for duration + resolution + frame rate
     const ffprobeResult = await this.runFfprobe(bin, filePath)
     result.duration = ffprobeResult.duration
     result.resolution = ffprobeResult.resolution
+    result.frameRate = ffprobeResult.frameRate
 
     return result
   }
@@ -45,7 +62,7 @@ export class FfprobeMediaProbe implements IMediaProbe {
   private runFfprobe(
     bin: string,
     filePath: string
-  ): Promise<{ duration: number | null; resolution: string | null }> {
+  ): Promise<{ duration: number | null; resolution: string | null; frameRate: number | null }> {
     return new Promise((resolve, reject) => {
       const args = [
         // `error` surfaces ffprobe's actual error message on stderr (e.g.
@@ -102,7 +119,7 @@ export class FfprobeMediaProbe implements IMediaProbe {
           const json = JSON.parse(stdout)
           const duration = json.format?.duration ? parseFloat(json.format.duration) : null
 
-          // Find the video stream for resolution
+          // Find the video stream for resolution + frame rate
           const videoStream = json.streams?.find(
             (s: { codec_type: string }) => s.codec_type === 'video'
           )
@@ -111,7 +128,13 @@ export class FfprobeMediaProbe implements IMediaProbe {
               ? `${videoStream.width}x${videoStream.height}`
               : null
 
-          resolve({ duration, resolution })
+          // Prefer r_frame_rate (the stream's base/declared rate); fall back to
+          // avg_frame_rate for containers that only report the average. Both are
+          // "num/den" rationals; parseFrameRate handles "0/0" and bad values.
+          const frameRate =
+            parseFrameRate(videoStream?.r_frame_rate) ?? parseFrameRate(videoStream?.avg_frame_rate)
+
+          resolve({ duration, resolution, frameRate })
         } catch (e) {
           reject(new Error(`ffprobe: failed to parse JSON output: ${e}`))
         }

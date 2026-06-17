@@ -18,6 +18,8 @@ export interface VideoDto {
   duration: number | null
   resolution: string | null
   fileSize: number | null
+  /** Frames per second from ffprobe (e.g. 29.97); null until probed. */
+  frameRate: number | null
   hasThumbnail: boolean
   hasTranscript: boolean
   downloadDate: string | null

@@ -39,6 +39,7 @@ export class EnrichMediaMetadata implements IEnrichMediaMetadata {
           duration: metadata.duration ?? video.duration,
           resolution: metadata.resolution ?? video.resolution,
           fileSize: metadata.fileSize ?? video.fileSize,
+          frameRate: metadata.frameRate ?? video.frameRate,
           probeStatus: 'complete'
         })
         result.videosProbed++

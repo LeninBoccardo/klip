@@ -167,7 +167,8 @@ function useSourceVideoBootstrap(sourceVideoId: string): void {
         sourceVideoId,
         sourceTitle: video.title,
         sourceCreatorName: creator?.name ?? '',
-        durationSec: duration
+        durationSec: duration,
+        frameRateFps: video.frameRate
       })
     })().catch((err) => {
       console.error('[klip:editor] source video bootstrap failed:', err)

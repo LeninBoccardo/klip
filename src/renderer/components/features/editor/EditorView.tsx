@@ -33,16 +33,16 @@ import { RenderProgress } from './RenderProgress'
  * Range scrubbing works because the klip-media:// handler delegates
  * to `net.fetch(file://)`, which honours Range natively.
  */
-// Frame-step shortcut delta. The probe doesn't currently capture frame rate
-// (MediaProbeResult exposes duration / resolution / fileSize only), so we
-// fall back to 1/30s — the right magnitude for "nudge by one frame" until
-// the probe pipeline grows a frameRate field in a later phase.
-const FRAME_DURATION_SEC = 1 / 30
+// Fallback frame-step delta when the source frame rate is unknown (probe
+// pending or no video stream). 1/30s is the right magnitude for "nudge by one
+// frame"; when ffprobe gives us the real rate we use 1/fps instead (F71).
+const FALLBACK_FRAME_DURATION_SEC = 1 / 30
 
 export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.ReactElement {
   const { t } = useTranslation('editor')
   const sourceTitle = useEditorStore((s) => s.sourceTitle)
   const sourceCreatorName = useEditorStore((s) => s.sourceCreatorName)
+  const sourceFrameRate = useEditorStore((s) => s.sourceFrameRate)
   const timeline = useEditorStore((s) => s.timeline)
   const setCursor = useEditorStore((s) => s.setCursor)
   const setInPoint = useEditorStore((s) => s.setInPoint)
@@ -124,12 +124,18 @@ export function EditorView({ sourceVideoId }: { sourceVideoId: string }): React.
     [setCursor]
   )
 
+  // One frame in seconds for the comma/period nudge: 1/fps from the probed
+  // source rate, or the 1/30s fallback when the rate is unknown. Guards against
+  // a non-positive/non-finite rate so a bad probe can't produce a 0 or NaN step.
+  const frameDurationSec =
+    sourceFrameRate && sourceFrameRate > 0 ? 1 / sourceFrameRate : FALLBACK_FRAME_DURATION_SEC
+
   const handleFrameStepBack = useCallback(() => {
-    seekRelative(-FRAME_DURATION_SEC)
-  }, [seekRelative])
+    seekRelative(-frameDurationSec)
+  }, [seekRelative, frameDurationSec])
   const handleFrameStepForward = useCallback(() => {
-    seekRelative(FRAME_DURATION_SEC)
-  }, [seekRelative])
+    seekRelative(frameDurationSec)
+  }, [seekRelative, frameDurationSec])
   const handleArrowLeft = useCallback(
     (e: KeyboardEvent) => {
       seekRelative(e.shiftKey ? -5 : -1)

@@ -1,0 +1,1 @@
+ALTER TABLE `videos` ADD `frame_rate` real;

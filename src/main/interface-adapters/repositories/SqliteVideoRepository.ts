@@ -202,6 +202,7 @@ export class SqliteVideoRepository implements IVideoRepository {
         duration: video.duration,
         resolution: video.resolution,
         fileSize: video.fileSize,
+        frameRate: video.frameRate,
         filePath: video.filePath,
         thumbnailPath: video.thumbnailPath,
         downloadDate: video.downloadDate,
@@ -232,6 +233,7 @@ export class SqliteVideoRepository implements IVideoRepository {
           duration: sql`excluded.duration`,
           resolution: sql`excluded.resolution`,
           fileSize: sql`excluded.file_size`,
+          frameRate: sql`excluded.frame_rate`,
           filePath: sql`excluded.file_path`,
           thumbnailPath: sql`excluded.thumbnail_path`,
           downloadDate: sql`excluded.download_date`,
@@ -313,6 +315,7 @@ export class SqliteVideoRepository implements IVideoRepository {
       duration: number | null
       resolution: string | null
       fileSize: number | null
+      frameRate: number | null
       probeStatus: ProbeStatus
     }
   ): void {
@@ -322,6 +325,7 @@ export class SqliteVideoRepository implements IVideoRepository {
         duration: result.duration,
         resolution: result.resolution,
         fileSize: result.fileSize,
+        frameRate: result.frameRate,
         probeStatus: result.probeStatus,
         updatedAt: new Date().toISOString()
       })

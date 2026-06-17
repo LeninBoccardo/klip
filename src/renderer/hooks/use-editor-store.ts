@@ -33,6 +33,13 @@ interface EditorState {
   /** Display name of the creator that owns the source video. */
   sourceCreatorName: string | null
 
+  /**
+   * Frames per second of the source video (from ffprobe), or null when the
+   * probe hasn't run / has no rate. Drives the exact one-frame nudge for the
+   * comma/period shortcuts; the editor falls back to 1/30s when null (F71).
+   */
+  sourceFrameRate: number | null
+
   /** The graph-shaped timeline. Initialised once the source duration is known. */
   timeline: TimelineState | null
 
@@ -52,6 +59,7 @@ interface EditorState {
     sourceTitle: string
     sourceCreatorName: string
     durationSec: number
+    frameRateFps: number | null
   }): void
 
   // ── Timeline mutations ──
@@ -88,6 +96,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   sourceVideoId: null,
   sourceTitle: null,
   sourceCreatorName: null,
+  sourceFrameRate: null,
   timeline: null,
   renderMode: 'copy',
   activeJobId: null,
@@ -96,12 +105,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeJobPercent: null,
   activeJobError: null,
 
-  initSourceVideo({ sourceVideoId, sourceTitle, sourceCreatorName, durationSec }) {
+  initSourceVideo({ sourceVideoId, sourceTitle, sourceCreatorName, durationSec, frameRateFps }) {
     const timeline = timelineForSource({ sourceVideoId, durationSec })
     set({
       sourceVideoId,
       sourceTitle,
       sourceCreatorName,
+      sourceFrameRate: frameRateFps,
       timeline,
       // A fresh source clears any stale job mirror — the previous render
       // (if any) is unrelated to the new working surface.

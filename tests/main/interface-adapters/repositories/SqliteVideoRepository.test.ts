@@ -39,6 +39,7 @@ function makeVideo(overrides: Partial<Video> = {}): Video {
     duration: 120,
     resolution: '1920x1080',
     fileSize: 50_000_000,
+    frameRate: null,
     filePath: '/videos/test.mp4',
     thumbnailPath: '/videos/thumb.jpg',
     downloadDate: '2025-01-02T00:00:00.000Z',
@@ -147,7 +148,8 @@ describe('SqliteVideoRepository', () => {
         probeStatus: 'pending',
         duration: null,
         resolution: null,
-        fileSize: null
+        fileSize: null,
+        frameRate: null
       })
     )
 
@@ -155,6 +157,7 @@ describe('SqliteVideoRepository', () => {
       duration: 120,
       resolution: '1920x1080',
       fileSize: 5_000_000,
+      frameRate: 29.97,
       probeStatus: 'complete'
     })
 
@@ -162,6 +165,7 @@ describe('SqliteVideoRepository', () => {
       duration: 120,
       resolution: '1920x1080',
       fileSize: 5_000_000,
+      frameRate: 29.97,
       probeStatus: 'complete',
       // Columns the probe write must NOT touch — a stale full-row upsert would
       // have reverted these.

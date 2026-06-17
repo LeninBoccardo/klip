@@ -85,6 +85,13 @@
       "when": 1778620923619,
       "tag": "0011_slimy_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1781722746215,
+      "tag": "0012_nice_quicksilver",
+      "breakpoints": true
     }
   ]
 }

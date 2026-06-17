@@ -60,6 +60,9 @@ export const videos = sqliteTable(
     duration: integer('duration'),
     resolution: text('resolution'),
     fileSize: integer('file_size'),
+    // Frames per second from ffprobe's r_frame_rate (e.g. 29.97). REAL, not
+    // INTEGER — fractional NTSC rates must round-trip exactly (F71).
+    frameRate: real('frame_rate'),
     filePath: text('file_path').notNull(),
     thumbnailPath: text('thumbnail_path'),
     downloadDate: text('download_date'),

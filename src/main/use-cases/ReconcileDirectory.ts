@@ -379,6 +379,8 @@ export class ReconcileDirectory implements IReconcileDirectory {
       duration: metaJson?.duration ?? null,
       resolution: null,
       fileSize: null,
+      // Populated later by EnrichMediaMetadata's ffprobe pass (probeStatus: pending).
+      frameRate: null,
       filePath: this.path.join(videoDir, mediaFile),
       thumbnailPath: thumbFile ? this.path.join(videoDir, thumbFile) : null,
       downloadDate: metaJson?.downloadDate ?? null,

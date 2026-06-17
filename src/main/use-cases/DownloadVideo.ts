@@ -274,6 +274,8 @@ export class DownloadVideo implements IDownloadVideo {
         duration: result.duration ?? info.duration ?? null,
         resolution: null,
         fileSize: null,
+        // Populated later by EnrichMediaMetadata's ffprobe pass (probeStatus: pending).
+        frameRate: null,
         filePath: result.filePath,
         thumbnailPath: result.thumbnailPath,
         downloadDate: now,
