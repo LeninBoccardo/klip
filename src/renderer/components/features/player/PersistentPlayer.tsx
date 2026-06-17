@@ -9,14 +9,7 @@ import { usePlayerSlot } from './player-slot-ref'
 import { mediaUrl } from '@/lib/format'
 import { useShortcut } from '@/hooks/use-shortcut'
 import { Button } from '@ui/button'
-import {
-  GripHorizontal,
-  Maximize2,
-  X,
-  ExternalLink,
-  SkipBack,
-  SkipForward
-} from 'lucide-react'
+import { GripHorizontal, Maximize2, X, ExternalLink, SkipBack, SkipForward } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -72,7 +65,6 @@ function seekToPercent(el: HTMLVideoElement, fraction: number): void {
   if (!Number.isFinite(el.duration) || el.duration <= 0) return
   el.currentTime = el.duration * fraction
 }
-
 
 /**
  * The single, persistent `<video>` element shared across the app.
@@ -241,10 +233,31 @@ export function PersistentPlayer(): React.ReactElement | null {
       // cost is invisible compared to video decoding happening anyway.
       // It naturally covers every motion source — scroll, resize, layout
       // shift, sidebar toggle — without needing to enumerate them.
-      let rafId = requestAnimationFrame(function tick() {
-        update()
-        rafId = requestAnimationFrame(tick)
-      })
+      // Pause the loop while the window is hidden (minimized / occluded /
+      // backgrounded): there's no layout to track and no point burning a
+      // getBoundingClientRect per frame, and it lets the renderer idle so the
+      // OS can throttle. Resume on visibility. (F45/F46)
+      let rafId = 0
+      const startLoop = (): void => {
+        if (rafId) return
+        rafId = requestAnimationFrame(function tick() {
+          update()
+          rafId = requestAnimationFrame(tick)
+        })
+      }
+      const stopLoop = (): void => {
+        if (rafId) cancelAnimationFrame(rafId)
+        rafId = 0
+      }
+      const onVisibility = (): void => {
+        if (document.hidden) stopLoop()
+        else {
+          update()
+          startLoop()
+        }
+      }
+      if (!document.hidden) startLoop()
+      document.addEventListener('visibilitychange', onVisibility)
 
       // ResizeObserver is still useful: it fires synchronously after a
       // resize-driven layout, eliminating the up-to-one-frame lag the rAF
@@ -253,7 +266,8 @@ export function PersistentPlayer(): React.ReactElement | null {
       ro.observe(slotEl)
 
       return () => {
-        cancelAnimationFrame(rafId)
+        stopLoop()
+        document.removeEventListener('visibilitychange', onVisibility)
         ro.disconnect()
       }
     }
@@ -582,8 +596,8 @@ export function PersistentPlayer(): React.ReactElement | null {
             const el = e.currentTarget
             const err = el.error
             const codeName = err
-              ? ['UNKNOWN', 'ABORTED', 'NETWORK', 'DECODE', 'SRC_NOT_SUPPORTED'][err.code] ??
-                `code${err.code}`
+              ? (['UNKNOWN', 'ABORTED', 'NETWORK', 'DECODE', 'SRC_NOT_SUPPORTED'][err.code] ??
+                `code${err.code}`)
               : 'no-error-object'
             console.error('[PersistentPlayer] <video> error', {
               videoId,
@@ -599,16 +613,23 @@ export function PersistentPlayer(): React.ReactElement | null {
             setErroredId(videoId)
           }}
           onLoadStart={() => {
-            console.log('[PersistentPlayer] <video> loadstart', { videoId, mediaKind, src })
+            // DEV-only: these fire on every media load / queue advance, and the
+            // console.log monkey-patch ships them to the on-disk log over IPC —
+            // don't pollute production logs on every play. onError stays. (F47)
+            if (import.meta.env.DEV) {
+              console.log('[PersistentPlayer] <video> loadstart', { videoId, mediaKind, src })
+            }
           }}
           onLoadedMetadata={(e) => {
             const el = e.currentTarget
-            console.log('[PersistentPlayer] <video> loadedmetadata', {
-              videoId,
-              duration: el.duration,
-              videoWidth: el.videoWidth,
-              videoHeight: el.videoHeight
-            })
+            if (import.meta.env.DEV) {
+              console.log('[PersistentPlayer] <video> loadedmetadata', {
+                videoId,
+                duration: el.duration,
+                videoWidth: el.videoWidth,
+                videoHeight: el.videoHeight
+              })
+            }
           }}
           onEnded={handleEnded}
         />
