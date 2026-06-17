@@ -119,7 +119,11 @@ app.whenReady().then(() => {
   container.services.klipMediaProtocol.register()
 
   // ── Register IPC controllers ──
-  registerReconcileController(container.useCases.reconcile, container.rootPathRef)
+  registerReconcileController(
+    container.useCases.reconcile,
+    container.rootPathRef,
+    container.ports.notifier
+  )
   registerDownloadController(
     container.useCases.fetchVideoInfo,
     container.useCases.downloadVideo,

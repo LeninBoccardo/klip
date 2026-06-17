@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IReconcileDirectory, ReconcileResult } from '@use-cases/IReconcileDirectory'
-import type { RootPathRef } from '@domain/ports'
+import type { RootPathRef, INotifier } from '@domain/ports'
 
 const electron = vi.hoisted(() => {
   const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
@@ -31,6 +31,10 @@ const emptyResult: ReconcileResult = {
   cutsRecovered: 0
 }
 
+function makeNotifier(): INotifier {
+  return { notify: vi.fn() }
+}
+
 describe('ReconcileController', () => {
   beforeEach(() => {
     electron.handlers.clear()
@@ -40,11 +44,12 @@ describe('ReconcileController', () => {
   it('registers the "reconcile" channel', () => {
     const reconcile: IReconcileDirectory = {
       execute: vi.fn().mockReturnValue(emptyResult),
-      executeForCreator: vi.fn()
+      executeForCreator: vi.fn(),
+      executeForCreatorBatch: vi.fn()
     }
     const rootPathRef: RootPathRef = { value: '/root' }
 
-    registerReconcileController(reconcile, rootPathRef)
+    registerReconcileController(reconcile, rootPathRef, makeNotifier())
 
     expect(electron.handlers.has('reconcile')).toBe(true)
   })
@@ -52,11 +57,12 @@ describe('ReconcileController', () => {
   it('reads rootPathRef.value at invocation time, not at registration time', async () => {
     const reconcile: IReconcileDirectory = {
       execute: vi.fn().mockReturnValue(emptyResult),
-      executeForCreator: vi.fn()
+      executeForCreator: vi.fn(),
+      executeForCreatorBatch: vi.fn()
     }
     const rootPathRef: RootPathRef = { value: '/old/root' }
 
-    registerReconcileController(reconcile, rootPathRef)
+    registerReconcileController(reconcile, rootPathRef, makeNotifier())
 
     // Mutate the ref AFTER registration — simulates a successful root migration.
     rootPathRef.value = '/new/root'
@@ -65,5 +71,33 @@ describe('ReconcileController', () => {
     await handler({})
 
     expect(reconcile.execute).toHaveBeenCalledWith('/new/root')
+  })
+
+  it('pushes db-updated scope:[all] when the manual reconcile changed something (F13)', async () => {
+    const reconcile: IReconcileDirectory = {
+      execute: vi.fn().mockReturnValue({ ...emptyResult, videosAdded: 5 }),
+      executeForCreator: vi.fn(),
+      executeForCreatorBatch: vi.fn()
+    }
+    const notifier = makeNotifier()
+
+    registerReconcileController(reconcile, { value: '/root' }, notifier)
+    await electron.handlers.get('reconcile')!({})
+
+    expect(notifier.notify).toHaveBeenCalledWith('db-updated', { scope: ['all'] })
+  })
+
+  it('does NOT push db-updated when the manual reconcile changed nothing', async () => {
+    const reconcile: IReconcileDirectory = {
+      execute: vi.fn().mockReturnValue(emptyResult),
+      executeForCreator: vi.fn(),
+      executeForCreatorBatch: vi.fn()
+    }
+    const notifier = makeNotifier()
+
+    registerReconcileController(reconcile, { value: '/root' }, notifier)
+    await electron.handlers.get('reconcile')!({})
+
+    expect(notifier.notify).not.toHaveBeenCalled()
   })
 })
