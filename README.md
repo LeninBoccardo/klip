@@ -51,7 +51,7 @@ For deep details (schema, ports, conventions, testing strategy), see [AGENTS.md]
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 20.19+ or 22.12+
 - npm 11+
 
 ## Setup
@@ -75,6 +75,12 @@ npm run build:win    # Windows (NSIS)
 npm run build:mac    # macOS
 npm run build:linux  # Linux
 ```
+
+### Releases
+
+Releases are automated. Merging to `master` runs the [release workflow](.github/workflows/release.yml): [semantic-release](https://github.com/semantic-release/semantic-release) reads the [Conventional Commits](https://www.conventionalcommits.org/) since the last release (`feat` → minor, `fix` → patch, `BREAKING CHANGE` → major), bumps the version, writes `CHANGELOG.md`, tags it, and publishes a GitHub Release. A build matrix then attaches the Windows (NSIS) and Linux (AppImage) installers, along with the `electron-updater` feed (`latest.yml` / `latest-linux.yml`).
+
+Installed apps check for updates on launch; when a newer release is available they download it in the background and surface a "Restart now" toast. Updates work even though the installers are unsigned — Windows shows a SmartScreen prompt on first install, and the Linux AppImage updates cleanly.
 
 ### Testing
 
