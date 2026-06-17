@@ -345,7 +345,7 @@ describe('RecoverOperations', () => {
     expect(fsWriter.moveDirectory).toHaveBeenCalledWith('/new/root/a', '/old/root/a')
   })
 
-  it('should record stranded folders in error message when individual moves fail', () => {
+  it('leaves the op in_progress (not terminal) when a rollback move strands a folder (F24)', () => {
     const op = makeOperation({
       id: 'op-migrate-strand',
       type: 'migrate_root',
@@ -370,10 +370,17 @@ describe('RecoverOperations', () => {
 
     useCase.execute()
 
+    // Stranded → stay non-terminal so the next launch re-attempts the leftover,
+    // NOT rolled_back (terminal, never re-scanned).
     expect(operationRepo.updateStatus).toHaveBeenCalledWith(
       'op-migrate-strand',
+      'in_progress',
+      expect.stringContaining('stranded at new root: b')
+    )
+    expect(operationRepo.updateStatus).not.toHaveBeenCalledWith(
+      'op-migrate-strand',
       'rolled_back',
-      'Root migration interrupted — folders moved back, but these are stranded at new root: b'
+      expect.anything()
     )
   })
 

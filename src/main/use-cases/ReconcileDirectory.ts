@@ -335,7 +335,12 @@ export class ReconcileDirectory implements IReconcileDirectory {
       // creator folder previously.)
       const existing = this.videoRepo.findById(videoId)
       if (existing) {
-        if (existing.status === 'missing') {
+        if (existing.creatorId !== creator.id) {
+          // Same video id now lives under a different creator folder on disk.
+          // Re-point creatorId/filePath to the current location (preserving
+          // metadata) rather than leaving a stale pointer into the old folder. (F23)
+          this.repointVideo(rootPath, creator, videoId, existing, result)
+        } else if (existing.status === 'missing') {
           this.videoRepo.updateStatus(videoId, 'active', null)
           result.videosRecovered++
         }
@@ -354,31 +359,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
   ): void {
     const videoDir = this.path.join(rootPath, creator.folderName, 'downloads', videoId)
     const metaJson = this.fs.readJsonFile<MetaJson>(this.path.join(videoDir, 'meta.json'))
-    const files = this.fs.listFiles(videoDir)
-
-    // Match ONLY the final muxed file — `<videoId>.<media-ext>` exactly.
-    // yt-dlp's HLS / DASH flows produce transient intermediate files named
-    // `<videoId>.fNNN.<ext>` (where `NNN` is the format-id) before the merge
-    // step into the final container. With `--merge-output-format mkv` the
-    // final is `<videoId>.mkv`; the intermediates are e.g. `<videoId>.f234.mp4`
-    // and `<videoId>.f140.m4a`. A prefix-based match would catalogue the
-    // intermediate `.mp4` as the canonical file, then yt-dlp would delete it
-    // post-merge, leaving the DB pointing at a vanished path — the renderer
-    // surfaces this as "Browser can't play this codec" via its generic
-    // `<video>` `onerror` fallback. The exact-match anchor closes the race by
-    // construction: nothing with a dot between `<videoId>` and the extension
-    // is eligible. `.part` is implicitly excluded.
-    const escapedVideoId = videoId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const FINAL_FILE_RE = new RegExp(
-      `^${escapedVideoId}\\.(mp4|mkv|webm|m4a|mp3|mov|avi|flv|m4v|ts|opus|ogg|ogv|wmv|3gp|aac|wav)$`,
-      'i'
-    )
-    const mediaFile = files.find((f) => FINAL_FILE_RE.test(f)) ?? null
-    // Accept either the literal `thumbnail.<ext>` (manual sideload convention) or
-    // any image alongside the media file as long as it isn't yt-dlp's `.info.json`
-    // sidecar (e.g. `<videoId>.jpg` written by `--write-thumbnail --convert-thumbnails jpg`).
-    const thumbFile =
-      files.find((f) => /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.includes('.info.')) ?? null
+    const { mediaFile, thumbFile } = this.resolveVideoFiles(videoDir, videoId)
 
     // No media file yet — almost always a mid-download race (yt-dlp wrote the
     // `.info.json` / `.part` first, the file watcher fired before the final
@@ -421,6 +402,68 @@ export class ReconcileDirectory implements IReconcileDirectory {
     }
     this.videoRepo.upsertWithPrevious(newVideo, previous)
     result.videosAdded++
+  }
+
+  /**
+   * Find the final muxed media file and a thumbnail in a video dir.
+   *
+   * Match ONLY the final muxed file — `<videoId>.<media-ext>` exactly. yt-dlp's
+   * HLS/DASH flows produce transient `<videoId>.fNNN.<ext>` intermediates before
+   * the merge; a prefix match would catalogue one and then yt-dlp deletes it,
+   * leaving a vanished path (the generic "can't play this codec" symptom). The
+   * exact-match anchor excludes anything with a dot between id and extension
+   * (and `.part`).
+   */
+  private resolveVideoFiles(
+    videoDir: string,
+    videoId: string
+  ): { mediaFile: string | null; thumbFile: string | null } {
+    const files = this.fs.listFiles(videoDir)
+    const escapedVideoId = videoId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const FINAL_FILE_RE = new RegExp(
+      `^${escapedVideoId}\\.(mp4|mkv|webm|m4a|mp3|mov|avi|flv|m4v|ts|opus|ogg|ogv|wmv|3gp|aac|wav)$`,
+      'i'
+    )
+    return {
+      mediaFile: files.find((f) => FINAL_FILE_RE.test(f)) ?? null,
+      // `thumbnail.<ext>` (sideload convention) or any image that isn't yt-dlp's
+      // `.info.json` sidecar (e.g. `<videoId>.jpg`).
+      thumbFile:
+        files.find((f) => /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.includes('.info.')) ?? null
+    }
+  }
+
+  /**
+   * Recover an existing video that now lives under a DIFFERENT creator folder
+   * on disk (e.g. the user moved its download dir across creators outside the
+   * app). Re-derive creatorId/filePath/thumbnailPath from the current location
+   * while PRESERVING all enriched metadata (tags, view counts, transcript,
+   * probe status) — unlike upsertVideoFromDisk which rebuilds a fresh row. Only
+   * re-points when the media file is actually present here. (F23)
+   */
+  private repointVideo(
+    rootPath: string,
+    creator: Creator,
+    videoId: string,
+    existing: Video,
+    result: ReconcileResult
+  ): void {
+    const videoDir = this.path.join(rootPath, creator.folderName, 'downloads', videoId)
+    const { mediaFile, thumbFile } = this.resolveVideoFiles(videoDir, videoId)
+    if (!mediaFile) return // not actually here yet — leave for a later pass
+    this.videoRepo.upsertWithPrevious(
+      {
+        ...existing,
+        creatorId: creator.id,
+        filePath: this.path.join(videoDir, mediaFile),
+        thumbnailPath: thumbFile ? this.path.join(videoDir, thumbFile) : existing.thumbnailPath,
+        status: 'active',
+        deletedAt: null,
+        updatedAt: new Date().toISOString()
+      },
+      existing
+    )
+    result.videosRecovered++
   }
 
   // ── Cut reconciliation ──
@@ -486,6 +529,12 @@ export class ReconcileDirectory implements IReconcileDirectory {
     const files = this.fs.listFiles(cutDir)
 
     const mediaFile = files.find((f) => /\.(mp4|mkv|webm)$/i.test(f)) ?? null
+    // No media file yet (mid-sideload-copy, or a folder with only cut-data.json).
+    // Mirror upsertVideoFromDisk's guard: refuse to catalogue the cut DIRECTORY
+    // as its filePath — ffprobe against a directory fails and pins
+    // probeStatus='failed' forever, and no later pass re-points it. Leave it for
+    // a reconcile pass once the rendered file lands. (F69)
+    if (!mediaFile) return
     // Accept either the literal `thumbnail.<ext>` (manual sideload convention) or
     // any image alongside the media file as long as it isn't yt-dlp's `.info.json`
     // sidecar (e.g. `<videoId>.jpg` written by `--write-thumbnail --convert-thumbnails jpg`).
@@ -511,7 +560,7 @@ export class ReconcileDirectory implements IReconcileDirectory {
       duration: null,
       resolution: null,
       fileSize: null,
-      filePath: mediaFile ? this.path.join(cutDir, mediaFile) : cutDir,
+      filePath: this.path.join(cutDir, mediaFile),
       thumbnailPath: thumbFile ? this.path.join(cutDir, thumbFile) : null,
       probeStatus: 'pending',
       status: 'active',

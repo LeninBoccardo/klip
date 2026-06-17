@@ -239,11 +239,22 @@ export class RecoverOperations implements IRecoverOperations {
       )
     }
 
-    const errorMsg =
-      stranded.length === 0
-        ? 'Root migration interrupted — folders moved back to original root'
-        : `Root migration interrupted — folders moved back, but these are stranded at new root: ${stranded.join(', ')}`
-    this.markRolledBack(op.id, errorMsg)
+    if (stranded.length > 0) {
+      // Some folders couldn't be moved back this pass (transient EBUSY / locked
+      // dir on Windows). The per-folder payload (partial:true, already-rolled-back
+      // entries skipped) is persisted above, so leave the op in a NON-terminal
+      // status — execute() scans 'in_progress', so the next launch re-attempts
+      // only the stranded folders. markRolledBack here would make it terminal and
+      // strand them permanently with no automatic retry. (F24)
+      this.operationRepo.updateStatus(
+        op.id,
+        'in_progress',
+        `Root migration rollback incomplete — retrying next launch; stranded at new root: ${stranded.join(', ')}`
+      )
+      return false
+    }
+
+    this.markRolledBack(op.id, 'Root migration interrupted — folders moved back to original root')
     return false
   }
 

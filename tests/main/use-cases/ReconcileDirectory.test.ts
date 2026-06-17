@@ -444,21 +444,38 @@ describe('ReconcileDirectory', () => {
     expect(result.videosAdded).toBe(0)
   })
 
-  it('recovers a missing video found during discoverVideos', () => {
+  it('re-points a video found under a different creator folder, preserving metadata (F23)', () => {
+    // The DB row says creatorId='creator-1' but the video dir now lives under
+    // 'new-creator' on disk (out-of-app move). discoverVideos must re-point
+    // creatorId/filePath to the current location, not just flip status.
     fs.listDirectories = vi.fn().mockImplementation((p: string) => {
       if (p === ROOT) return ['new-creator']
       if (p.endsWith('downloads')) return ['missing-video']
       return []
     })
+    fs.listFiles = vi.fn().mockReturnValue(['missing-video.mp4'])
     videoRepo.findById = vi
       .fn()
-      .mockReturnValue(makeVideo({ id: 'missing-video', status: 'missing' }))
+      .mockReturnValue(
+        makeVideo({
+          id: 'missing-video',
+          status: 'missing',
+          creatorId: 'creator-1',
+          tags: ['keep']
+        })
+      )
 
     const result = useCase.execute(ROOT)
 
     expect(result.videosRecovered).toBe(1)
-    expect(videoRepo.updateStatus).toHaveBeenCalledWith('missing-video', 'active', null)
-    expect(videoRepo.upsert).not.toHaveBeenCalled()
+    const upserted = vi.mocked(videoRepo.upsert).mock.calls.at(-1)![0]
+    expect(upserted).toMatchObject({
+      id: 'missing-video',
+      creatorId: 'new-creator', // re-pointed away from the stale 'creator-1'
+      status: 'active',
+      tags: ['keep'] // metadata preserved
+    })
+    expect(upserted.filePath).toContain('missing-video.mp4')
   })
 
   // ── Multi-creator scenarios ──
@@ -657,7 +674,8 @@ describe('ReconcileDirectory', () => {
         if (p.endsWith('cuts')) return ['cut-partial']
         return []
       })
-      fs.listFiles = vi.fn().mockReturnValue([])
+      // A media file must be present, else upsertCutFromDisk early-returns (F69).
+      fs.listFiles = vi.fn().mockReturnValue(['cut-partial.mp4'])
       fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
         if (p.endsWith('cut-data.json')) return { startTimestamp: 5 } // no title, no tags
         return null
@@ -673,6 +691,28 @@ describe('ReconcileDirectory', () => {
           startTimestamp: 5
         })
       )
+    })
+
+    it('does NOT catalogue a cut folder that has no media file yet (F69)', () => {
+      // A sideloaded folder with only cut-data.json (mid-copy) must not be
+      // stored with the directory as filePath — that pins probeStatus=failed
+      // forever. Skip until the rendered file lands.
+      creatorRepo.findAll = vi.fn().mockReturnValue([makeCreator()])
+      fs.listDirectories = vi.fn().mockImplementation((p: string) => {
+        if (p === ROOT) return ['creator-1']
+        if (p.endsWith('cuts')) return ['cut-incomplete']
+        return []
+      })
+      fs.listFiles = vi.fn().mockReturnValue([]) // no media file
+      fs.readJsonFile = vi.fn().mockImplementation((p: string) => {
+        if (p.endsWith('cut-data.json')) return { title: 'Pending cut' }
+        return null
+      })
+
+      const result = useCase.execute(ROOT)
+
+      expect(cutRepo.upsert).not.toHaveBeenCalled()
+      expect(result.cutsAdded).toBe(0)
     })
 
     // ── editRecipe round-trip from sidecar (HP-9) ──
