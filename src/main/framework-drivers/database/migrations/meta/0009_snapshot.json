@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e358e477-bc82-4b9d-b648-3490c4c56b74",
-  "prevId": "0009f1f1-0009-4009-8009-000000000009",
+  "id": "0009f1f1-0009-4009-8009-000000000009",
+  "prevId": "2a46051d-6e39-4070-8225-1b16ee0a336d",
   "tables": {
     "audit_log": {
       "name": "audit_log",
@@ -564,13 +564,6 @@
         },
         "deleted_at": {
           "name": "deleted_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "edit_recipe_json": {
-          "name": "edit_recipe_json",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
