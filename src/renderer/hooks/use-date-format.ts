@@ -13,6 +13,15 @@ interface UseDateFormatResult {
   /** Currently active preset (read from settings, default `'auto'`). */
   format: DateFormatPreset
   /**
+   * True while the persisted `dateFormat` preset is still being read from
+   * settings (the initial IPC round-trip on cold load). Until it resolves
+   * `format` is the `'auto'` default, so formatting now would paint a date in
+   * the wrong preset for one frame and then snap to the persisted preset.
+   * Callers that surface an absolute date should render a neutral placeholder
+   * while this is true instead of that transient `'auto'` value (F75).
+   */
+  isLoading: boolean
+  /**
    * Format `date` for display in the active preset and current i18n locale.
    * Stable across renders within a single locale + preset, so callers can
    * use it inside dependency arrays without re-triggering effects every
@@ -43,5 +52,5 @@ export function useDateFormat(): UseDateFormatResult {
     [format, locale]
   )
 
-  return { format, formatDate: formatter }
+  return { format, isLoading: setting.isLoading, formatDate: formatter }
 }

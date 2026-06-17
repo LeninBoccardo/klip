@@ -41,7 +41,7 @@ function VideoDetailPage(): React.ReactElement {
   const { videoId } = Route.useParams()
   const { data: video, isLoading } = useVideoById(videoId)
   const fetchDetail = useFetchVideoDetail()
-  const { formatDate } = useDateFormat()
+  const { formatDate, isLoading: isDateFormatLoading } = useDateFormat()
   const [tab, setTab] = useState('info')
   const play = usePlayerStore((s) => s.play)
   const setMode = usePlayerStore((s) => s.setMode)
@@ -140,7 +140,12 @@ function VideoDetailPage(): React.ReactElement {
       <PageHeader
         title={video.title}
         description={
-          video.uploadDate
+          // Suppress the uploaded line entirely until the date-format preset
+          // resolves, rather than painting it in 'auto' and snapping to the
+          // chosen preset one frame later. The description is already optional
+          // (undefined when there's no uploadDate), so a one-frame absence
+          // reads cleaner than a half-formed 'Uploaded —' (F75).
+          video.uploadDate && !isDateFormatLoading
             ? t('detail.uploaded', { date: formatDate(video.uploadDate) })
             : undefined
         }

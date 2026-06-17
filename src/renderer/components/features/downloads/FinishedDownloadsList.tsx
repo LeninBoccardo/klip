@@ -4,13 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@ui/button'
 import { Badge } from '@ui/badge'
 import { Skeleton } from '@ui/skeleton'
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle
-} from '@ui/empty'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@ui/empty'
 import { CheckCircle2, History, RefreshCw, XCircle } from 'lucide-react'
 import { useDownloadHistory, useRetryDownload } from '@/hooks/use-download-history'
 import { useDateFormat } from '@/hooks/use-date-format'
@@ -52,13 +46,9 @@ export function FinishedDownloadsList(): React.ReactElement {
   )
 }
 
-function FinishedDownloadRow({
-  entry
-}: {
-  entry: DownloadHistoryEntryDto
-}): React.ReactElement {
+function FinishedDownloadRow({ entry }: { entry: DownloadHistoryEntryDto }): React.ReactElement {
   const { t } = useTranslation('downloads')
-  const { formatDate } = useDateFormat()
+  const { formatDate, isLoading: isDateFormatLoading } = useDateFormat()
   const retry = useRetryDownload()
 
   const handleRetry = (): void => {
@@ -69,9 +59,7 @@ function FinishedDownloadRow({
   }
 
   const titleNode = (
-    <span className="truncate font-medium text-sm">
-      {entry.videoTitle ?? entry.youtubeUrl}
-    </span>
+    <span className="truncate font-medium text-sm">{entry.videoTitle ?? entry.youtubeUrl}</span>
   )
 
   return (
@@ -102,12 +90,13 @@ function FinishedDownloadRow({
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           {entry.creatorFolderName && <span>{entry.creatorFolderName}</span>}
-          <span>{formatDate(entry.finishedAt)}</span>
+          {/* Hold the timestamp at a neutral placeholder until the persisted
+              date-format preset resolves, so it doesn't flash in 'auto' then
+              snap to the chosen preset on cold load (F75). */}
+          <span>{isDateFormatLoading ? '—' : formatDate(entry.finishedAt)}</span>
         </div>
         {entry.status === 'error' && entry.errorMessage && (
-          <p className="mt-1 wrap-break-word text-xs text-muted-foreground">
-            {entry.errorMessage}
-          </p>
+          <p className="mt-1 wrap-break-word text-xs text-muted-foreground">{entry.errorMessage}</p>
         )}
       </div>
       <div className="shrink-0">
@@ -118,12 +107,7 @@ function FinishedDownloadRow({
             </Link>
           </Button>
         ) : entry.status === 'error' && entry.errorRetryable ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRetry}
-            disabled={retry.isPending}
-          >
+          <Button variant="outline" size="sm" onClick={handleRetry} disabled={retry.isPending}>
             <RefreshCw className="mr-2 size-4" />
             {t('finished.retry')}
           </Button>
