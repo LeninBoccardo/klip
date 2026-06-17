@@ -714,5 +714,5 @@ npm run db:studio      # Drizzle Kit — open visual DB browser
 
 - Renderer components are `.tsx` files under `src/renderer/components/`; shared UI primitives live in `src/renderer/components/ui/`
 - The renderer HTML (`src/renderer/index.html`) enforces a strict CSP—when adding external resources, update the `Content-Security-Policy` meta tag
-- electron-builder config is in `electron-builder.yml` (not `package.json`)—app ID is `com.electron.app`, product name is `klip`
+- electron-builder config is in `electron-builder.yml` (not `package.json`)—app ID is `com.leninboccardo.klip`, product name is `klip`
 - Auto-update support via `electron-updater` is present in dependencies; publish URL is in `electron-builder.yml`

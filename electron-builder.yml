@@ -1,16 +1,18 @@
-appId: com.electron.app
+appId: com.leninboccardo.klip
 productName: klip
 directories:
   buildResources: build
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!resources'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-asarUnpack:
-  - resources/**
+extraResources:
+  - from: resources/bin
+    to: bin
 win:
   executableName: klip
 nsis:
@@ -31,9 +33,6 @@ dmg:
 linux:
   target:
     - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}

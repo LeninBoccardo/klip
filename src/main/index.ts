@@ -79,9 +79,9 @@ let container: AppContainer
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows. Must match the electron-builder appId
-  // ('com.electron.app') so Windows attributes taskbar grouping and toast
+  // ('com.leninboccardo.klip') so Windows attributes taskbar grouping and toast
   // notifications (incl. the auto-update toast) to the installed app. (F64)
-  electronApp.setAppUserModelId('com.electron.app')
+  electronApp.setAppUserModelId('com.leninboccardo.klip')
 
   // ── Defence-in-depth security: deny external navigation + lock permissions.
   //    Wired here (not at module load) because `session.defaultSession` throws

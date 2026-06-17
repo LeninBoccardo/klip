@@ -2,9 +2,13 @@
   "name": "klip",
   "version": "0.0.1",
   "description": "A local, offline-first desktop asset manager designed to organize downloaded source videos and manually created video cuts",
+  "license": "MIT",
   "main": "./out/main/index.js",
   "author": "github.com/LeninBoccardo",
-  "homepage": "https://electron-vite.org",
+  "homepage": "https://github.com/LeninBoccardo/klip",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
