@@ -242,7 +242,7 @@ export interface AppConfig {
   defaultRootPath: string
   /** When true, the auto-updater is replaced with a no-op `DisabledUpdater`. */
   isDev: boolean
-  /** Path to the icon used for non-titlebar window decorations on Linux. */
+  /** Path to the window/taskbar icon, set on Windows + Linux (macOS uses the .app bundle). */
   iconPath: string
 }
 

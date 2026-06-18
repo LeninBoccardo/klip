@@ -86,7 +86,13 @@ export class ElectronWindowManager implements IWindowManager {
         height: 32
       },
       backgroundColor: '#1c1815',
-      ...(process.platform === 'linux' ? { icon: this.config.iconPath } : {}),
+      // Window/taskbar icon. macOS ignores this (it takes the icon from the
+      // packaged .app bundle), so set it on every platform except darwin.
+      // Without it, `npm run dev` on Windows shows the default Electron icon in
+      // the taskbar — dev runs under electron.exe, which has no branded icon
+      // embedded (a packaged build does, via build/icon.ico). Linux needs it
+      // both in dev and packaged.
+      ...(process.platform !== 'darwin' ? { icon: this.config.iconPath } : {}),
       webPreferences: {
         preload: this.config.preloadPath,
         // Pinned exactly as the original main-window block; both windows
