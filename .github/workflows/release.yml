@@ -5,6 +5,10 @@ name: Release
 # (feat -> minor, fix -> patch, BREAKING CHANGE -> major), tags it, and creates
 # the GitHub Release; the build matrix then attaches the installers + the
 # electron-updater feed (latest.yml / latest-linux.yml) to that Release.
+#
+# A manual workflow_dispatch skips semantic-release and instead builds + publishes
+# the CURRENT package.json version on the selected ref. Used to bootstrap the
+# first release (v0.1.0) and for ad-hoc rebuilds.
 on:
   push:
     branches: [master]
@@ -22,6 +26,9 @@ permissions:
 jobs:
   release:
     name: Version & GitHub Release
+    # Auto-versioning runs only on push to master. workflow_dispatch skips this
+    # job and goes straight to the build job (manual build of the current version).
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -63,7 +70,10 @@ jobs:
   build:
     name: Build & publish (${{ matrix.platform }})
     needs: release
-    if: needs.release.outputs.published == 'true'
+    # Runs when semantic-release published a new version (push), OR on a manual
+    # workflow_dispatch (which skips the release job). !cancelled() lets this run
+    # even though the release job is skipped on dispatch.
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.release.outputs.published == 'true') }}
     permissions:
       contents: write
     strategy:
@@ -77,12 +87,14 @@ jobs:
             platform: linux
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout released tag
+      - name: Checkout release ref
         uses: actions/checkout@v4
         with:
-          # The tag semantic-release just created — it carries the bumped
-          # package.json, so the artifacts and the GitHub Release agree on version.
-          ref: ${{ needs.release.outputs.tag }}
+          # On push: the tag semantic-release just created (carries the bumped
+          # package.json, so artifacts and the Release agree on version).
+          # On workflow_dispatch: the selected ref (builds the current
+          # package.json version, e.g. the v0.1.0 bootstrap from master).
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || needs.release.outputs.tag }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
