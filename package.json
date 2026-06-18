@@ -1,6 +1,6 @@
 {
   "name": "klip",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A local, offline-first desktop asset manager designed to organize downloaded source videos and manually created video cuts",
   "license": "MIT",
   "main": "./out/main/index.js",
